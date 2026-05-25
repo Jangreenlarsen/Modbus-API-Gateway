@@ -15,5 +15,5 @@ Status: `planned` | `in-progress` | `done`
 - [ ] planned — Web frontend: konfigurationsside (interface-parametre, slave-adresser)
 - [ ] planned — Multi-interface support (UART1 + UART2)
 - [ ] planned — SPIFFS-baseret data-backup (seneste kendte værdier ved strømfald)
-- [ ] planned — OTA firmware-opdatering via web frontend
+- [x] done    — OTA firmware- og frontend-opdatering fra GitHub releases (REST API)
 - [ ] planned — Alarm/threshold-logik med notifikation via WebSocket

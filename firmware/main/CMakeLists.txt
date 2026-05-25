@@ -15,7 +15,9 @@ idf_component_register(
         "api/routes/input_regs.c"
         "api/routes/interfaces.c"
         "api/routes/system.c"
+        "api/routes/ota.c"
         "api/ws_handler.c"
+        "ota/ota_manager.c"
     INCLUDE_DIRS
         "."
         "core"
@@ -23,11 +25,14 @@ idf_component_register(
         "storage"
         "service"
         "api"
+        "ota"
     REQUIRES
         esp_http_server
         esp_eth
+        esp_https_ota
         nvs_flash
         spiffs
         json
         freemodbus
+        esp-tls
 )

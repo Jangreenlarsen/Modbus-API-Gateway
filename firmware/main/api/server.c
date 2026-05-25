@@ -5,6 +5,7 @@
 #include "routes/input_regs.h"
 #include "routes/interfaces.h"
 #include "routes/system.h"
+#include "routes/ota.h"
 #include "ws_handler.h"
 #include "esp_log.h"
 
@@ -39,6 +40,12 @@ esp_err_t api_server_start(void)
     // System routes
     httpd_register_uri_handler(s_server, &route_get_system);
     httpd_register_uri_handler(s_server, &route_post_reboot);
+
+    // OTA routes
+    httpd_register_uri_handler(s_server, &route_get_ota_check);
+    httpd_register_uri_handler(s_server, &route_post_ota_firmware);
+    httpd_register_uri_handler(s_server, &route_post_ota_frontend);
+    httpd_register_uri_handler(s_server, &route_get_ota_status);
 
     // WebSocket
     httpd_register_uri_handler(s_server, &route_ws);
