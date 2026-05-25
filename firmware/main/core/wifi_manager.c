@@ -6,6 +6,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "cJSON.h"
+#include "lwip/inet.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -98,6 +99,20 @@ esp_err_t wifi_manager_init(const wifi_config_gw_t *cfg)
     s_wifi_eg   = xEventGroupCreate();
     s_sta_netif = esp_netif_create_default_wifi_sta();
     s_ap_netif  = esp_netif_create_default_wifi_ap();
+
+    // Statisk IP hvis ikke "dhcp" — ellers forbliver DHCP-klient aktiv (default)
+    if (cfg->ip[0] && strcmp(cfg->ip, "dhcp") != 0) {
+        esp_netif_ip_info_t ip_info = {};
+        inet_pton(AF_INET, cfg->ip,      &ip_info.ip);
+        inet_pton(AF_INET, cfg->gw,      &ip_info.gw);
+        inet_pton(AF_INET, cfg->netmask, &ip_info.netmask);
+        esp_netif_dhcpc_stop(s_sta_netif);
+        ESP_ERROR_CHECK(esp_netif_set_ip_info(s_sta_netif, &ip_info));
+        ESP_LOGI(TAG, "WiFi STA static IP: %s  gw %s  mask %s",
+                 cfg->ip, cfg->gw, cfg->netmask);
+    } else {
+        ESP_LOGI(TAG, "WiFi STA DHCP aktiv");
+    }
 
     wifi_init_config_t init_cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&init_cfg));

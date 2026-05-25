@@ -2,6 +2,26 @@
 
 ---
 
+## v0.1.0 build 0007 — 2026-05-25 — Fix: WiFi statisk IP
+
+WiFi statisk IP-konfiguration virkede ikke — gatewayen brugte altid DHCP uanset hvad der var konfigureret. Rettet nu.
+
+**WiFi IP-konfiguration:**
+- **DHCP** (standard): sæt `ip` til `"dhcp"` eller lad feltet være tomt
+- **Statisk IP**: udfyld `ip`, `gw` og `netmask` — DHCP-klienten deaktiveres automatisk
+
+Via CLI:
+```bash
+# DHCP (standard)
+mbgw wifi set --ssid MitNet --password s3cr3t
+
+# Statisk IP
+mbgw wifi set --ssid MitNet --password s3cr3t --ip 192.168.1.50
+# (gw og netmask konfigureres via web-frontend eller direkte via PUT /api/v1/system/wifi)
+```
+
+---
+
 ## v0.1.0 build 0006 — 2026-05-25 — CLI-værktøj (mbgw)
 
 Terminal-CLI til direkte konfiguration og testning af gatewayen — ingen browser nødvendig.

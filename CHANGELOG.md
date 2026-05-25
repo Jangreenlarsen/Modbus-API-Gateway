@@ -4,6 +4,18 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0007] — 2026-05-25 — Fix: WiFi statisk IP ignoreret
+
+**Bug fix:**
+- `firmware/main/core/wifi_manager.c` — `wifi_manager_init()` brugte altid DHCP, selv når `cfg->ip` var sat til en statisk IP-adresse. Nu stoppes DHCP-klienten og statisk IP/GW/netmask konfigureres via `esp_netif_set_ip_info()` når `ip != "dhcp"`.
+- Tilføjet `#include "lwip/inet.h"` for `inet_pton()`.
+
+**Opførsel:**
+- `ip = "dhcp"` (eller tomt) → DHCP-klient aktiv (uændret default)
+- `ip = "192.168.1.50"` + `gw` + `netmask` → statisk IP, ingen DHCP
+
+---
+
 ## [0.1.0 build 0006] — 2026-05-25 — CLI-værktøj (mbgw)
 
 **Filer tilføjet:**

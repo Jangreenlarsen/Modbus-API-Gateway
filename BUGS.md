@@ -5,4 +5,4 @@ Status: `open` | `investigating` | `fixed`
 
 ---
 
-Ingen kendte bugs endnu. Projektet er i opstartsfase.
+- [fixed] v0.1.0 b0007 — WiFi statisk IP-konfiguration ignoreret: `wifi_manager_init()` brugte altid DHCP uanset `cfg->ip`
