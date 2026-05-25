@@ -4,6 +4,33 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0005] — 2026-05-25 — WiFi STA/AP support + komplet web frontend
+
+**Filer tilføjet:**
+- `firmware/main/core/wifi_manager.h/.c` — WiFi STA med 5-retry logik, AP fallback hotspot (ModbusGW-XXXXXX), WiFi scan, `wifi_manager_reconfigure()`
+- `firmware/main/api/routes/wifi.h/.c` — REST endpoints: GET status, PUT config, GET scan
+- `frontend/index.html` — Single-page web app med 4 tabs: Status, Trend, Log, Indstillinger
+- `frontend/css/style.css` — Mørkt tema, card grid, form grid, badge-system, toast-notifikationer
+- `frontend/js/api.js` — Alle REST API-kald samlet i ét API-objekt
+- `frontend/js/app.js` — Navigation, header refresh (version/IP/WiFi/uptime), interface loading
+- `frontend/js/page-status.js` — System/WiFi status-cards, interface status med HW/SW badge, register-læser
+- `frontend/js/page-trend.js` — Enkelt- og multi-register trend via Chart.js (auto-start/stop, min/max/avg)
+- `frontend/js/page-log.js` — Log-viewer med niveau-filter, OTA check/trigger med progress bar
+- `frontend/js/page-settings.js` — Ethernet, WiFi (scan + AP-fallback), Modbus interface-cards, genstart
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — tilføjet `wifi_config_gw_t` struct og `wifi`-felt i `gateway_config_t`
+- `firmware/main/api/server.c` — tilføjet wifi.h-include og registrering af 3 WiFi-routes
+- `firmware/main/CMakeLists.txt` — tilføjet wifi_manager.c, routes/wifi.c, esp_wifi og esp_netif
+- `firmware/main/main.c` — tilføjet `wifi_manager_init()` kald
+
+**API tilføjelser:**
+- `GET  /api/v1/system/wifi`      — WiFi-status: state, ssid, ip, rssi, ap_active
+- `PUT  /api/v1/system/wifi`      — Gem og anvend WiFi-konfiguration straks (ingen genstart nødvendig)
+- `GET  /api/v1/system/wifi/scan` — Scan efter tilgængelige netværk (returnerer array med ssid/rssi/channel/open)
+
+---
+
 ## [0.1.0 build 0004] — 2026-05-25 — Software UART til ekstra RS485/RS232 interfaces
 
 **Filer tilføjet:**

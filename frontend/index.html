@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modbus API Gateway</title>
+<link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<header>
+  <div class="header-left">
+    <span class="logo">⬡ Modbus Gateway</span>
+    <span id="hdr-version" class="version-badge">v—</span>
+  </div>
+  <div class="header-right">
+    <span id="hdr-ip" class="ip-badge">—.—.—.—</span>
+    <span id="hdr-wifi" class="wifi-badge" title="WiFi">&#x1F4F6;</span>
+    <span id="hdr-uptime" class="uptime">↑ —</span>
+  </div>
+</header>
+
+<nav>
+  <button class="nav-btn active" data-page="status">Status</button>
+  <button class="nav-btn"        data-page="trend">Trend</button>
+  <button class="nav-btn"        data-page="log">Log</button>
+  <button class="nav-btn"        data-page="settings">Indstillinger</button>
+</nav>
+
+<main>
+  <!-- ── STATUS ─────────────────────────────────────────────── -->
+  <section id="page-status" class="page active">
+    <h2>System Status</h2>
+
+    <div class="card-grid">
+      <div class="card" id="card-system">
+        <h3>System</h3>
+        <table class="info-table" id="system-table"></table>
+      </div>
+      <div class="card" id="card-wifi-status">
+        <h3>WiFi</h3>
+        <table class="info-table" id="wifi-table"></table>
+      </div>
+    </div>
+
+    <h2>Modbus Interfaces</h2>
+    <div id="iface-status-list"></div>
+
+    <h2>Direkte Register-læsning</h2>
+    <div class="card">
+      <div class="form-row">
+        <label>Interface<select id="rd-iface"></select></label>
+        <label>Slave (1–247)<input type="number" id="rd-slave" value="1" min="1" max="247"></label>
+        <label>Type
+          <select id="rd-type">
+            <option value="holding-registers">Holding Reg (FC03)</option>
+            <option value="input-registers">Input Reg (FC04)</option>
+            <option value="coils">Coils (FC01)</option>
+            <option value="discrete-inputs">Discrete Inputs (FC02)</option>
+          </select>
+        </label>
+        <label>Start<input type="number" id="rd-start" value="0" min="0"></label>
+        <label>Antal<input type="number" id="rd-count" value="10" min="1" max="125"></label>
+        <button class="btn-primary" onclick="readRegisters()">Læs</button>
+      </div>
+      <div id="rd-result" class="code-block hidden"></div>
+    </div>
+  </section>
+
+  <!-- ── TREND ──────────────────────────────────────────────── -->
+  <section id="page-trend" class="page">
+    <h2>Trend Analyse</h2>
+    <div class="card">
+      <div class="form-row">
+        <label>Interface<select id="tr-iface"></select></label>
+        <label>Slave<input type="number" id="tr-slave" value="1" min="1" max="247"></label>
+        <label>Register<input type="number" id="tr-reg" value="0" min="0"></label>
+        <label>Interval (sek)<input type="number" id="tr-interval" value="2" min="1" max="60"></label>
+        <label>Punkter<input type="number" id="tr-points" value="60" min="10" max="300"></label>
+        <button class="btn-primary" id="tr-toggle" onclick="toggleTrend()">Start</button>
+        <button class="btn-secondary" onclick="clearTrend()">Ryd</button>
+      </div>
+      <div class="trend-info">
+        <span id="tr-current">Aktuel: —</span>
+        <span id="tr-min">Min: —</span>
+        <span id="tr-max">Max: —</span>
+        <span id="tr-avg">Avg: —</span>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <canvas id="trend-chart"></canvas>
+    </div>
+
+    <div class="card">
+      <h3>Multi-register sammenligning</h3>
+      <div class="form-row">
+        <label>Interface<select id="mc-iface"></select></label>
+        <label>Slave<input type="number" id="mc-slave" value="1" min="1" max="247"></label>
+        <label>Start-register<input type="number" id="mc-start" value="0" min="0"></label>
+        <label>Antal<input type="number" id="mc-count" value="5" min="2" max="20"></label>
+        <label>Interval (sek)<input type="number" id="mc-interval" value="3" min="1"></label>
+        <button class="btn-primary" id="mc-toggle" onclick="toggleMultiChart()">Start</button>
+      </div>
+      <div class="chart-container">
+        <canvas id="multi-chart"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── LOG ────────────────────────────────────────────────── -->
+  <section id="page-log" class="page">
+    <h2>System Log</h2>
+    <div class="card">
+      <div class="form-row">
+        <label>Auto-refresh
+          <select id="log-refresh">
+            <option value="0">Slukket</option>
+            <option value="2000" selected>2 sek</option>
+            <option value="5000">5 sek</option>
+            <option value="10000">10 sek</option>
+          </select>
+        </label>
+        <label>Filter
+          <select id="log-filter">
+            <option value="">Alle</option>
+            <option value="ERROR">ERROR</option>
+            <option value="WARN">WARN</option>
+            <option value="INFO">INFO</option>
+          </select>
+        </label>
+        <button class="btn-secondary" onclick="clearLogView()">Ryd visning</button>
+      </div>
+    </div>
+    <div id="log-entries" class="log-container"></div>
+
+    <h2>OTA Opdatering</h2>
+    <div class="card">
+      <div class="form-row">
+        <button class="btn-secondary" onclick="checkOTA()">Tjek GitHub for opdatering</button>
+      </div>
+      <div id="ota-result" class="hidden">
+        <table class="info-table" id="ota-table"></table>
+        <div class="form-row" id="ota-buttons" style="margin-top:12px"></div>
+        <div id="ota-progress" class="hidden">
+          <div class="progress-bar"><div id="ota-bar" class="progress-fill"></div></div>
+          <span id="ota-status-text"></span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── SETTINGS ───────────────────────────────────────────── -->
+  <section id="page-settings" class="page">
+    <h2>Netværk</h2>
+
+    <!-- Ethernet -->
+    <div class="card">
+      <h3>Ethernet</h3>
+      <div class="form-grid">
+        <label>IP-adresse<input type="text" id="eth-ip" placeholder="dhcp eller 192.168.1.100"></label>
+        <label>Gateway<input type="text" id="eth-gw" placeholder="192.168.1.1"></label>
+        <label>Netmaske<input type="text" id="eth-mask" placeholder="255.255.255.0"></label>
+      </div>
+      <div class="form-row" style="margin-top:12px">
+        <button class="btn-primary" onclick="saveEthernet()">Gem Ethernet</button>
+      </div>
+    </div>
+
+    <!-- WiFi -->
+    <div class="card">
+      <h3>WiFi</h3>
+      <div class="form-row" style="margin-bottom:12px">
+        <label class="toggle-label">
+          <input type="checkbox" id="wifi-enabled" onchange="toggleWifiFields()">
+          Aktivér WiFi
+        </label>
+      </div>
+      <div id="wifi-fields" class="hidden">
+        <div class="form-grid">
+          <label>SSID
+            <div class="input-btn-row">
+              <input type="text" id="wifi-ssid" placeholder="Netværksnavn">
+              <button class="btn-secondary" onclick="scanWifi()">Scan</button>
+            </div>
+          </label>
+          <label>Kodeord<input type="password" id="wifi-password" placeholder="••••••••"></label>
+          <label>IP (valgfri)<input type="text" id="wifi-ip" placeholder="dhcp"></label>
+        </div>
+
+        <div id="wifi-scan-results" class="hidden scan-list"></div>
+
+        <h4 style="margin-top:16px">AP Fallback (hotspot ved forbindelsesfejl)</h4>
+        <div class="form-row">
+          <label class="toggle-label">
+            <input type="checkbox" id="wifi-ap-fallback">
+            Aktivér AP fallback
+          </label>
+        </div>
+        <div class="form-grid">
+          <label>AP Navn<input type="text" id="wifi-ap-ssid" placeholder="ModbusGW-XXXXXX"></label>
+          <label>AP Kodeord<input type="password" id="wifi-ap-password" placeholder="Min. 8 tegn (tomt = åben)"></label>
+        </div>
+      </div>
+      <div class="form-row" style="margin-top:12px">
+        <button class="btn-primary" onclick="saveWifi()">Gem WiFi</button>
+      </div>
+    </div>
+
+    <!-- Modbus Interfaces -->
+    <h2>Modbus Interfaces</h2>
+    <div id="iface-settings-list"></div>
+    <div class="form-row" style="margin-top:12px">
+      <button class="btn-primary" onclick="addInterface()">+ Tilføj interface</button>
+    </div>
+
+    <!-- System -->
+    <h2>System</h2>
+    <div class="card danger-zone">
+      <h3>Farezone</h3>
+      <div class="form-row">
+        <button class="btn-danger" onclick="reboot()">Genstart gateway</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script src="js/page-status.js"></script>
+<script src="js/page-trend.js"></script>
+<script src="js/page-log.js"></script>
+<script src="js/page-settings.js"></script>
+</body>
+</html>

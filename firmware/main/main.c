@@ -4,6 +4,7 @@
 
 #include "config.h"
 #include "ethernet.h"
+#include "wifi_manager.h"
 #include "config_store.h"
 #include "modbus_manager.h"
 #include "server.h"
@@ -26,10 +27,13 @@ void app_main(void)
     ESP_LOGI(TAG, "Ethernet initialised, waiting for IP...");
     ethernet_wait_for_ip(10000);
 
-    // 4. Modbus interfaces init
+    // 4. WiFi init (parallel med ethernet — begge kan køre samtidigt)
+    wifi_manager_init(&cfg.wifi);
+
+    // 5. Modbus interfaces init
     ESP_ERROR_CHECK(modbus_manager_init(&cfg));
 
-    // 5. HTTP/WebSocket server start
+    // 6. HTTP/WebSocket server start
     ESP_ERROR_CHECK(api_server_start());
 
     ESP_LOGI(TAG, "Gateway ready — %d interface(s) active", cfg.interface_count);

@@ -6,6 +6,7 @@
 #include "routes/interfaces.h"
 #include "routes/system.h"
 #include "routes/ota.h"
+#include "routes/wifi.h"
 #include "ws_handler.h"
 #include "esp_log.h"
 
@@ -15,7 +16,7 @@ static httpd_handle_t s_server = NULL;
 esp_err_t api_server_start(void)
 {
     httpd_config_t cfg = HTTPD_DEFAULT_CONFIG();
-    cfg.max_uri_handlers = 24;
+    cfg.max_uri_handlers = 32;
     cfg.uri_match_fn     = httpd_uri_match_wildcard;
 
     ESP_ERROR_CHECK(httpd_start(&s_server, &cfg));
@@ -46,6 +47,11 @@ esp_err_t api_server_start(void)
     httpd_register_uri_handler(s_server, &route_post_ota_firmware);
     httpd_register_uri_handler(s_server, &route_post_ota_frontend);
     httpd_register_uri_handler(s_server, &route_get_ota_status);
+
+    // WiFi routes
+    httpd_register_uri_handler(s_server, &route_get_wifi_status);
+    httpd_register_uri_handler(s_server, &route_put_wifi_config);
+    httpd_register_uri_handler(s_server, &route_get_wifi_scan);
 
     // WebSocket
     httpd_register_uri_handler(s_server, &route_ws);

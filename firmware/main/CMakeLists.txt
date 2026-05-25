@@ -18,8 +18,10 @@ idf_component_register(
         "api/routes/interfaces.c"
         "api/routes/system.c"
         "api/routes/ota.c"
+        "api/routes/wifi.c"
         "api/ws_handler.c"
         "ota/ota_manager.c"
+        "core/wifi_manager.c"
     INCLUDE_DIRS
         "."
         "core"
@@ -39,4 +41,6 @@ idf_component_register(
         esp-tls
         driver
         esp_timer
+        esp_wifi
+        esp_netif
 )

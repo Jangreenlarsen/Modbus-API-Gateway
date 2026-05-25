@@ -37,9 +37,23 @@ typedef struct {
 } eth_config_t;
 
 typedef struct {
-    uint8_t        interface_count;
-    iface_config_t interfaces[GATEWAY_MAX_IFACES];
-    eth_config_t   ethernet;
+    uint8_t enabled;
+    char    ssid[33];       // max 32 tegn + null
+    char    password[65];   // max 64 tegn + null
+    char    ip[16];         // "dhcp" eller statisk IP
+    char    gw[16];
+    char    netmask[16];
+    // AP-fallback — startes hvis STA ikke kan forbinde inden timeout
+    uint8_t ap_fallback;    // 1 = opret hotspot hvis STA fejler
+    char    ap_ssid[33];    // AP navn — default "ModbusGW-XXXXXX"
+    char    ap_password[65];// AP kodeord — min 8 tegn, eller "" for åben
+} wifi_config_gw_t;
+
+typedef struct {
+    uint8_t          interface_count;
+    iface_config_t   interfaces[GATEWAY_MAX_IFACES];
+    eth_config_t     ethernet;
+    wifi_config_gw_t wifi;
 } gateway_config_t;
 
 // Default-værdier
