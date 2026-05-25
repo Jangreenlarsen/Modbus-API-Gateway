@@ -1,0 +1,33 @@
+idf_component_register(
+    SRCS
+        "main.c"
+        "core/config.c"
+        "core/ethernet.c"
+        "modbus/modbus_manager.c"
+        "modbus/interface.c"
+        "storage/config_store.c"
+        "storage/register_cache.c"
+        "service/gateway_service.c"
+        "api/server.c"
+        "api/routes/coils.c"
+        "api/routes/discrete.c"
+        "api/routes/holding_regs.c"
+        "api/routes/input_regs.c"
+        "api/routes/interfaces.c"
+        "api/routes/system.c"
+        "api/ws_handler.c"
+    INCLUDE_DIRS
+        "."
+        "core"
+        "modbus"
+        "storage"
+        "service"
+        "api"
+    REQUIRES
+        esp_http_server
+        esp_eth
+        nvs_flash
+        spiffs
+        json
+        freemodbus
+)

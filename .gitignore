@@ -1,0 +1,19 @@
+# ESP-IDF build output
+firmware/build/
+firmware/managed_components/
+firmware/.cache/
+firmware/dependencies.lock
+firmware/sdkconfig.old
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
