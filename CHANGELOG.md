@@ -4,6 +4,26 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0006] — 2026-05-25 — CLI-værktøj (mbgw)
+
+**Filer tilføjet:**
+- `cli/mbgw.py` — Python CLI med kommandogrupper: config, status, reboot, wifi, iface, read, write, ota
+- `cli/requirements.txt` — click>=8.0, requests>=2.28
+- `cli/setup.py` — installérbar som `mbgw` kommando via `pip install -e .`
+
+**Kommandooversigt:**
+- `mbgw config set host <IP>` — gem standardgateway IP
+- `mbgw status` — version, uptime, heap, IP
+- `mbgw reboot` — genstart gateway
+- `mbgw wifi status/scan/set/disable` — WiFi-konfiguration og scanning
+- `mbgw iface list/show/set` — Modbus interface-konfiguration
+- `mbgw read holding/input/coils/discrete` — FC01–FC04 register-læsning
+- `mbgw write holding/coil/coils` — FC05/FC06/FC0F/FC10 register-skrivning
+- `mbgw ota check/firmware/frontend/status` — OTA opdatering
+- `--json` flag på alle kommandoer for maskingenereret output
+
+---
+
 ## [0.1.0 build 0005] — 2026-05-25 — WiFi STA/AP support + komplet web frontend
 
 **Filer tilføjet:**

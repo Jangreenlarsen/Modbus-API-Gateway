@@ -2,6 +2,51 @@
 
 ---
 
+## v0.1.0 build 0006 — 2026-05-25 — CLI-værktøj (mbgw)
+
+Terminal-CLI til direkte konfiguration og testning af gatewayen — ingen browser nødvendig.
+
+**Installation:**
+```bash
+cd cli
+pip install -r requirements.txt
+# Kør direkte:
+python mbgw.py --help
+# Eller installér globalt som 'mbgw':
+pip install -e .
+```
+
+**Hurtig start:**
+```bash
+# Gem gateway-IP én gang
+mbgw config set host 192.168.1.100
+
+# Tjek system-status
+mbgw status
+
+# Konfigurer WiFi
+mbgw wifi scan
+mbgw wifi set --ssid MitNetværk --password hemmeligt
+
+# Læs 10 holding registers fra slave 1
+mbgw read holding 0 1 0 10
+
+# Skriv værdi 1234 til register 100
+mbgw write holding 0 1 100 1234
+
+# Tjek og opdater firmware
+mbgw ota check
+mbgw ota firmware
+```
+
+**JSON-output til scripting:**
+```bash
+mbgw --json status | python -c "import json,sys; d=json.load(sys.stdin); print(d['ip'])"
+mbgw --json read holding 0 1 0 5 | jq '.registers[]'
+```
+
+---
+
 ## v0.1.0 build 0005 — 2026-05-25 — WiFi STA/AP support + komplet web frontend
 
 Gatewayen har nu fuldt WiFi-understøttelse og en komplet web-brugergrænseflade tilgængelig direkte fra browseren.

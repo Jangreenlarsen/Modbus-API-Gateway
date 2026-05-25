@@ -16,4 +16,5 @@ Status: `planned` | `in-progress` | `done`
 - [ ] planned — Multi-interface support (UART1 + UART2)
 - [ ] planned — SPIFFS-baseret data-backup (seneste kendte værdier ved strømfald)
 - [x] done    — OTA firmware- og frontend-opdatering fra GitHub releases (REST API)
+- [x] done    — CLI-værktøj (mbgw) til konfiguration og testning fra terminal (WiFi, interfaces, Modbus R/W, OTA)
 - [ ] planned — Alarm/threshold-logik med notifikation via WebSocket
