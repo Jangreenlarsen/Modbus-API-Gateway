@@ -5,6 +5,8 @@ idf_component_register(
         "core/ethernet.c"
         "modbus/modbus_manager.c"
         "modbus/interface.c"
+        "modbus/sw_uart.c"
+        "modbus/mb_rtu_sw.c"
         "storage/config_store.c"
         "storage/register_cache.c"
         "service/gateway_service.c"
@@ -35,4 +37,6 @@ idf_component_register(
         json
         freemodbus
         esp-tls
+        driver
+        esp_timer
 )

@@ -1,13 +1,19 @@
 #pragma once
 #include "config.h"
 #include "modbus_manager.h"
+#include "sw_uart.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
 typedef struct {
-    iface_config_t  cfg;
-    SemaphoreHandle_t mutex;    // én transaktion ad gangen pr. interface
-    void            *mb_handle; // esp-modbus port handle
+    iface_config_t    cfg;
+    SemaphoreHandle_t mutex;      // én transaktion ad gangen pr. interface
+
+    // HW UART: esp-modbus handle
+    void             *mb_handle;
+
+    // SW UART: custom Modbus RTU over bit-bang
+    sw_uart_t        *sw_uart;
 } mb_interface_t;
 
 esp_err_t   mb_interface_init(mb_interface_t *iface, const iface_config_t *cfg);

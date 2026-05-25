@@ -4,6 +4,20 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0004] — 2026-05-25 — Software UART til ekstra RS485/RS232 interfaces
+
+**Filer tilføjet:**
+- `firmware/main/modbus/sw_uart.h/.c` — GPIO bit-bang UART driver styret af gptimer (max 9600 baud). TX via ISR, RX via GPIO edge-interrupt + gptimer sampling i midten af bit-vinduer. Fuld RS485 DE/RE-styring.
+- `firmware/main/modbus/mb_rtu_sw.h/.c` — Modbus RTU framing over SW-UART: CRC-16/IBM beregning, frame-opbygning, silence-detektion (4 ms), FC01–FC10 implementering med FreeRTOS queue-baseret RX.
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — tilføjet `iface_uart_mode_t` (HW/SW), `GATEWAY_MAX_IFACES` hævet til 8
+- `firmware/main/modbus/interface.h` — tilføjet `sw_uart` felt i `mb_interface_t`
+- `firmware/main/modbus/interface.c` — komplet omskrevet med HW/SW branching for alle FC01–FC10
+- `firmware/main/modbus/sw_uart.h/.c` — tilføjet `sw_uart_set_userdata()`/`sw_uart_get_userdata()`
+- `firmware/main/CMakeLists.txt` — tilføjet sw_uart.c, mb_rtu_sw.c, driver og esp_timer
+- `ESP32_REFERENCE.md` — SW-UART sektion med konfigurationseksempel og GPIO-overblik
+
 ## [0.1.0 build 0003] — 2026-05-25 — OTA opdatering fra GitHub releases
 
 **Filer tilføjet:**

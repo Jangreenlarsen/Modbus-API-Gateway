@@ -10,13 +10,66 @@ Modbus-bibliotek: esp-modbus v1.x
 
 ESP32 har **3 hardware-UARTs**: UART0, UART1, UART2.
 
-| UART  | Default GPIO      | Anbefalet brug              |
-|-------|-------------------|-----------------------------|
-| UART0 | TX=1, RX=3        | Debug/monitor (reservér)    |
-| UART1 | TX=10, RX=9       | RS485 interface 0           |
-| UART2 | TX=17, RX=16      | RS485 interface 1           |
+| UART  | Default GPIO      | Anbefalet brug                        |
+|-------|-------------------|---------------------------------------|
+| UART0 | TX=1, RX=3        | Debug/monitor (reservér)              |
+| UART1 | TX=10, RX=9       | HW RS485/RS232 interface 0 (≤115200)  |
+| UART2 | TX=17, RX=16      | HW RS485/RS232 interface 1 (≤115200)  |
 
 > Alle UART-pins kan remappes til næsten alle GPIO via GPIO Matrix.
+
+---
+
+## Software UART (SW-UART) — ekstra interfaces ved ≤9600 baud
+
+Når der kræves mere end 2 RS485/RS232 interfaces, kan yderligere interfaces
+implementeres som **software UART** via GPIO bit-bang styret af `gptimer`.
+
+**Forudsætning**: baudrate ≤ 9600 (bit-periode = 104 µs — komfortabelt for ESP32 ved 240 MHz)
+
+| Parameter         | Værdi                                         |
+|-------------------|-----------------------------------------------|
+| Max baudrate      | 9600 bps                                      |
+| Bit-timing        | gptimer, 1 µs opløsning                       |
+| TX                | gptimer ISR skifter bits ud på GPIO           |
+| RX start-bit      | GPIO falling-edge interrupt                   |
+| RX data-bits      | gptimer sampler i midten af hvert bit-vindue  |
+| DE/RE styring     | GPIO sat høj/lav i TX/RX ISR                 |
+| Max antal SW-UART | Begrænset af GPIO-count: 3 pins pr. interface (TX+RX+DE) |
+
+**Typisk antal interfaces pr. ESP32:**
+
+```
+UART0  → debug (reserveret)
+UART1  → HW RS485 #0 (op til 115200 baud)
+UART2  → HW RS485 #1 (op til 115200 baud)
+SW #0  → GPIO 25/26/27  (max 9600 baud)
+SW #1  → GPIO 32/33/34  (max 9600 baud)
+SW #2  → GPIO 18/19/21  (max 9600 baud)
+...
+```
+
+**Konfiguration i gateway_config_t:**
+```c
+// Software UART interface — tilføj til interfaces[]
+iface_config_t sw_iface = {
+    .id        = 2,
+    .type      = IFACE_TYPE_RS485,
+    .uart_mode = IFACE_UART_SW,      // <-- SW mode
+    .uart_num  = 0,                  // ignoreret for SW
+    .baudrate  = 9600,
+    .timeout_ms= 500,
+    .tx_pin    = 25,
+    .rx_pin    = 26,
+    .rts_pin   = 27,                 // DE/RE pin
+    .enabled   = 1,
+};
+```
+
+**Implementering**: `firmware/main/modbus/sw_uart.c` + `mb_rtu_sw.c`
+- `sw_uart`: GPIO bit-bang UART driver med gptimer
+- `mb_rtu_sw`: Modbus RTU framing (CRC-16, FC01–FC10) over SW-UART
+- `interface.c`: transparent routing HW ↔ SW baseret på `uart_mode`
 
 ### Konfiguration (ESP-IDF)
 ```c
