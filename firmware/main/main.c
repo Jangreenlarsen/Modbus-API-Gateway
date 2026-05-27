@@ -26,10 +26,12 @@ void app_main(void)
     // 3. Serial CLI — startes tidligt så IP kan konfigureres uden netværk
     serial_cli_start(&cfg);
 
-    // 4. Ethernet init
-    ESP_ERROR_CHECK(ethernet_init(&cfg.ethernet));
-    ESP_LOGI(TAG, "Ethernet initialised, waiting for IP...");
-    ethernet_wait_for_ip(10000);
+    // 4. Ethernet init — fejl er ikke fatal (PHY måske ikke tilsluttet)
+    esp_err_t eth_err = ethernet_init(&cfg.ethernet);
+    if (eth_err != ESP_OK) {
+        ESP_LOGW(TAG, "Ethernet ikke tilgængeligt — kører kun WiFi");
+    }
+    ethernet_wait_for_ip(5000); // returnerer straks hvis Ethernet fejlede
 
     // 5. WiFi init (parallel med ethernet — begge kan køre samtidigt)
     wifi_manager_init(&cfg.wifi);

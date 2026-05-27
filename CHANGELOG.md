@@ -4,6 +4,18 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0013] — 2026-05-27 — fix: Ethernet PHY-fejl ikke-fatal + version/build i boot display
+
+**Filer ændret:**
+- `firmware/main/core/ethernet.c` — `esp_eth_driver_install` er nu ikke-fatal; ved PHY-fejl logges advarsel og gateway kører videre på WiFi; tilføjet `s_eth_available` flag; `ethernet_wait_for_ip` returnerer straks hvis Ethernet fejlede
+- `firmware/main/main.c` — `ESP_ERROR_CHECK(ethernet_init(...))` erstattet med graceful fejlhåndtering
+- `firmware/main/core/config.h` — tilføjet `GATEWAY_BUILD "0013"` define
+- `firmware/main/core/serial_cli.c` — boot display og `status`-kommando viser nu `v0.1.0 b0013`; `status` viser "ikke tilgængeligt" for Ethernet hvis ingen IP
+
+**Resultat:** Gateway booter og er fuldt funktionel uden Ethernet PHY tilsluttet.
+
+---
+
 ## [0.1.0 build 0012] — 2026-05-27 — Build-tid optimeret (Bluetooth + mbedTLS + IPv6 deaktiveret)
 
 **Filer ændret:**
