@@ -56,6 +56,9 @@ typedef struct {
     wifi_config_gw_t wifi;
 } gateway_config_t;
 
+// Default-konfiguration
+void config_set_defaults(gateway_config_t *cfg);
+
 // Default-værdier
 #define DEFAULT_BAUDRATE    9600
 #define DEFAULT_TIMEOUT_MS  500

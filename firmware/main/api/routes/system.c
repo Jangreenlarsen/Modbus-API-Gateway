@@ -2,6 +2,7 @@
 #include "config.h"
 #include "ethernet.h"
 #include "esp_system.h"
+#include "esp_timer.h"
 #include "esp_heap_caps.h"
 #include "cJSON.h"
 #include <stdlib.h>

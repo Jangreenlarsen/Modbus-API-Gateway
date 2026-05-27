@@ -2,6 +2,8 @@
 #include <string.h>
 #include "esp_log.h"
 #include "esp_eth.h"
+#include "esp_eth_mac_esp.h"
+#include "esp_eth_phy.h"
 #include "esp_event.h"
 #include "esp_netif.h"
 #include "freertos/FreeRTOS.h"
@@ -30,11 +32,12 @@ esp_err_t ethernet_init(const eth_config_t *cfg)
     esp_netif_t *eth_netif = esp_netif_new(&netif_cfg);
 
     // LAN8720 via RMII — tilpas pins til din hardware
-    eth_mac_config_t mac_cfg = ETH_MAC_DEFAULT_CONFIG();
-    eth_phy_config_t phy_cfg = ETH_PHY_DEFAULT_CONFIG();
+    eth_esp32_emac_config_t emac_cfg = ETH_ESP32_EMAC_DEFAULT_CONFIG();
+    eth_mac_config_t        mac_cfg  = ETH_MAC_DEFAULT_CONFIG();
+    eth_phy_config_t        phy_cfg  = ETH_PHY_DEFAULT_CONFIG();
     phy_cfg.phy_addr = 0;
 
-    esp_eth_mac_t *mac = esp_eth_mac_new_esp32(&mac_cfg);
+    esp_eth_mac_t *mac = esp_eth_mac_new_esp32(&emac_cfg, &mac_cfg);
     esp_eth_phy_t *phy = esp_eth_phy_new_lan87xx(&phy_cfg);
 
     esp_eth_config_t eth_cfg = ETH_DEFAULT_CONFIG(mac, phy);

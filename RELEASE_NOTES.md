@@ -2,6 +2,12 @@
 
 ---
 
+## v0.1.0 build 0009 — 2026-05-27 — Kompilerer rent med PlatformIO
+
+Alle kompileringsfejl under ESP-IDF v5.5 + PlatformIO er rettet. `pio run` giver nu `[SUCCESS]`.
+
+---
+
 ## v0.1.0 build 0008 — 2026-05-27 — PlatformIO support
 
 Projektet bygger nu med PlatformIO IDE i VS Code.

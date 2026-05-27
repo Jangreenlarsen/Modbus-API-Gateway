@@ -2,9 +2,20 @@
 #include "mb_rtu_sw.h"
 #include "esp_log.h"
 #include "driver/uart.h"
-#include "mbcontroller.h"
+#include "esp_modbus_common.h"
+#include "esp_modbus_master.h"
 #include "freertos/queue.h"
 #include <string.h>
+
+// Modbus function codes — mb_functioncode_t er ikke eksporteret i esp-modbus v1.x
+#define MB_FUNC_READ_COILS                0x01
+#define MB_FUNC_READ_DISCRETE_INPUTS      0x02
+#define MB_FUNC_READ_HOLDING_REGISTER     0x03
+#define MB_FUNC_READ_INPUT_REGISTER       0x04
+#define MB_FUNC_WRITE_SINGLE_COIL         0x05
+#define MB_FUNC_WRITE_REGISTER            0x06
+#define MB_FUNC_WRITE_MULTIPLE_COILS      0x0F
+#define MB_FUNC_WRITE_MULTIPLE_REGISTERS  0x10
 
 static const char *TAG = "mb_iface";
 

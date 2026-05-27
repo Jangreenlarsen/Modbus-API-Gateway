@@ -4,6 +4,19 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0009] — 2026-05-27 — Kompileringsfejl rettet (ESP-IDF v5.5 + PlatformIO)
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — tilføjet `config_set_defaults()` prototype (implicit declaration fejl)
+- `firmware/main/core/ethernet.c` — ESP-IDF v5.x API: `eth_esp32_emac_config_t` + `ETH_ESP32_EMAC_DEFAULT_CONFIG()`, tilføjet `esp_eth_mac_esp.h` + `esp_eth_phy.h` includes
+- `firmware/main/modbus/interface.c` — `mbcontroller.h` → `esp_modbus_common.h` + `esp_modbus_master.h`; tilføjet lokale `MB_FUNC_*` defines (esp-modbus v1.x eksporterer ikke `mb_functioncode_t`)
+- `firmware/main/api/routes/system.c` — tilføjet `#include "esp_timer.h"` (implicit declaration af `esp_timer_get_time`)
+- `firmware/main/core/wifi_manager.c` — `lwip/inet.h` → `lwip/ip4_addr.h`; `inet_pton`/`AF_INET` → `ip4addr_aton` (lwIP native API)
+
+**Resultat:** `[SUCCESS]` — rent build uden fejl.
+
+---
+
 ## [0.1.0 build 0008] — 2026-05-27 — PlatformIO support
 
 **Filer tilføjet:**
