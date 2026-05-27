@@ -3,6 +3,7 @@ idf_component_register(
         "main.c"
         "core/config.c"
         "core/ethernet.c"
+        "core/serial_cli.c"
         "modbus/modbus_manager.c"
         "modbus/interface.c"
         "modbus/sw_uart.c"
@@ -43,4 +44,5 @@ idf_component_register(
         esp_timer
         esp_wifi
         esp_netif
+        console
 )
