@@ -56,15 +56,15 @@ static int cmd_show(int argc, char **argv)
 
 static int cmd_status(int argc, char **argv)
 {
-    char ip[16];
-    ethernet_get_ip(ip, sizeof(ip));
+    char eth_ip[16];
+    ethernet_get_ip(eth_ip, sizeof(eth_ip));
     uint64_t uptime_s = (uint64_t)(esp_timer_get_time() / 1000000ULL);
     uint32_t heap_kb  = esp_get_free_heap_size() / 1024;
 
     sep();
-    printf("Version : %s\r\n", GATEWAY_VERSION);
+    printf("Version : v%s b%s\r\n", GATEWAY_VERSION, GATEWAY_BUILD);
     printf("Uptime  : %llu s\r\n", uptime_s);
-    printf("Eth IP  : %s\r\n", ip);
+    printf("Eth IP  : %s\r\n", strcmp(eth_ip, "0.0.0.0") == 0 ? "ikke tilgængeligt" : eth_ip);
     printf("Heap    : %lu KB fri\r\n", (unsigned long)heap_kb);
     sep();
     return 0;
@@ -182,7 +182,7 @@ static void cli_task(void *arg)
 {
     printf("\r\n");
     printf("================================\r\n");
-    printf(" Modbus API Gateway %s\r\n", GATEWAY_VERSION);
+    printf(" Modbus API Gateway v%s b%s\r\n", GATEWAY_VERSION, GATEWAY_BUILD);
     printf(" Serial CLI -- skriv 'help'\r\n");
     printf("================================\r\n\r\n");
 

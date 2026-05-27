@@ -2,6 +2,14 @@
 
 ---
 
+## v0.1.0 build 0013 — 2026-05-27 — Boot uden Ethernet + version i CLI
+
+Gateway booter nu stabilt selv uden Ethernet PHY tilsluttet. Ved manglende PHY logges en advarsel og systemet kører videre på WiFi alene — ingen reboot-loop.
+
+Serial CLI boot-display og `status`-kommando viser nu fuld version: `v0.1.0 b0013`.
+
+---
+
 ## v0.1.0 build 0012 — 2026-05-27 — Hurtigere build
 
 Bluetooth, TLS-server og IPv6 er nu deaktiveret i `sdkconfig.defaults`. Build-tid falder fra over 5 minutter til ~4.3 minutter. Flash-footprint reduceret.

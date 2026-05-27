@@ -13,6 +13,7 @@ static const char *TAG = "ethernet";
 static EventGroupHandle_t s_eth_event_group;
 #define ETH_CONNECTED_BIT BIT0
 static char s_ip[16] = "0.0.0.0";
+static bool s_eth_available = false;
 
 static void on_got_ip(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
@@ -31,7 +32,6 @@ esp_err_t ethernet_init(const eth_config_t *cfg)
     esp_netif_config_t netif_cfg = ESP_NETIF_DEFAULT_ETH();
     esp_netif_t *eth_netif = esp_netif_new(&netif_cfg);
 
-    // LAN8720 via RMII — tilpas pins til din hardware
     eth_esp32_emac_config_t emac_cfg = ETH_ESP32_EMAC_DEFAULT_CONFIG();
     eth_mac_config_t        mac_cfg  = ETH_MAC_DEFAULT_CONFIG();
     eth_phy_config_t        phy_cfg  = ETH_PHY_DEFAULT_CONFIG();
@@ -42,16 +42,27 @@ esp_err_t ethernet_init(const eth_config_t *cfg)
 
     esp_eth_config_t eth_cfg = ETH_DEFAULT_CONFIG(mac, phy);
     esp_eth_handle_t eth_handle;
-    ESP_ERROR_CHECK(esp_eth_driver_install(&eth_cfg, &eth_handle));
+    esp_err_t ret = esp_eth_driver_install(&eth_cfg, &eth_handle);
+    if (ret != ESP_OK) {
+        ESP_LOGW(TAG, "Ethernet PHY init fejlede (%s) — kører videre uden Ethernet",
+                 esp_err_to_name(ret));
+        mac->del(mac);
+        phy->del(phy);
+        (void)eth_netif;
+        return ret;
+    }
+
     ESP_ERROR_CHECK(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle)));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, on_got_ip, NULL));
     ESP_ERROR_CHECK(esp_eth_start(eth_handle));
 
+    s_eth_available = true;
     return ESP_OK;
 }
 
 void ethernet_wait_for_ip(uint32_t timeout_ms)
 {
+    if (!s_eth_available) return;
     xEventGroupWaitBits(s_eth_event_group, ETH_CONNECTED_BIT, false, true,
                         pdMS_TO_TICKS(timeout_ms));
 }
