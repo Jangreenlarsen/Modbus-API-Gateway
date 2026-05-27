@@ -4,6 +4,19 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0014] — 2026-05-27 — fix: Serial CLI "gw>" prompt spam
+
+**Rod-årsag:** `esp_console_init()` installerer IKKE UART-driveren i ESP-IDF v5.x. stdin kørte i polling-mode: `read()` returnerede 0 bytes straks → `linenoiseDumb()` returnerede tom streng `""` → ingen delay i cli_task → tight loop med hundredvis af "gw>" prompts/sek.
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — erstattet `esp_console_init()` + custom `cli_task` med `esp_console_new_repl_uart()` + `esp_console_start_repl()`. Den nye API installerer UART-driveren og konfigurerer VFS til blokerende læsning. Ingen custom task mere.
+- `firmware/main/core/config.h` — GATEWAY_BUILD "0014"
+- `version.json` — build 0014
+
+**Resultat:** CLI blokerer korrekt på brugerinput, ingen prompt-spam.
+
+---
+
 ## [0.1.0 build 0013] — 2026-05-27 — fix: Ethernet PHY-fejl ikke-fatal + version/build i boot display
 
 **Filer ændret:**
