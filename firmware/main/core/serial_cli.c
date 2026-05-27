@@ -217,7 +217,7 @@ esp_err_t serial_cli_start(gateway_config_t *cfg)
     console_cfg.max_cmdline_args     = 8;
     ESP_ERROR_CHECK(esp_console_init(&console_cfg));
 
-    linenoiseSetMultiLine(1);
+    linenoiseSetDumbMode(1);      // Deaktivér ANSI terminal-probing — kræves af PlatformIO monitor
     linenoiseHistorySetMaxLen(20);
     esp_console_register_help_command();
 
