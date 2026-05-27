@@ -4,6 +4,15 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0012] — 2026-05-27 — Build-tid optimeret (Bluetooth + mbedTLS + IPv6 deaktiveret)
+
+**Filer ændret:**
+- `sdkconfig.defaults` — deaktiveret: Bluetooth/BLE (`CONFIG_BT_ENABLED=n`), TLS-server (`CONFIG_MBEDTLS_TLS_SERVER=n`), IPv6 (`CONFIG_LWIP_IPV6=n`), ubrugte mbedTLS cipher suites; tilføjet `CONFIG_COMPILER_OPTIMIZATION_SIZE=y`
+
+**Resultat:** Build-tid reduceret fra ~5+ min til ~4.3 min. Flash-forbrug: 77.2% (1213 KB / 1536 KB).
+
+---
+
 ## [0.1.0 build 0009] — 2026-05-27 — Kompileringsfejl rettet (ESP-IDF v5.5 + PlatformIO)
 
 **Filer ændret:**

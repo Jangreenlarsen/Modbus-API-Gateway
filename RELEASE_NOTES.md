@@ -2,6 +2,12 @@
 
 ---
 
+## v0.1.0 build 0012 — 2026-05-27 — Hurtigere build
+
+Bluetooth, TLS-server og IPv6 er nu deaktiveret i `sdkconfig.defaults`. Build-tid falder fra over 5 minutter til ~4.3 minutter. Flash-footprint reduceret.
+
+---
+
 ## v0.1.0 build 0009 — 2026-05-27 — Kompilerer rent med PlatformIO
 
 Alle kompileringsfejl under ESP-IDF v5.5 + PlatformIO er rettet. `pio run` giver nu `[SUCCESS]`.

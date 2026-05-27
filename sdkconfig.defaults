@@ -51,3 +51,28 @@ CONFIG_ESP_CONSOLE_UART_BAUDRATE=115200
 
 # ── Task watchdog ────────────────────────────────────────────────────────────
 CONFIG_ESP_TASK_WDT_TIMEOUT_S=30
+
+# ── Bluetooth — DEAKTIVERET (ikke brugt, største enkelt-besparelse) ──────────
+CONFIG_BT_ENABLED=n
+CONFIG_BLUEDROID_ENABLED=n
+CONFIG_NIMBLE_ENABLED=n
+
+# ── mbedTLS — kun TLS-klient behøves (OTA fra GitHub HTTPS) ─────────────────
+CONFIG_MBEDTLS_TLS_SERVER=n
+CONFIG_MBEDTLS_ECP_DP_BP256R1_ENABLED=n
+CONFIG_MBEDTLS_ECP_DP_BP384R1_ENABLED=n
+CONFIG_MBEDTLS_ECP_DP_BP512R1_ENABLED=n
+CONFIG_MBEDTLS_ECP_DP_CURVE25519_ENABLED=n
+CONFIG_MBEDTLS_RIPEMD160_C=n
+CONFIG_MBEDTLS_BLOWFISH_C=n
+CONFIG_MBEDTLS_XTEA_C=n
+CONFIG_MBEDTLS_CAMELLIA_C=n
+CONFIG_MBEDTLS_3DES_C=n
+CONFIG_MBEDTLS_RC4_DISABLED=y
+
+# ── lwIP — trim ubrugte protokoller ─────────────────────────────────────────
+CONFIG_LWIP_IPV6=n
+CONFIG_LWIP_PPP_SUPPORT=n
+
+# ── Compiler optimering — størrelse ──────────────────────────────────────────
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y
