@@ -1,0 +1,5 @@
+dependencies:
+  # esp-modbus erstatter freemodbus i ESP-IDF v5.x
+  espressif/esp-modbus: "^1.0"
+  idf:
+    version: ">=5.0.0"

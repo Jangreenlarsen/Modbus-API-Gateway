@@ -37,7 +37,7 @@ idf_component_register(
         nvs_flash
         spiffs
         json
-        freemodbus
+        esp-modbus
         esp-tls
         driver
         esp_timer

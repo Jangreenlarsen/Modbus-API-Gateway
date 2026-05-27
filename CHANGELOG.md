@@ -4,6 +4,26 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0008] — 2026-05-27 — PlatformIO support
+
+**Filer tilføjet:**
+- `platformio.ini` — PlatformIO konfiguration: ESP32, ESP-IDF framework, custom partitions, SPIFFS upload
+- `sdkconfig.defaults` — ESP-IDF Kconfig defaults (HTTP WS, TLS bundle, Ethernet RMII, WiFi, logging)
+- `firmware/main/idf_component.yml` — komponent-afhængighed: `espressif/esp-modbus ^1.0` (erstatter `freemodbus`)
+- `firmware/main/storage/register_cache.h/.c` — stub til register-cache (var i CMakeLists.txt men manglede)
+- `firmware/main/service/gateway_service.h/.c` — stub til service-lag (var i CMakeLists.txt men manglede)
+
+**Filer ændret:**
+- `firmware/main/CMakeLists.txt` — `freemodbus` → `esp-modbus` (ESP-IDF v5.x navngivning)
+
+**PlatformIO workflow:**
+- `pio run` — byg firmware
+- `pio run -t upload` — flash firmware
+- `pio run -t uploadfs` — upload frontend (SPIFFS)
+- `pio device monitor` — serial monitor
+
+---
+
 ## [0.1.0 build 0007] — 2026-05-25 — Fix: WiFi statisk IP ignoreret
 
 **Bug fix:**

@@ -2,6 +2,33 @@
 
 ---
 
+## v0.1.0 build 0008 — 2026-05-27 — PlatformIO support
+
+Projektet bygger nu med PlatformIO IDE i VS Code.
+
+**Kom i gang:**
+```bash
+# Installer PlatformIO IDE extension i VS Code
+# Åbn projektet — PlatformIO genkender automatisk platformio.ini
+
+# Byg
+pio run
+
+# Flash firmware
+pio run -t upload
+
+# Upload web frontend til SPIFFS
+pio run -t uploadfs
+
+# Serial monitor (Ctrl+C for at afslutte)
+pio device monitor
+```
+
+**Første gang:**
+PlatformIO downloader automatisk ESP-IDF toolchain og `espressif/esp-modbus` komponenten. Det tager nogle minutter første gang.
+
+---
+
 ## v0.1.0 build 0007 — 2026-05-25 — Fix: WiFi statisk IP
 
 WiFi statisk IP-konfiguration virkede ikke — gatewayen brugte altid DHCP uanset hvad der var konfigureret. Rettet nu.
