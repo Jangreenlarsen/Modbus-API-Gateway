@@ -2,6 +2,14 @@
 
 ---
 
+## v0.1.0 build 0017 — 2026-05-28 — Stabil boot + Modbus starter korrekt
+
+Gateway booter nu stabilt og Modbus RS485 starter korrekt ved hvert boot — også efter save+reboot. Rod-årsag til boot-loop var en ugyldig `uart_num=-1` i NVS-config fra en tidligere build. Ny `config_sanitize()` retter automatisk ugyldige værdier ved load. `mb_interface_init` er nu fuldt non-fatal — ingen `ESP_ERROR_CHECK` der kan forårsage panic.
+
+CLI testet og verificeret: `help`, `status`, `show`, `eth`, `wifi`, `save`, `reboot` — alle fungerer korrekt.
+
+---
+
 ## v0.1.0 build 0015 — 2026-05-28 — Stabil boot efter save+reboot
 
 Gateway booter nu stabilt selv efter save+reboot. Alle tidligere årsager til boot-loop er rettet: NVS-fejl håndteres gracefully, Modbus/API init-fejl forårsager ikke længere panic, og UART RS485-mode sættes i korrekt rækkefølge.

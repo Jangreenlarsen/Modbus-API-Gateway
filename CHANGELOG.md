@@ -4,6 +4,32 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0017] — 2026-05-28 — fix: config sanitization + Modbus init non-fatal
+
+**Filer ændret:**
+- `firmware/main/core/config.c` — tilføjet `config_sanitize()`: retter ugyldige uart_num-værdier (< 0 eller > 2) til 1 ved NVS-load; retter baudrate=0 og timeout_ms=0
+- `firmware/main/core/config.h` — tilføjet `config_sanitize()` prototype; GATEWAY_BUILD "0017"
+- `firmware/main/storage/config_store.c` — kalder `config_sanitize(cfg)` efter succesfuld NVS-load; fjernet separat interface_count-check (håndteres nu i config_sanitize)
+- `firmware/main/modbus/interface.c` — alle 3 `ESP_ERROR_CHECK(mbc_master_*)` erstattet med proper error returns; uart_num-validering før brug; mbc_master_destroy() ved cleanup efter fejl
+- `version.json` — build 0017
+
+**Resultat:** Gateway booter stabilt efter save+reboot. Modbus UART1 initialiseres korrekt. Ingen panic ved invalid NVS-data.
+
+---
+
+## [0.1.0 build 0016] — 2026-05-28 — fix: mb_interface_init non-fatal + COM8 port
+
+**Filer ændret:**
+- `firmware/main/modbus/interface.c` — alle `ESP_ERROR_CHECK(mbc_master_init/setup/start)` erstattet med error-returns; uart_num valideres mod UART_NUM_MAX; mbc_master_destroy() cleanup ved fejl
+- `firmware/main/storage/config_store.c` — `ESP_ERROR_CHECK(nvs_open)` erstattet med graceful fallback til defaults; interface_count bounds check
+- `firmware/main/core/config.h` — GATEWAY_BUILD "0016"
+- `platformio.ini` — upload_port og monitor_port sat til COM8
+- `version.json` — build 0016
+
+**Resultat:** Boot-loop fjernet (ingen panic). Gateway kører videre selv med ugyldig NVS-config.
+
+---
+
 ## [0.1.0 build 0015] — 2026-05-28 — fix: boot-loop efter save+reboot
 
 **Filer ændret:**

@@ -2,7 +2,7 @@
 #include <stdint.h>
 
 #define GATEWAY_VERSION     "0.1.0"
-#define GATEWAY_BUILD       "0015"
+#define GATEWAY_BUILD       "0017"
 #define GATEWAY_MAX_IFACES  8       // 2 HW UART + op til 6 SW UART
 
 typedef enum {
@@ -59,6 +59,9 @@ typedef struct {
 
 // Default-konfiguration
 void config_set_defaults(gateway_config_t *cfg);
+
+// Sanitér loaded config — ret ugyldige felter til safe defaults
+void config_sanitize(gateway_config_t *cfg);
 
 // Default-værdier
 #define DEFAULT_BAUDRATE    9600
