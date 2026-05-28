@@ -176,65 +176,48 @@ static int cmd_reboot(int argc, char **argv)
     return 0;
 }
 
-// ── REPL task ─────────────────────────────────────────────────────────────────
-
-static void cli_task(void *arg)
-{
-    printf("\r\n");
-    printf("================================\r\n");
-    printf(" Modbus API Gateway v%s b%s\r\n", GATEWAY_VERSION, GATEWAY_BUILD);
-    printf(" Serial CLI -- skriv 'help'\r\n");
-    printf("================================\r\n\r\n");
-
-    while (1) {
-        char *line = linenoise("gw> ");
-        if (line == NULL) {
-            vTaskDelay(pdMS_TO_TICKS(10));
-            continue;
-        }
-        if (strlen(line) > 0) {
-            linenoiseHistoryAdd(line);
-            int cmd_ret;
-            esp_err_t err = esp_console_run(line, &cmd_ret);
-            if (err == ESP_ERR_NOT_FOUND) {
-                printf("Ukendt kommando: '%s' -- prøv 'help'\r\n", line);
-            } else if (err != ESP_OK) {
-                printf("Fejl: %s\r\n", esp_err_to_name(err));
-            }
-        }
-        linenoiseFree(line);
-    }
-}
-
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 esp_err_t serial_cli_start(gateway_config_t *cfg)
 {
     s_cfg = cfg;
 
-    esp_console_config_t console_cfg = ESP_CONSOLE_CONFIG_DEFAULT();
-    console_cfg.max_cmdline_length   = 256;
-    console_cfg.max_cmdline_args     = 8;
-    ESP_ERROR_CHECK(esp_console_init(&console_cfg));
+    // esp_console_new_repl_uart installs UART driver + configures VFS for
+    // blocking reads — the old esp_console_init() did NOT do this, causing
+    // linenoise to spin in a tight loop returning empty strings.
+    esp_console_repl_t *repl = NULL;
+    esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
+    repl_config.prompt             = "gw>";
+    repl_config.max_cmdline_length = 256;
+    repl_config.task_stack_size    = 5120;
+    repl_config.task_priority      = 3;
+    repl_config.max_history_len    = 20;
 
-    linenoiseSetDumbMode(1);      // Deaktivér ANSI terminal-probing — kræves af PlatformIO monitor
-    linenoiseHistorySetMaxLen(20);
+    esp_console_dev_uart_config_t uart_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_console_new_repl_uart(&uart_config, &repl_config, &repl));
+
+    linenoiseSetDumbMode(1);  // Deaktivér ANSI terminal-probing (ESC[6n spam)
     esp_console_register_help_command();
 
     static const esp_console_cmd_t cmds[] = {
-        { .command = "show",   .help = "Vis al konfiguration",                           .hint = NULL, .func = cmd_show,   .argtable = NULL },
-        { .command = "status", .help = "System status: IP, uptime, heap",                .hint = NULL, .func = cmd_status, .argtable = NULL },
-        { .command = "eth",    .help = "Ethernet IP  (eth dhcp | eth <ip> <gw> <mask>)", .hint = NULL, .func = cmd_eth,    .argtable = NULL },
-        { .command = "wifi",   .help = "WiFi config  (wifi on/off/ssid/pass/ip/ap)",     .hint = NULL, .func = cmd_wifi,   .argtable = NULL },
-        { .command = "save",   .help = "Gem konfiguration til NVS",                      .hint = NULL, .func = cmd_save,   .argtable = NULL },
-        { .command = "reboot", .help = "Genstart gateway",                               .hint = NULL, .func = cmd_reboot, .argtable = NULL },
+        { .command = "show",   .help = "Vis al konfiguration",                           .hint = NULL, .func = cmd_show,        .argtable = NULL },
+        { .command = "status", .help = "System status: version, IP, uptime, heap",       .hint = NULL, .func = cmd_status,      .argtable = NULL },
+        { .command = "eth",    .help = "Ethernet IP  (eth dhcp | eth <ip> <gw> <mask>)", .hint = NULL, .func = cmd_eth,         .argtable = NULL },
+        { .command = "wifi",   .help = "WiFi config  (wifi on/off/ssid/pass/ip/ap)",     .hint = NULL, .func = cmd_wifi,        .argtable = NULL },
+        { .command = "save",   .help = "Gem konfiguration til NVS",                      .hint = NULL, .func = cmd_save,        .argtable = NULL },
+        { .command = "reboot", .help = "Genstart gateway",                               .hint = NULL, .func = cmd_reboot,      .argtable = NULL },
     };
 
     for (size_t i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {
         ESP_ERROR_CHECK(esp_console_cmd_register(&cmds[i]));
     }
 
-    xTaskCreate(cli_task, "serial_cli", 5120, NULL, 3, NULL);
+    printf("\r\n================================\r\n");
+    printf(" Modbus API Gateway v%s b%s\r\n", GATEWAY_VERSION, GATEWAY_BUILD);
+    printf(" Serial CLI -- skriv 'help'\r\n");
+    printf("================================\r\n\r\n");
+
+    ESP_ERROR_CHECK(esp_console_start_repl(repl));
     ESP_LOGI(TAG, "Serial CLI klar pa UART0 (115200 8N1)");
     return ESP_OK;
 }

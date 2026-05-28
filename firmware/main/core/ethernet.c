@@ -27,7 +27,10 @@ esp_err_t ethernet_init(const eth_config_t *cfg)
 {
     s_eth_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    esp_err_t evloop_err = esp_event_loop_create_default();
+    if (evloop_err != ESP_OK && evloop_err != ESP_ERR_INVALID_STATE) {
+        return evloop_err;
+    }
 
     esp_netif_config_t netif_cfg = ESP_NETIF_DEFAULT_ETH();
     esp_netif_t *eth_netif = esp_netif_new(&netif_cfg);

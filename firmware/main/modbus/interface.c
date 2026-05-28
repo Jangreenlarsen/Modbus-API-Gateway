@@ -36,20 +36,41 @@ esp_err_t mb_interface_init(mb_interface_t *iface, const iface_config_t *cfg)
 
     if (cfg->uart_mode == IFACE_UART_HW) {
         // ── Hardware UART via esp-modbus ──────────────────────────────────
+        if (cfg->uart_num < 0 || cfg->uart_num >= UART_NUM_MAX) {
+            ESP_LOGE(TAG, "Interface %d: uart_num=%d ugyldig (0..%d) — springer over",
+                     cfg->id, cfg->uart_num, UART_NUM_MAX - 1);
+            return ESP_ERR_INVALID_ARG;
+        }
         mb_communication_info_t comm = {
             .port     = cfg->uart_num,
             .mode     = MB_MODE_RTU,
             .baudrate = cfg->baudrate,
             .parity   = cfg->parity,
         };
-        ESP_ERROR_CHECK(mbc_master_init(MB_PORT_SERIAL_MASTER, &iface->mb_handle));
-        ESP_ERROR_CHECK(mbc_master_setup((void*)&comm));
+        esp_err_t err;
+        err = mbc_master_init(MB_PORT_SERIAL_MASTER, &iface->mb_handle);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Interface %d: mbc_master_init fejlede: %s", cfg->id, esp_err_to_name(err));
+            return err;
+        }
+        err = mbc_master_setup((void*)&comm);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Interface %d: mbc_master_setup fejlede: %s", cfg->id, esp_err_to_name(err));
+            mbc_master_destroy();
+            return err;
+        }
         uart_set_pin(cfg->uart_num, cfg->tx_pin, cfg->rx_pin,
                      cfg->rts_pin >= 0 ? cfg->rts_pin : UART_PIN_NO_CHANGE,
                      UART_PIN_NO_CHANGE);
+        err = mbc_master_start();
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Interface %d: mbc_master_start fejlede: %s", cfg->id, esp_err_to_name(err));
+            mbc_master_destroy();
+            return err;
+        }
+        // uart_set_mode kræver at UART-driveren er installeret (sker inde i mbc_master_start)
         if (cfg->type == IFACE_TYPE_RS485)
             uart_set_mode(cfg->uart_num, UART_MODE_RS485_HALF_DUPLEX);
-        ESP_ERROR_CHECK(mbc_master_start());
         ESP_LOGI(TAG, "HW-UART interface %d: %s UART%d @ %lu baud",
                  cfg->id,
                  cfg->type == IFACE_TYPE_RS485 ? "RS485" : "RS232",

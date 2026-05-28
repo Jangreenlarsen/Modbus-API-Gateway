@@ -2,6 +2,28 @@
 
 ---
 
+## v0.1.0 build 0017 — 2026-05-28 — Stabil boot + Modbus starter korrekt
+
+Gateway booter nu stabilt og Modbus RS485 starter korrekt ved hvert boot — også efter save+reboot. Rod-årsag til boot-loop var en ugyldig `uart_num=-1` i NVS-config fra en tidligere build. Ny `config_sanitize()` retter automatisk ugyldige værdier ved load. `mb_interface_init` er nu fuldt non-fatal — ingen `ESP_ERROR_CHECK` der kan forårsage panic.
+
+CLI testet og verificeret: `help`, `status`, `show`, `eth`, `wifi`, `save`, `reboot` — alle fungerer korrekt.
+
+---
+
+## v0.1.0 build 0015 — 2026-05-28 — Stabil boot efter save+reboot
+
+Gateway booter nu stabilt selv efter save+reboot. Alle tidligere årsager til boot-loop er rettet: NVS-fejl håndteres gracefully, Modbus/API init-fejl forårsager ikke længere panic, og UART RS485-mode sættes i korrekt rækkefølge.
+
+---
+
+## v0.1.0 build 0014 — 2026-05-27 — Serial CLI fungerer nu korrekt
+
+Serial CLI blokkerer nu korrekt på brugerinput — ingen "gw>" prompt-spam mere. Rod-årsag: `esp_console_init()` installerer ikke UART-driveren i ESP-IDF v5.x, så stdin kørte non-blocking. Løst ved at bruge `esp_console_new_repl_uart()` som er den korrekte v5.x API.
+
+Du kan nu bruge CLI normalt: `help`, `show`, `status`, `wifi`, `eth`, `save`, `reboot`.
+
+---
+
 ## v0.1.0 build 0013 — 2026-05-27 — Boot uden Ethernet + version i CLI
 
 Gateway booter nu stabilt selv uden Ethernet PHY tilsluttet. Ved manglende PHY logges en advarsel og systemet kører videre på WiFi alene — ingen reboot-loop.

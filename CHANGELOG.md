@@ -4,6 +4,57 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0017] — 2026-05-28 — fix: config sanitization + Modbus init non-fatal
+
+**Filer ændret:**
+- `firmware/main/core/config.c` — tilføjet `config_sanitize()`: retter ugyldige uart_num-værdier (< 0 eller > 2) til 1 ved NVS-load; retter baudrate=0 og timeout_ms=0
+- `firmware/main/core/config.h` — tilføjet `config_sanitize()` prototype; GATEWAY_BUILD "0017"
+- `firmware/main/storage/config_store.c` — kalder `config_sanitize(cfg)` efter succesfuld NVS-load; fjernet separat interface_count-check (håndteres nu i config_sanitize)
+- `firmware/main/modbus/interface.c` — alle 3 `ESP_ERROR_CHECK(mbc_master_*)` erstattet med proper error returns; uart_num-validering før brug; mbc_master_destroy() ved cleanup efter fejl
+- `version.json` — build 0017
+
+**Resultat:** Gateway booter stabilt efter save+reboot. Modbus UART1 initialiseres korrekt. Ingen panic ved invalid NVS-data.
+
+---
+
+## [0.1.0 build 0016] — 2026-05-28 — fix: mb_interface_init non-fatal + COM8 port
+
+**Filer ændret:**
+- `firmware/main/modbus/interface.c` — alle `ESP_ERROR_CHECK(mbc_master_init/setup/start)` erstattet med error-returns; uart_num valideres mod UART_NUM_MAX; mbc_master_destroy() cleanup ved fejl
+- `firmware/main/storage/config_store.c` — `ESP_ERROR_CHECK(nvs_open)` erstattet med graceful fallback til defaults; interface_count bounds check
+- `firmware/main/core/config.h` — GATEWAY_BUILD "0016"
+- `platformio.ini` — upload_port og monitor_port sat til COM8
+- `version.json` — build 0016
+
+**Resultat:** Boot-loop fjernet (ingen panic). Gateway kører videre selv med ugyldig NVS-config.
+
+---
+
+## [0.1.0 build 0015] — 2026-05-28 — fix: boot-loop efter save+reboot
+
+**Filer ændret:**
+- `firmware/main/main.c` — nvs_flash_init: eraser NVS ved NO_FREE_PAGES/NEW_VERSION_FOUND i stedet for panic; modbus_manager_init + api_server_start: LOGW/LOGE i stedet for ESP_ERROR_CHECK; version + build i boot-log
+- `firmware/main/modbus/interface.c` — uart_set_mode flyttes til EFTER mbc_master_start (UART-driver skal installeres først)
+- `firmware/main/core/ethernet.c` — esp_event_loop_create_default: håndterer ESP_ERR_INVALID_STATE (allerede oprettet) gracefully
+- `firmware/main/core/config.h` — GATEWAY_BUILD "0015"
+
+**Resultat:** Gateway booter stabilt efter save+reboot. Ingen panic ved Modbus/API/NVS fejl.
+
+---
+
+## [0.1.0 build 0014] — 2026-05-27 — fix: Serial CLI "gw>" prompt spam
+
+**Rod-årsag:** `esp_console_init()` installerer IKKE UART-driveren i ESP-IDF v5.x. stdin kørte i polling-mode: `read()` returnerede 0 bytes straks → `linenoiseDumb()` returnerede tom streng `""` → ingen delay i cli_task → tight loop med hundredvis af "gw>" prompts/sek.
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — erstattet `esp_console_init()` + custom `cli_task` med `esp_console_new_repl_uart()` + `esp_console_start_repl()`. Den nye API installerer UART-driveren og konfigurerer VFS til blokerende læsning. Ingen custom task mere.
+- `firmware/main/core/config.h` — GATEWAY_BUILD "0014"
+- `version.json` — build 0014
+
+**Resultat:** CLI blokerer korrekt på brugerinput, ingen prompt-spam.
+
+---
+
 ## [0.1.0 build 0013] — 2026-05-27 — fix: Ethernet PHY-fejl ikke-fatal + version/build i boot display
 
 **Filer ændret:**

@@ -18,7 +18,11 @@ esp_err_t config_store_load(gateway_config_t *cfg)
         config_set_defaults(cfg);
         return ESP_OK;
     }
-    ESP_ERROR_CHECK(err);
+    if (err != ESP_OK) {
+        ESP_LOGW(TAG, "NVS open fejlede (%s) — using defaults", esp_err_to_name(err));
+        config_set_defaults(cfg);
+        return ESP_OK;
+    }
 
     size_t sz = sizeof(gateway_config_t);
     err = nvs_get_blob(h, NVS_KEY, cfg, &sz);
@@ -28,6 +32,7 @@ esp_err_t config_store_load(gateway_config_t *cfg)
         ESP_LOGW(TAG, "Config blob invalid — using defaults");
         config_set_defaults(cfg);
     } else {
+        config_sanitize(cfg);
         ESP_LOGI(TAG, "Config loaded (%d interface(s))", cfg->interface_count);
     }
     return ESP_OK;

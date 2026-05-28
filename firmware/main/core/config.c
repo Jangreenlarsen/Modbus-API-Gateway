@@ -24,3 +24,20 @@ void config_set_defaults(gateway_config_t *cfg)
     strncpy(cfg->ethernet.gw,      "192.168.1.1", sizeof(cfg->ethernet.gw));
     strncpy(cfg->ethernet.netmask, "255.255.255.0", sizeof(cfg->ethernet.netmask));
 }
+
+void config_sanitize(gateway_config_t *cfg)
+{
+    if (cfg->interface_count > GATEWAY_MAX_IFACES)
+        cfg->interface_count = 0;
+    for (uint8_t i = 0; i < cfg->interface_count; i++) {
+        iface_config_t *iface = &cfg->interfaces[i];
+        if (iface->uart_mode == IFACE_UART_HW &&
+            (iface->uart_num < 0 || iface->uart_num > 2)) {
+            iface->uart_num = 1;   // UART1 er standard HW Modbus port
+        }
+        if (iface->baudrate == 0)
+            iface->baudrate = DEFAULT_BAUDRATE;
+        if (iface->timeout_ms == 0)
+            iface->timeout_ms = DEFAULT_TIMEOUT_MS;
+    }
+}
