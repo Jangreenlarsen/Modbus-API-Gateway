@@ -47,9 +47,10 @@ esp_err_t mb_interface_init(mb_interface_t *iface, const iface_config_t *cfg)
         uart_set_pin(cfg->uart_num, cfg->tx_pin, cfg->rx_pin,
                      cfg->rts_pin >= 0 ? cfg->rts_pin : UART_PIN_NO_CHANGE,
                      UART_PIN_NO_CHANGE);
+        ESP_ERROR_CHECK(mbc_master_start());
+        // uart_set_mode kræver at UART-driveren er installeret (sker inde i mbc_master_start)
         if (cfg->type == IFACE_TYPE_RS485)
             uart_set_mode(cfg->uart_num, UART_MODE_RS485_HALF_DUPLEX);
-        ESP_ERROR_CHECK(mbc_master_start());
         ESP_LOGI(TAG, "HW-UART interface %d: %s UART%d @ %lu baud",
                  cfg->id,
                  cfg->type == IFACE_TYPE_RS485 ? "RS485" : "RS232",

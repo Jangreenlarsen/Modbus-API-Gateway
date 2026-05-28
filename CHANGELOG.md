@@ -4,6 +4,18 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0015] — 2026-05-28 — fix: boot-loop efter save+reboot
+
+**Filer ændret:**
+- `firmware/main/main.c` — nvs_flash_init: eraser NVS ved NO_FREE_PAGES/NEW_VERSION_FOUND i stedet for panic; modbus_manager_init + api_server_start: LOGW/LOGE i stedet for ESP_ERROR_CHECK; version + build i boot-log
+- `firmware/main/modbus/interface.c` — uart_set_mode flyttes til EFTER mbc_master_start (UART-driver skal installeres først)
+- `firmware/main/core/ethernet.c` — esp_event_loop_create_default: håndterer ESP_ERR_INVALID_STATE (allerede oprettet) gracefully
+- `firmware/main/core/config.h` — GATEWAY_BUILD "0015"
+
+**Resultat:** Gateway booter stabilt efter save+reboot. Ingen panic ved Modbus/API/NVS fejl.
+
+---
+
 ## [0.1.0 build 0014] — 2026-05-27 — fix: Serial CLI "gw>" prompt spam
 
 **Rod-årsag:** `esp_console_init()` installerer IKKE UART-driveren i ESP-IDF v5.x. stdin kørte i polling-mode: `read()` returnerede 0 bytes straks → `linenoiseDumb()` returnerede tom streng `""` → ingen delay i cli_task → tight loop med hundredvis af "gw>" prompts/sek.

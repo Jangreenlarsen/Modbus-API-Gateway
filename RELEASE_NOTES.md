@@ -2,6 +2,12 @@
 
 ---
 
+## v0.1.0 build 0015 — 2026-05-28 — Stabil boot efter save+reboot
+
+Gateway booter nu stabilt selv efter save+reboot. Alle tidligere årsager til boot-loop er rettet: NVS-fejl håndteres gracefully, Modbus/API init-fejl forårsager ikke længere panic, og UART RS485-mode sættes i korrekt rækkefølge.
+
+---
+
 ## v0.1.0 build 0014 — 2026-05-27 — Serial CLI fungerer nu korrekt
 
 Serial CLI blokkerer nu korrekt på brugerinput — ingen "gw>" prompt-spam mere. Rod-årsag: `esp_console_init()` installerer ikke UART-driveren i ESP-IDF v5.x, så stdin kørte non-blocking. Løst ved at bruge `esp_console_new_repl_uart()` som er den korrekte v5.x API.
