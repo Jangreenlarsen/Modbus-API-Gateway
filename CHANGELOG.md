@@ -4,6 +4,17 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0035] — 2026-05-29 — fix: WiFi 30s backoff efter max retries — undgår log-spam
+
+**Filer ændret:**
+- `firmware/main/core/wifi_manager.c` — `esp_timer` backoff: 30s pause efter 5 fejlede forsøg
+- `firmware/main/core/version.h` — build 0035
+- `version.json` — build 0035
+
+**Problem:** WiFi retry-loop kørte hvert ~3. sekund og flooded terminalen med log-linjer, umuliggjorde CLI-brug. **Fix:** `retry_schedule()` starter en 30-sekunders `esp_timer` efter de første 5 retries. Ét loglinje hvert 30. sekund i stedet for hvert 3. sekund. `retry_cancel()` annullerer timeren ved forbundet/stop/reconfigure. WIFI_EVENT_STA_START nulstiller counter og annullerer timer.
+
+---
+
 ## [0.1.0 build 0034] — 2026-05-29 — fix: WiFi threshold WPA_PSK → WPA2_PSK (WLC CCMP-krav)
 
 **Filer ændret:**

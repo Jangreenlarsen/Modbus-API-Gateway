@@ -2,6 +2,12 @@
 
 ---
 
+## v0.1.0 build 0035 — 2026-05-29 — WiFi 30s backoff — CLI brugbar under reconnect
+
+Efter 5 fejlede WiFi-forsøg venter gateway nu 30 sekunder inden næste forsøg. Terminalen viser én loglinje hvert 30. sekund i stedet for én hvert 3. sekund. CLI er fuldt brugbar mens WiFi reconnect foregår i baggrunden.
+
+---
+
 ## v0.1.0 build 0034 — 2026-05-29 — fix: WiFi threshold WPA2_PSK for WLC-kompatibilitet
 
 `WIFI_AUTH_WPA_PSK` threshold (b0031) inkluderede WPA1/TKIP-kapabiliteter i association request. Enterprise WLC'er med CCMP-only policy afviser dette under 4-way handshake → `4WAY_HANDSHAKE_TIMEOUT (reason 15)`. Threshold ændret tilbage til `WPA2_PSK` — ESP32 annoncerer kun WPA2/CCMP.
