@@ -2,6 +2,16 @@
 
 ---
 
+## v0.1.0 build 0033 — 2026-05-29 — fix: WiFi PMF — SA_QUERY_TIMEOUT på enterprise WLC
+
+**Problem:** WiFi forbandt (auth → assoc → run) men fik aldrig en IP-adresse. WLC viste enheden som associated. Disconnect reason 205 = `SA_QUERY_TIMEOUT`.
+
+**Årsag:** `pmf_cfg.capable = true` (tilføjet i b0031) signalerede til AP'en at ESP32 understøtter PMF (Protected Management Frames). Enterprise WLC'er starter herefter SA-query procedurer mod klienten. ESP32 timeouder på disse forespørgsler → forbindelsen droppes før WPA2-handshaken og DHCP kan afsluttes.
+
+**Fix:** PMF-konfiguration fjernet. ESP32 annoncerer ikke PMF-støtte → WLC udfører ingen SA queries → normal WPA2-forbindelse.
+
+---
+
 ## v0.1.0 build 0032 — 2026-05-29 — WiFi disconnect reason + factory-reset
 
 **Ny kommando:** `factory-reset` — sletter al NVS-konfiguration og genstarter med fabriksindstillinger. Nyttigt ved korrupt config eller ved skift til ny opsætning.
