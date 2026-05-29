@@ -2,6 +2,35 @@
 
 ---
 
+## v0.1.0 build 0028 — 2026-05-29 — fix: WiFi SSID altid vist + NVS struct-version
+
+**Rettede problemer:**
+- WiFi STA SSID vises nu altid i `show config` — tidligere skjult hvis feltet var tomt
+- PSK vises som `*** (sat)` eller `(ikke sat)` — aldrig i klartekst, aldrig som garbage-tegn
+- NVS-blob valideres nu mod `CONFIG_STRUCT_VERSION` — forældet config fra tidligere builds nulstilles automatisk til defaults i stedet for at indlæse med forkert feltoffset
+
+**`show config` WIFI-blok ser nu sådan ud:**
+```
+Interface WIFI
+ Enable
+ mode STA
+ SSID "(ikke sat)"
+ PSK (ikke sat)
+ IP dhcp
+End interface WIFI
+!
+Interface WIFI-AP
+ Disable
+ SSID "ModbusGW-AUTO"
+ PSK none (åben)
+ IP 192.168.4.1
+End interface WIFI-AP
+```
+
+> **Efter flash:** NVS nulstilles automatisk — konfigurér med `conf t` og `save`.
+
+---
+
 ## v0.1.0 build 0027 — 2026-05-29 — Configure terminal + kontekst-sensitiv ?-hjælp
 
 **`configure terminal`** (eller `conf t`) giver Cisco IOS-stil konfigurationstilstand med skiftende prompt:

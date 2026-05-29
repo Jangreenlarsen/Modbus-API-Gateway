@@ -28,12 +28,14 @@ esp_err_t config_store_load(gateway_config_t *cfg)
     err = nvs_get_blob(h, NVS_KEY, cfg, &sz);
     nvs_close(h);
 
-    if (err != ESP_OK || sz != sizeof(gateway_config_t)) {
-        ESP_LOGW(TAG, "Config blob invalid — using defaults");
+    if (err != ESP_OK || sz != sizeof(gateway_config_t) ||
+        cfg->version != CONFIG_STRUCT_VERSION) {
+        ESP_LOGW(TAG, "Config blob invalid eller forældet (v%lu != v%d) — using defaults",
+                 (unsigned long)(err == ESP_OK ? cfg->version : 0), CONFIG_STRUCT_VERSION);
         config_set_defaults(cfg);
     } else {
         config_sanitize(cfg);
-        ESP_LOGI(TAG, "Config loaded (%d interface(s))", cfg->interface_count);
+        ESP_LOGI(TAG, "Config loaded v%d (%d interface(s))", cfg->version, cfg->interface_count);
     }
     return ESP_OK;
 }

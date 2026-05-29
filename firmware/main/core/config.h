@@ -66,7 +66,12 @@ typedef struct {
     char    ap_password[65];// AP kodeord — min 8 tegn, eller "" for åben
 } wifi_config_gw_t;
 
+// Bump CONFIG_STRUCT_VERSION ved ENHVER ændring af gateway_config_t eller sub-structs.
+// NVS-load afviser blob hvis version ikke matcher → defaults indlæses.
+#define CONFIG_STRUCT_VERSION  3
+
 typedef struct {
+    uint32_t         version;          // skal matche CONFIG_STRUCT_VERSION
     uint8_t          interface_count;
     iface_config_t   interfaces[GATEWAY_MAX_IFACES];
     eth_config_t     ethernet;

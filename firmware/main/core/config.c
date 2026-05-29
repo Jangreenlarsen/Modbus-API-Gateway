@@ -4,6 +4,7 @@
 void config_set_defaults(gateway_config_t *cfg)
 {
     memset(cfg, 0, sizeof(*cfg));
+    cfg->version        = CONFIG_STRUCT_VERSION;
     cfg->interface_count = 1;
 
     iface_config_t *iface = &cfg->interfaces[0];

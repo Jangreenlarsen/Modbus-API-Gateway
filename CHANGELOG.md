@@ -4,6 +4,22 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0028] — 2026-05-29 — fix: NVS struct-version + WiFi SSID altid vist
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — `CONFIG_STRUCT_VERSION 3` + `uint32_t version` felt i `gateway_config_t`
+- `firmware/main/core/config.c` — `config_set_defaults` sætter `cfg->version = CONFIG_STRUCT_VERSION`
+- `firmware/main/storage/config_store.c` — load checker `cfg->version != CONFIG_STRUCT_VERSION` → defaults
+- `firmware/main/core/serial_cli.c` — `show config` WIFI-blok viser altid SSID og PSK (med fallback-tekst). PSK vises aldrig i klartekst.
+- `firmware/main/core/version.h` — build 0028
+- `version.json` — build 0028
+
+**Rodårsag fikset:** Struct-layout ændring (b0026: eth_config_t voksede) forskydte wifi-felternes offset i RAM. Gammelt NVS-blob med anden layout-version nulstilles nu automatisk til defaults ved boot.
+
+**NVS-note:** Første boot efter flash nulstiller NVS til defaults — rekonfigurér og `save`.
+
+---
+
 ## [0.1.0 build 0027] — 2026-05-29 — CLI: configure terminal + kontekst-sensitiv ?-hjælp
 
 **Filer ændret:**
