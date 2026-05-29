@@ -203,7 +203,9 @@ esp_err_t serial_cli_start(gateway_config_t *cfg)
     // CRLF-mode konsumerer \r\n som ét \n — løser dobbelt-prompt.
     uart_vfs_dev_port_set_rx_line_endings(0, ESP_LINE_ENDINGS_CRLF);
 
-    linenoiseSetDumbMode(1);  // Deaktivér ANSI terminal-probing (ESC[6n spam)
+    // Dumb mode var slået til for at undgå ESC[6n cursor-probe spam.
+    // ESC[6n sendes kun i multi-line mode (getColumnPos) — vi bruger single-line
+    // (default), så det er sikkert at køre i ANSI-mode og få pile-taster + historik.
     esp_console_register_help_command();
 
     static const esp_console_cmd_t cmds[] = {

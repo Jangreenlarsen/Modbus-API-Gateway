@@ -4,6 +4,23 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0021] — 2026-05-29 — CLI: kommandohistorik + cursor-bevægelse (←→)
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — fjernet `linenoiseSetDumbMode(1)`. ANSI-mode aktiveret: pile-taster virker nu fuldt ud. Historik (op/ned ←→): navigér tidligere kommandoer. Cursor-bevægelse (←→): flyt inden i kommandolinjen. ESC[6n cursor-probe sendes KUN i multi-line mode; vi bruger single-line (default) → ingen probe-spam.
+- `firmware/main/core/version.h` — build 0021
+- `version.json` — build 0021
+
+**Resultat:**
+- ↑/↓ pile: navigér kommandohistorik (op til 20 kommandoer)
+- ←/→ pile: flyt cursor inden i aktuel kommando
+- Home/End: hop til start/slut af linje
+- Ctrl+A / Ctrl+E: start/slut (Emacs-style)
+- Ctrl+W: slet ord bagud
+- Ctrl+K: slet til linjeslut
+
+---
+
 ## [0.1.0 build 0020] — 2026-05-29 — sdkconfig: core dump deaktiveret
 
 **Filer ændret:**

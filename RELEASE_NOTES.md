@@ -2,6 +2,17 @@
 
 ---
 
+## v0.1.0 build 0021 — 2026-05-29 — CLI: kommandohistorik og cursor-bevægelse
+
+Serial CLI understøtter nu pile-taster fuldt ud:
+- **↑/↓**: navigér de seneste 20 kommandoer
+- **←/→**: flyt cursor inden i aktuel kommando
+- **Home/End** og **Ctrl+A/E**: hop til linjens start/slut
+- **Ctrl+W**: slet ord bagud
+- **Ctrl+K**: slet til linjeslut
+
+---
+
 ## v0.1.0 build 0020 — 2026-05-29 — Core dump deaktiveret
 
 Core dump er deaktiveret (ingen coredump-partition i partitionstabellen). Reducerer espcoredump-komponentens overhead.
