@@ -29,10 +29,28 @@ typedef struct {
     uint8_t           enabled;
 } iface_config_t;
 
+typedef enum {
+    ETH_HW_LAN8720,   // RMII intern MAC (LAN8720/LAN8742)
+    ETH_HW_W5500,     // SPI ekstern MAC (W5500)
+} eth_hw_t;
+
 typedef struct {
-    char ip[16];        // statisk IP, eller "dhcp"
-    char gw[16];
-    char netmask[16];
+    uint8_t  enabled;
+    eth_hw_t hw_type;
+    char     ip[16];        // statisk IP, eller "dhcp"
+    char     gw[16];
+    char     netmask[16];
+    // LAN8720 RMII
+    int      phy_addr;      // PHY adresse (typisk 0 eller 1)
+    int      mdc_gpio;      // MDC management clock
+    int      mdio_gpio;     // MDIO management data
+    int      phy_rst_gpio;  // PHY reset, -1 = ikke tilsluttet
+    // W5500 SPI
+    int      spi_cs_gpio;
+    int      spi_mosi_gpio;
+    int      spi_miso_gpio;
+    int      spi_sclk_gpio;
+    int      spi_int_gpio;  // interrupt pin, -1 = pollet
 } eth_config_t;
 
 typedef struct {

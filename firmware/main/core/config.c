@@ -20,8 +20,19 @@ void config_set_defaults(gateway_config_t *cfg)
     iface->rts_pin    = DEFAULT_RTS_PIN;
     iface->enabled    = 1;
 
-    strncpy(cfg->ethernet.ip,      "dhcp", sizeof(cfg->ethernet.ip));
-    strncpy(cfg->ethernet.gw,      "192.168.1.1", sizeof(cfg->ethernet.gw));
+    cfg->ethernet.enabled      = 1;
+    cfg->ethernet.hw_type      = ETH_HW_LAN8720;
+    cfg->ethernet.phy_addr     = 0;
+    cfg->ethernet.mdc_gpio     = 23;
+    cfg->ethernet.mdio_gpio    = 18;
+    cfg->ethernet.phy_rst_gpio = -1;
+    cfg->ethernet.spi_cs_gpio   = -1;
+    cfg->ethernet.spi_mosi_gpio = -1;
+    cfg->ethernet.spi_miso_gpio = -1;
+    cfg->ethernet.spi_sclk_gpio = -1;
+    cfg->ethernet.spi_int_gpio  = -1;
+    strncpy(cfg->ethernet.ip,      "dhcp",          sizeof(cfg->ethernet.ip));
+    strncpy(cfg->ethernet.gw,      "192.168.1.1",   sizeof(cfg->ethernet.gw));
     strncpy(cfg->ethernet.netmask, "255.255.255.0", sizeof(cfg->ethernet.netmask));
 }
 

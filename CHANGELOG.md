@@ -4,6 +4,19 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0026] — 2026-05-29 — ETH config: Enable/Disable, Type, GPIO pins
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — `eth_config_t` udvidet: `enabled`, `hw_type` (ETH_HW_LAN8720/W5500), `phy_addr`, `mdc_gpio`, `mdio_gpio`, `phy_rst_gpio`, SPI-pins (cs/mosi/miso/sclk/int)
+- `firmware/main/core/config.c` — defaults: LAN8720, enabled=1, mdc=23, mdio=18, phy_addr=0, alle SPI=-1
+- `firmware/main/core/serial_cli.c` — `show config` ETH0 blok viser Enable/Disable, Type og alle GPIO-pins. `cmd_eth` udvidet med enable/disable/type/phy-addr/mdc/mdio/phy-rst/cs/mosi/miso/sclk/int subkommandoer
+- `firmware/main/core/version.h` — build 0026
+- `version.json` — build 0026
+
+**NVS bemærkning:** struct-ændring nulstiller gemt config til defaults ved næste boot (forventet adfærd).
+
+---
+
 ## [0.1.0 build 0025] — 2026-05-29 — CLI show config: IOS-stil running config
 
 **Filer ændret:**
