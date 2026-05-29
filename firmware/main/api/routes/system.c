@@ -1,5 +1,6 @@
 #include "system.h"
 #include "config.h"
+#include "version.h"
 #include "ethernet.h"
 #include "esp_system.h"
 #include "esp_timer.h"
