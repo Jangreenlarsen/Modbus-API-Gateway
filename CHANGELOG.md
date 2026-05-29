@@ -4,6 +4,18 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0018] — 2026-05-29 — fix: dobbelt CLI-prompt ved Enter
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — efter `esp_console_new_repl_uart()`: tilføjet `uart_vfs_dev_port_set_rx_line_endings(0, ESP_LINE_ENDINGS_CRLF)`. Standardindstillingen CR-mode oversætter `\r`→`\n`, men Windows-terminaler sender `\r\n` som giver to `\n` — ét afslutter kommandoen, ét printer prompten ekstra. CRLF-mode konsumerer `\r\n` som ét `\n`.
+- `platformio.ini` — tilføjet `monitor_eol = CRLF` (gør det eksplicit hvad terminalen sender)
+- `firmware/main/core/config.h` — GATEWAY_BUILD "0018"
+- `version.json` — build 0018
+
+**Resultat:** Prompten `gw>` vises kun én gang efter hvert Enter. Testet med status, show, help, wifi, eth — alle korrekte.
+
+---
+
 ## [0.1.0 build 0017] — 2026-05-28 — fix: config sanitization + Modbus init non-fatal
 
 **Filer ændret:**

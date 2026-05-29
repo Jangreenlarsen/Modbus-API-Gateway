@@ -2,6 +2,12 @@
 
 ---
 
+## v0.1.0 build 0018 — 2026-05-29 — CLI-prompt vises kun én gang
+
+CLI-prompten `gw>` vises nu kun én gang efter hvert Enter — ikke to gange. Rod-årsag: ESP-IDF's standard UART RX-mode (`CR`) oversætter `\r`→`\n`, men Windows-terminaler sender `\r\n` (to tegn) som begge tolkes som Enter. Løst ved at skifte til `CRLF`-mode der konsumerer `\r\n` som ét enkelt `\n`.
+
+---
+
 ## v0.1.0 build 0017 — 2026-05-28 — Stabil boot + Modbus starter korrekt
 
 Gateway booter nu stabilt og Modbus RS485 starter korrekt ved hvert boot — også efter save+reboot. Rod-årsag til boot-loop var en ugyldig `uart_num=-1` i NVS-config fra en tidligere build. Ny `config_sanitize()` retter automatisk ugyldige værdier ved load. `mb_interface_init` er nu fuldt non-fatal — ingen `ESP_ERROR_CHECK` der kan forårsage panic.

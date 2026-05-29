@@ -4,6 +4,7 @@
 #include "ethernet.h"
 #include "esp_console.h"
 #include "linenoise/linenoise.h"
+#include "driver/uart_vfs.h"
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_timer.h"
@@ -195,6 +196,11 @@ esp_err_t serial_cli_start(gateway_config_t *cfg)
 
     esp_console_dev_uart_config_t uart_config = ESP_CONSOLE_DEV_UART_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_console_new_repl_uart(&uart_config, &repl_config, &repl));
+
+    // esp_console sætter CR-mode (\r->\n) men Windows-terminaler sender \r\n
+    // hvilket giver to \n: ét afslutter kommandoen, ét printer prompten ekstra.
+    // CRLF-mode konsumerer \r\n som ét \n — løser dobbelt-prompt.
+    uart_vfs_dev_port_set_rx_line_endings(0, ESP_LINE_ENDINGS_CRLF);
 
     linenoiseSetDumbMode(1);  // Deaktivér ANSI terminal-probing (ESC[6n spam)
     esp_console_register_help_command();
