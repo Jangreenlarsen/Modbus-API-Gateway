@@ -2,6 +2,12 @@
 
 ---
 
+## v0.1.0 build 0034 — 2026-05-29 — fix: WiFi threshold WPA2_PSK for WLC-kompatibilitet
+
+`WIFI_AUTH_WPA_PSK` threshold (b0031) inkluderede WPA1/TKIP-kapabiliteter i association request. Enterprise WLC'er med CCMP-only policy afviser dette under 4-way handshake → `4WAY_HANDSHAKE_TIMEOUT (reason 15)`. Threshold ændret tilbage til `WPA2_PSK` — ESP32 annoncerer kun WPA2/CCMP.
+
+---
+
 ## v0.1.0 build 0033 — 2026-05-29 — fix: WiFi PMF — SA_QUERY_TIMEOUT på enterprise WLC
 
 **Problem:** WiFi forbandt (auth → assoc → run) men fik aldrig en IP-adresse. WLC viste enheden som associated. Disconnect reason 205 = `SA_QUERY_TIMEOUT`.

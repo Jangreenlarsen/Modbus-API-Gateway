@@ -4,6 +4,17 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0034] — 2026-05-29 — fix: WiFi threshold WPA_PSK → WPA2_PSK (WLC CCMP-krav)
+
+**Filer ændret:**
+- `firmware/main/core/wifi_manager.c` — threshold tilbage til `WIFI_AUTH_WPA2_PSK`
+- `firmware/main/core/version.h` — build 0034
+- `version.json` — build 0034
+
+**Årsag:** `WIFI_AUTH_WPA_PSK` (indført i b0031) fik ESP32 til at inkludere WPA1/TKIP i association request. Enterprise WLC'er der kun accepterer CCMP kan afvise dette under 4-way handshake → `4WAY_HANDSHAKE_TIMEOUT (reason 15)`. `WPA2_PSK` threshold sikrer at ESP32 udelukkende annoncerer WPA2/CCMP.
+
+---
+
 ## [0.1.0 build 0033] — 2026-05-29 — fix: WiFi PMF fjernet — SA_QUERY_TIMEOUT på enterprise WLC
 
 **Filer ændret:**
