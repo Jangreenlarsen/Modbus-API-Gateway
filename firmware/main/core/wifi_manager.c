@@ -148,8 +148,9 @@ esp_err_t wifi_manager_init(const wifi_config_gw_t *cfg)
     // WIFI_AUTH_WPA_PSK: accepterer WPA og stærkere (WPA2, WPA3).
     // WPA2_PSK var for strikt og afviste WPA-only AP'er og visse transition-modes.
     sta_cfg.sta.threshold.authmode  = WIFI_AUTH_WPA_PSK;
-    sta_cfg.sta.pmf_cfg.capable     = true;
-    sta_cfg.sta.pmf_cfg.required    = false;
+    // pmf_cfg bevidst ikke sat ({0,0} = ikke capable, ikke required).
+    // capable=true forårsager SA_QUERY_TIMEOUT (reason 205) på enterprise WLC'er
+    // fordi WLC starter SA-query mekanisme som ESP32 timer ud på.
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_cfg));

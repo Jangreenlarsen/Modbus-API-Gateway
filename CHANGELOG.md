@@ -4,6 +4,19 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0033] — 2026-05-29 — fix: WiFi PMF fjernet — SA_QUERY_TIMEOUT på enterprise WLC
+
+**Filer ændret:**
+- `firmware/main/core/wifi_manager.c` — `pmf_cfg.capable = true` fjernet
+- `firmware/main/core/version.h` — build 0033
+- `version.json` — build 0033
+
+**Rodårsag:** b0031 tilføjede `pmf_cfg.capable = true` som fortæller AP'en at ESP32 understøtter PMF (Protected Management Frames). Enterprise WLC'er starter SA-query mekanisme ved PMF-capable klienter. ESP32 timer ud på disse SA queries → `WIFI_REASON_SA_QUERY_TIMEOUT (reason 205)` og `WIFI_REASON_4WAY_HANDSHAKE_TIMEOUT (reason 15)`. WLC ser enheden som associated (assoc lykkedes) men WPA2-handshaken fejler i `run`-tilstanden. DHCP når aldrig at køre.
+
+**Fix:** `pmf_cfg` ikke sat (defaults `{0,0}` = ikke capable, ikke required). WLC laver ikke SA queries mod non-PMF klienter.
+
+---
+
 ## [0.1.0 build 0032] — 2026-05-29 — diagnose: WiFi disconnect reason + factory-reset kommando
 
 **Filer ændret:**
