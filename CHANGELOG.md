@@ -4,6 +4,20 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0023] — 2026-05-29 — API index endpoint: /api og /api/v1 returnerer endpoint-liste
+
+**Filer ændret:**
+- `firmware/main/api/server.c` — tilføjet `api_index_handler` og `route_api_index` (`/api*` wildcard, registreret sidst). Inkluderer nu `version.h` og `cJSON.h`.
+- `firmware/main/core/version.h` — build 0023
+- `version.json` — build 0023
+
+**Resultat:**
+- `GET /api` og `GET /api/v1/` returnerer JSON med alle 21 endpoints
+- `/api*` catch-all matcher kun hvis ingen specifik route matcher (registreret sidst)
+- Eksisterende specifikke routes upåvirket
+
+---
+
 ## [0.1.0 build 0022] — 2026-05-29 — CLI: wifi status + wifi mode kommandoer
 
 **Filer ændret:**

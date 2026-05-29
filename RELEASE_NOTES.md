@@ -2,6 +2,27 @@
 
 ---
 
+## v0.1.0 build 0023 — 2026-05-29 — API endpoint-oversigt på /api og /api/v1
+
+`GET http://ip/api` eller `GET http://ip/api/v1/` returnerer nu en komplet liste over alle tilgængelige endpoints:
+
+```json
+{
+  "api": "Modbus API Gateway",
+  "version": "0.1.0",
+  "build": "0023",
+  "base": "/api/v1",
+  "endpoints": [
+    {"method": "GET",  "path": "/api/v1/system", "description": "System info..."},
+    ...
+  ]
+}
+```
+
+Alle 21 endpoints er beskrevet med metode, sti og dansk beskrivelse. Fungerer som API-dokumentation direkte fra gatewayen.
+
+---
+
 ## v0.1.0 build 0022 — 2026-05-29 — CLI: wifi status og wifi mode
 
 To nye subkommandoer under `wifi`:
