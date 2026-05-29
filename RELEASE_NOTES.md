@@ -2,6 +2,105 @@
 
 ---
 
+## v0.1.0 build 0025 — 2026-05-29 — CLI show config: IOS-stil running config
+
+`show config` viser nu al konfiguration i Cisco IOS-stil blokformat:
+
+```
+!
+Interface ETH0
+ IP 192.168.1.100
+ Gateway 192.168.1.1
+ Netmask 255.255.255.0
+End interface ETH0
+!
+Interface WIFI
+ Enable
+ mode STA
+ SSID "MitNetværk"
+ PSK "hemmeligt"
+ IP dhcp
+End interface WIFI
+!
+Interface WIFI-AP
+ Enable
+ SSID "ModbusGW-AUTO"
+ PSK none
+ IP 192.168.4.1
+End interface WIFI-AP
+!
+Interface Modbus0
+ Enable
+ Type RS485
+ UART HW UART1
+ com 9600B-8N1
+ Timeout 500ms
+ Tx GPIO 17
+ Rx GPIO 16
+ DE GPIO 4
+End interface Modbus0
+!
+```
+
+---
+
+## v0.1.0 build 0024 — 2026-05-29 — CLI show: komplet konfigurationsvisning
+
+`show` kommandoen viser nu **al gemt konfiguration** opdelt i tre sektioner:
+
+```
+--------------------------------
+ETHERNET
+  IP      : 192.168.1.100
+  Gateway : 192.168.1.1
+  Netmask : 255.255.255.0
+
+WIFI STA
+  Aktiv   : ja
+  SSID    : MitNetværk
+  Password: *** (sat)
+  IP      : dhcp
+  Gateway : (dhcp)
+  Netmask : (dhcp)
+
+WIFI AP FALLBACK
+  Aktiv   : ja
+  SSID    : ModbusGW-XXXXXX (auto)
+  Password: (åben)
+
+MODBUS INTERFACES  (1 konfigureret)
+  [0] RS485  HW  UART1
+       Baud    : 9600
+       Format  : 8N1  paritet=ingen
+       Timeout : 500 ms
+       Pins    : TX=17  RX=16  DE/RTS=4
+       Status  : aktiv
+--------------------------------
+```
+
+---
+
+## v0.1.0 build 0023 — 2026-05-29 — API endpoint-oversigt på /api og /api/v1
+
+`GET http://ip/api` eller `GET http://ip/api/v1/` returnerer nu en komplet liste over alle tilgængelige endpoints:
+
+```json
+{
+  "api": "Modbus API Gateway",
+  "version": "0.1.0",
+  "build": "0023",
+  "base": "/api/v1",
+  "endpoints": [
+    {"method": "GET",  "path": "/api/v1/system", "description": "System info..."},
+    ...
+  ]
+}
+```
+
+Alle 21 endpoints er beskrevet med metode, sti og dansk beskrivelse. Fungerer som API-dokumentation direkte fra gatewayen.
+
+---
+
 ## v0.1.0 build 0022 — 2026-05-29 — CLI: wifi status og wifi mode
 
 To nye subkommandoer under `wifi`:

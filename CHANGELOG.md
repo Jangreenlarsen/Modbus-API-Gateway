@@ -4,6 +4,44 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0025] — 2026-05-29 — CLI show config: IOS-stil running config
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — `show config` omskrevet til Cisco IOS-stil blokformat. `show_running_config()` udskriver Interface-blokke for ETH0, WIFI, WIFI-AP og alle Modbus-interfaces.
+- `firmware/main/core/version.h` — build 0025
+- `version.json` — build 0025
+
+---
+
+## [0.1.0 build 0024] — 2026-05-29 — CLI show: komplet konfigurationsvisning
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — `cmd_show()` omskrevet: viser nu alle felter fra `gateway_config_t`
+- `firmware/main/core/version.h` — build 0024
+- `version.json` — build 0024
+
+**Viser nu:**
+- ETHERNET: ip, gateway, netmask
+- WIFI STA: aktiv, ssid, password (maskeret), ip, gateway, netmask
+- WIFI AP FALLBACK: aktiv, ap-ssid, ap-password (maskeret)
+- MODBUS INTERFACES: type, HW/SW, uart_num, baudrate, data_bits+stop_bits+parity, timeout_ms, pins (TX/RX/DE), status
+
+---
+
+## [0.1.0 build 0023] — 2026-05-29 — API index endpoint: /api og /api/v1 returnerer endpoint-liste
+
+**Filer ændret:**
+- `firmware/main/api/server.c` — tilføjet `api_index_handler` og `route_api_index` (`/api*` wildcard, registreret sidst). Inkluderer nu `version.h` og `cJSON.h`.
+- `firmware/main/core/version.h` — build 0023
+- `version.json` — build 0023
+
+**Resultat:**
+- `GET /api` og `GET /api/v1/` returnerer JSON med alle 21 endpoints
+- `/api*` catch-all matcher kun hvis ingen specifik route matcher (registreret sidst)
+- Eksisterende specifikke routes upåvirket
+
+---
+
 ## [0.1.0 build 0022] — 2026-05-29 — CLI: wifi status + wifi mode kommandoer
 
 **Filer ændret:**
