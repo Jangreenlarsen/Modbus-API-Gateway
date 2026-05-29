@@ -4,6 +4,17 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0030] — 2026-05-29 — fix: dangling pointer — cfg static i app_main
+
+**Filer ændret:**
+- `firmware/main/main.c` — `gateway_config_t cfg` gjort `static` så det lever i BSS, ikke på app_main's stack
+- `firmware/main/core/version.h` — build 0030
+- `version.json` — build 0030
+
+**Rodårsag fikset:** `app_main` returnerer efter at have startet alle tasks. FreeRTOS sletter main-tasken og frigiver dens stack. `s_cfg` i `serial_cli.c` pegede på stack-allokeret `cfg` og blev dangling pointer. Al efterfølgende gem/læs via `s_cfg` arbejdede på frigjort hukommelse → data-korruption. `static` placerer `cfg` i BSS-segmentet (levetid = hele programmets kørsel).
+
+---
+
 ## [0.1.0 build 0029] — 2026-05-29 — ETH GPIO type-gates: kun relevante pins vises og accepteres
 
 **Filer ændret:**

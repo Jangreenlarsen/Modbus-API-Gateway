@@ -2,6 +2,16 @@
 
 ---
 
+## v0.1.0 build 0030 — 2026-05-29 — fix: gem-rutine korrupterede data
+
+**Problem:** `save`-kommandoen gemte tilfældigt indhold i stedet for den aktuelle konfiguration.
+
+**Årsag:** `gateway_config_t cfg` var stack-allokeret i `app_main()`. Når `app_main` returnerer (den har ingen `while(1)`-løkke — alle subsystemer kører som FreeRTOS-tasks), sletter ESP-IDF main-tasken og frigiver dens stack. CLI'ens interne pointer `s_cfg` pegede stadig på denne frigjorte stack-hukommelse. Enhver `show config`, `save`, `wifi ssid`, osv. efterfølgende læste/skrev korrupt/tilfældig hukommelse.
+
+**Fix:** `cfg` i `main.c` er nu `static` — placeret i BSS-segmentet med levetid lig hele programmets kørsel.
+
+---
+
 ## v0.1.0 build 0029 — 2026-05-29 — ETH GPIO: kun relevante pins for valgt type
 
 `show config` og `?`-hjælp viser nu kun de GPIO-pins der er relevante for den valgte Ethernet-controller:
