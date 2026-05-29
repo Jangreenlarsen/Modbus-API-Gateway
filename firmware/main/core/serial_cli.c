@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
+#include <stdlib.h>
+#include <ctype.h>
 
 static const char *TAG = "serial_cli";
 static gateway_config_t *s_cfg;
@@ -149,8 +151,25 @@ static int cmd_status(int argc, char **argv)
 
 static int cmd_eth(int argc, char **argv)
 {
+    if (argc >= 2 && strcmp(argv[argc - 1], "?") == 0) {
+        if      (argc == 2)                                                    goto eth_full_help;
+        else if (strcasecmp(argv[1], "type")    == 0) { printf("  lan8720  -- RMII intern MAC (LAN8720/LAN8742)\r\n  w5500   -- SPI ekstern MAC\r\n"); }
+        else if (strcasecmp(argv[1], "ip")      == 0) { printf("  dhcp            -- automatisk IP\r\n  <ip> <gw> <mask> -- statisk IP\r\n"); }
+        else if (strcasecmp(argv[1], "phy-addr")== 0) { printf("  <0-31>  -- PHY adresse (typisk 0 eller 1)\r\n"); }
+        else if (strcasecmp(argv[1], "mdc")     == 0) { printf("  <gpio>  -- MDC management clock GPIO\r\n"); }
+        else if (strcasecmp(argv[1], "mdio")    == 0) { printf("  <gpio>  -- MDIO management data GPIO\r\n"); }
+        else if (strcasecmp(argv[1], "phy-rst") == 0) { printf("  <gpio>  -- PHY reset GPIO  (-1 = ikke tilsluttet)\r\n"); }
+        else if (strcasecmp(argv[1], "cs")      == 0) { printf("  <gpio>  -- W5500 SPI CS GPIO\r\n"); }
+        else if (strcasecmp(argv[1], "mosi")    == 0) { printf("  <gpio>  -- W5500 SPI MOSI GPIO\r\n"); }
+        else if (strcasecmp(argv[1], "miso")    == 0) { printf("  <gpio>  -- W5500 SPI MISO GPIO\r\n"); }
+        else if (strcasecmp(argv[1], "sclk")    == 0) { printf("  <gpio>  -- W5500 SPI SCLK GPIO\r\n"); }
+        else if (strcasecmp(argv[1], "int")     == 0) { printf("  <gpio>  -- W5500 SPI INT GPIO  (-1 = pollet)\r\n"); }
+        else                                           { goto eth_full_help; }
+        return 0;
+    }
     if (argc < 2) {
         printf("Brug:\r\n");
+        eth_full_help:
         printf("  eth enable                            -- aktiver Ethernet\r\n");
         printf("  eth disable                           -- deaktiver Ethernet\r\n");
         printf("  eth type lan8720|w5500                -- hardware-type\r\n");
@@ -247,8 +266,21 @@ static int cmd_eth(int argc, char **argv)
 
 static int cmd_wifi(int argc, char **argv)
 {
+    if (argc >= 2 && strcmp(argv[argc - 1], "?") == 0) {
+        if      (argc == 2)                                                   goto wifi_full_help;
+        else if (strcasecmp(argv[1], "ssid")    == 0) { printf("  <navn>          -- WiFi netværksnavn (maks 32 tegn)\r\n"); }
+        else if (strcasecmp(argv[1], "pass")    == 0) { printf("  <kodeord>       -- WiFi adgangskode (maks 64 tegn)\r\n"); }
+        else if (strcasecmp(argv[1], "ip")      == 0) { printf("  dhcp            -- automatisk IP\r\n  <ip>            -- statisk IP adresse\r\n"); }
+        else if (strcasecmp(argv[1], "ap")      == 0) { printf("  on              -- aktiver AP fallback hotspot\r\n  off             -- deaktiver AP fallback\r\n"); }
+        else if (strcasecmp(argv[1], "ap-ssid") == 0) { printf("  <navn>          -- AP hotspot netværksnavn\r\n"); }
+        else if (strcasecmp(argv[1], "mode")    == 0) { printf("  (ingen parametre) -- vis live WiFi tilstand\r\n"); }
+        else if (strcasecmp(argv[1], "status")  == 0) { printf("  (ingen parametre) -- vis detaljeret live WiFi status\r\n"); }
+        else                                          { goto wifi_full_help; }
+        return 0;
+    }
     if (argc < 2) {
         printf("Brug:\r\n");
+        wifi_full_help:
         printf("  wifi status              -- live WiFi status (tilstand, IP, RSSI, MAC)\r\n");
         printf("  wifi mode                -- aktuel tilstand: klient|AP|deaktiveret\r\n");
         printf("  wifi on                  -- aktiver WiFi STA\r\n");
@@ -395,6 +427,334 @@ static int cmd_reboot(int argc, char **argv)
     return 0;
 }
 
+// ── Configure terminal ────────────────────────────────────────────────────────
+
+#define CFG_MAX_ARGC 10
+
+static int cfg_tokenize(char *buf, char **argv)
+{
+    int argc = 0;
+    char *p = buf;
+    while (*p && argc < CFG_MAX_ARGC) {
+        while (*p == ' ' || *p == '\t') p++;
+        if (!*p) break;
+        argv[argc++] = p;
+        while (*p && *p != ' ' && *p != '\t') p++;
+        if (*p) *p++ = '\0';
+    }
+    return argc;
+}
+
+typedef enum { CTX_TOP, CTX_ETH, CTX_WIFI, CTX_WIFI_AP, CTX_MODBUS } cfg_ctx_t;
+
+static void cfg_help_top(void) {
+    printf("  interface eth0         -- Ethernet\r\n");
+    printf("  interface wifi         -- WiFi STA klient\r\n");
+    printf("  interface wifi-ap      -- WiFi AP hotspot fallback\r\n");
+    printf("  interface modbus<N>    -- Modbus interface N  (eks: modbus0)\r\n");
+    printf("  show                   -- vis komplet konfiguration\r\n");
+    printf("  save                   -- gem til NVS\r\n");
+    printf("  exit / end             -- forlad konfigurationstilstand\r\n");
+}
+
+static void cfg_help_eth(void) {
+    printf("  enable / disable       -- aktiver/deaktiver Ethernet\r\n");
+    printf("  type lan8720|w5500     -- hardware-type\r\n");
+    printf("  ip dhcp                -- DHCP\r\n");
+    printf("  ip <ip> <gw> <mask>    -- statisk IP\r\n");
+    printf("LAN8720 RMII:\r\n");
+    printf("  phy-addr <0-31>        -- PHY adresse\r\n");
+    printf("  mdc <gpio>             -- MDC pin\r\n");
+    printf("  mdio <gpio>            -- MDIO pin\r\n");
+    printf("  phy-rst <gpio|-1>      -- PHY reset pin  (-1=ingen)\r\n");
+    printf("W5500 SPI:\r\n");
+    printf("  cs <gpio>              -- CS pin\r\n");
+    printf("  mosi <gpio>            -- MOSI pin\r\n");
+    printf("  miso <gpio>            -- MISO pin\r\n");
+    printf("  sclk <gpio>            -- SCLK pin\r\n");
+    printf("  int <gpio|-1>          -- INT pin  (-1=pollet)\r\n");
+    printf("  exit                   -- tilbage til config\r\n");
+}
+
+static void cfg_help_wifi(void) {
+    printf("  enable / disable       -- aktiver/deaktiver WiFi STA\r\n");
+    printf("  ssid <navn>            -- netværksnavn\r\n");
+    printf("  psk <kodeord>          -- adgangskode\r\n");
+    printf("  ip dhcp                -- DHCP\r\n");
+    printf("  ip <ip> <gw> <mask>    -- statisk IP\r\n");
+    printf("  exit                   -- tilbage til config\r\n");
+}
+
+static void cfg_help_wifi_ap(void) {
+    printf("  enable / disable       -- aktiver/deaktiver AP fallback\r\n");
+    printf("  ssid <navn>            -- AP netværksnavn\r\n");
+    printf("  psk <kodeord>          -- AP adgangskode  (tom=åben)\r\n");
+    printf("  exit                   -- tilbage til config\r\n");
+}
+
+static void cfg_help_modbus(void) {
+    printf("  enable / disable       -- aktiver/deaktiver interface\r\n");
+    printf("  type rs485|rs232       -- interface-type\r\n");
+    printf("  uart hw <num>          -- hardware UART  (eks: uart hw 1)\r\n");
+    printf("  uart sw                -- software UART  (GPIO bit-bang)\r\n");
+    printf("  baudrate <baud>        -- baud-rate  (eks: 9600)\r\n");
+    printf("  format <bits> <n|e|o> <stop>  -- eks: format 8 n 1\r\n");
+    printf("  timeout <ms>           -- svar-timeout i ms\r\n");
+    printf("  tx <gpio>              -- TX pin\r\n");
+    printf("  rx <gpio>              -- RX pin\r\n");
+    printf("  de <gpio>              -- DE/RE pin  (RS485)\r\n");
+    printf("  exit                   -- tilbage til config\r\n");
+}
+
+static int cmd_configure(int argc, char **argv)
+{
+    if (argc > 1
+        && strcasecmp(argv[1], "terminal") != 0
+        && strcasecmp(argv[1], "t") != 0) {
+        printf("Brug: configure terminal  (eller: conf t)\r\n");
+        return 1;
+    }
+
+    cfg_ctx_t ctx = CTX_TOP;
+    int       modbus_id = 0;
+    char      prompt[32];
+    char      linebuf[256];
+    char     *av[CFG_MAX_ARGC];
+    int       ac;
+
+    printf("Konfigurationstilstand aktiv. '?' = hjælp, 'exit'/'end' = afslut.\r\n");
+
+    while (1) {
+        switch (ctx) {
+            case CTX_TOP:     snprintf(prompt, sizeof(prompt), "gw(config)# ");           break;
+            case CTX_ETH:     snprintf(prompt, sizeof(prompt), "gw(config-eth0)# ");      break;
+            case CTX_WIFI:    snprintf(prompt, sizeof(prompt), "gw(config-wifi)# ");      break;
+            case CTX_WIFI_AP: snprintf(prompt, sizeof(prompt), "gw(config-wifi-ap)# ");   break;
+            case CTX_MODBUS:  snprintf(prompt, sizeof(prompt), "gw(config-modbus%d)# ", modbus_id); break;
+        }
+
+        char *line = linenoise(prompt);
+        if (!line) break;                    // Ctrl+D / EOF
+        const char *p = line;
+        while (*p == ' ') p++;
+        if (!*p) { linenoiseFree(line); continue; }
+        linenoiseHistoryAdd(line);
+        strncpy(linebuf, line, sizeof(linebuf) - 1);
+        linebuf[sizeof(linebuf) - 1] = '\0';
+        linenoiseFree(line);
+
+        ac = cfg_tokenize(linebuf, av);
+        if (ac == 0) continue;
+        const char *cmd = av[0];
+
+        // ── Fælles kommandoer på alle niveauer ────────────────────────────────
+        if (strcmp(cmd, "?") == 0) {
+            switch (ctx) {
+                case CTX_TOP:     cfg_help_top();     break;
+                case CTX_ETH:     cfg_help_eth();     break;
+                case CTX_WIFI:    cfg_help_wifi();    break;
+                case CTX_WIFI_AP: cfg_help_wifi_ap(); break;
+                case CTX_MODBUS:  cfg_help_modbus();  break;
+            }
+            continue;
+        }
+        if (strcasecmp(cmd, "exit") == 0 || strcasecmp(cmd, "end") == 0) {
+            if (ctx == CTX_TOP) break;
+            ctx = CTX_TOP; continue;
+        }
+        if (strcasecmp(cmd, "show") == 0) { show_running_config(); continue; }
+        if (strcasecmp(cmd, "save") == 0) {
+            esp_err_t e = config_store_save(s_cfg);
+            printf(e == ESP_OK ? "Gemt.\r\n" : "Fejl ved gemning.\r\n"); continue;
+        }
+
+        // ── CTX_TOP ───────────────────────────────────────────────────────────
+        if (ctx == CTX_TOP) {
+            if (strcasecmp(cmd, "interface") == 0) {
+                if (ac < 2) { printf("Angiv interface navn  (?=hjælp)\r\n"); continue; }
+                if      (strcasecmp(av[1], "eth0")    == 0) { ctx = CTX_ETH; }
+                else if (strcasecmp(av[1], "wifi")    == 0) { ctx = CTX_WIFI; }
+                else if (strcasecmp(av[1], "wifi-ap") == 0) { ctx = CTX_WIFI_AP; }
+                else if (strncasecmp(av[1], "modbus", 6) == 0) {
+                    int id = atoi(av[1] + 6);
+                    if (id < 0 || id >= s_cfg->interface_count)
+                        printf("Modbus%d findes ikke (0-%d)\r\n", id, s_cfg->interface_count - 1);
+                    else { modbus_id = id; ctx = CTX_MODBUS; }
+                } else { printf("Ukendt interface '%s'  (?=hjælp)\r\n", av[1]); }
+            } else { printf("Ukendt: '%s'  (?=hjælp)\r\n", cmd); }
+            continue;
+        }
+
+        // ── CTX_ETH ───────────────────────────────────────────────────────────
+        if (ctx == CTX_ETH) {
+            if      (strcasecmp(cmd, "enable")   == 0) { s_cfg->ethernet.enabled = 1; printf("Ethernet: aktiveret\r\n"); }
+            else if (strcasecmp(cmd, "disable")  == 0) { s_cfg->ethernet.enabled = 0; printf("Ethernet: deaktiveret\r\n"); }
+            else if (strcasecmp(cmd, "type")     == 0) {
+                if (ac < 2) { printf("Brug: type lan8720|w5500  (?)\r\n"); continue; }
+                if (strcasecmp(av[1], "w5500") == 0) { s_cfg->ethernet.hw_type = ETH_HW_W5500;  printf("Type: W5500\r\n"); }
+                else                                  { s_cfg->ethernet.hw_type = ETH_HW_LAN8720; printf("Type: LAN8720\r\n"); }
+            }
+            else if (strcasecmp(cmd, "phy-addr") == 0) {
+                if (ac < 2) { printf("Brug: phy-addr <0-31>\r\n"); continue; }
+                s_cfg->ethernet.phy_addr = atoi(av[1]); printf("PHY addr: %d\r\n", s_cfg->ethernet.phy_addr);
+            }
+            else if (strcasecmp(cmd, "mdc")      == 0) {
+                if (ac < 2) { printf("Brug: mdc <gpio>\r\n"); continue; }
+                s_cfg->ethernet.mdc_gpio = atoi(av[1]); printf("MDC GPIO: %d\r\n", s_cfg->ethernet.mdc_gpio);
+            }
+            else if (strcasecmp(cmd, "mdio")     == 0) {
+                if (ac < 2) { printf("Brug: mdio <gpio>\r\n"); continue; }
+                s_cfg->ethernet.mdio_gpio = atoi(av[1]); printf("MDIO GPIO: %d\r\n", s_cfg->ethernet.mdio_gpio);
+            }
+            else if (strcasecmp(cmd, "phy-rst")  == 0) {
+                if (ac < 2) { printf("Brug: phy-rst <gpio|-1>\r\n"); continue; }
+                s_cfg->ethernet.phy_rst_gpio = atoi(av[1]); printf("PHY RST GPIO: %d\r\n", s_cfg->ethernet.phy_rst_gpio);
+            }
+            else if (strcasecmp(cmd, "cs")       == 0) {
+                if (ac < 2) { printf("Brug: cs <gpio>\r\n"); continue; }
+                s_cfg->ethernet.spi_cs_gpio = atoi(av[1]); printf("SPI CS GPIO: %d\r\n", s_cfg->ethernet.spi_cs_gpio);
+            }
+            else if (strcasecmp(cmd, "mosi")     == 0) {
+                if (ac < 2) { printf("Brug: mosi <gpio>\r\n"); continue; }
+                s_cfg->ethernet.spi_mosi_gpio = atoi(av[1]); printf("SPI MOSI GPIO: %d\r\n", s_cfg->ethernet.spi_mosi_gpio);
+            }
+            else if (strcasecmp(cmd, "miso")     == 0) {
+                if (ac < 2) { printf("Brug: miso <gpio>\r\n"); continue; }
+                s_cfg->ethernet.spi_miso_gpio = atoi(av[1]); printf("SPI MISO GPIO: %d\r\n", s_cfg->ethernet.spi_miso_gpio);
+            }
+            else if (strcasecmp(cmd, "sclk")     == 0) {
+                if (ac < 2) { printf("Brug: sclk <gpio>\r\n"); continue; }
+                s_cfg->ethernet.spi_sclk_gpio = atoi(av[1]); printf("SPI SCLK GPIO: %d\r\n", s_cfg->ethernet.spi_sclk_gpio);
+            }
+            else if (strcasecmp(cmd, "int")      == 0) {
+                if (ac < 2) { printf("Brug: int <gpio|-1>\r\n"); continue; }
+                s_cfg->ethernet.spi_int_gpio = atoi(av[1]); printf("SPI INT GPIO: %d\r\n", s_cfg->ethernet.spi_int_gpio);
+            }
+            else if (strcasecmp(cmd, "ip")       == 0) {
+                if (ac < 2) { printf("Brug: ip dhcp  eller  ip <ip> <gw> <mask>\r\n"); continue; }
+                if (strcasecmp(av[1], "dhcp") == 0) {
+                    strncpy(s_cfg->ethernet.ip, "dhcp", sizeof(s_cfg->ethernet.ip));
+                    strncpy(s_cfg->ethernet.gw, "0.0.0.0", sizeof(s_cfg->ethernet.gw));
+                    strncpy(s_cfg->ethernet.netmask, "0.0.0.0", sizeof(s_cfg->ethernet.netmask));
+                    printf("IP: dhcp\r\n");
+                } else if (ac >= 4) {
+                    strncpy(s_cfg->ethernet.ip,      av[1], sizeof(s_cfg->ethernet.ip));
+                    strncpy(s_cfg->ethernet.gw,      av[2], sizeof(s_cfg->ethernet.gw));
+                    strncpy(s_cfg->ethernet.netmask, av[3], sizeof(s_cfg->ethernet.netmask));
+                    printf("IP: %s  GW: %s  Mask: %s\r\n", s_cfg->ethernet.ip, s_cfg->ethernet.gw, s_cfg->ethernet.netmask);
+                } else { printf("Brug: ip <ip> <gateway> <netmask>\r\n"); }
+            }
+            else { printf("Ukendt: '%s'  (?=hjælp)\r\n", cmd); }
+            continue;
+        }
+
+        // ── CTX_WIFI ──────────────────────────────────────────────────────────
+        if (ctx == CTX_WIFI) {
+            if      (strcasecmp(cmd, "enable")  == 0) { s_cfg->wifi.enabled = 1; printf("WiFi STA: aktiveret\r\n"); }
+            else if (strcasecmp(cmd, "disable") == 0) { s_cfg->wifi.enabled = 0; printf("WiFi STA: deaktiveret\r\n"); }
+            else if (strcasecmp(cmd, "ssid")    == 0) {
+                if (ac < 2) { printf("Brug: ssid <navn>\r\n"); continue; }
+                strncpy(s_cfg->wifi.ssid, av[1], sizeof(s_cfg->wifi.ssid)); printf("SSID: %s\r\n", s_cfg->wifi.ssid);
+            }
+            else if (strcasecmp(cmd, "psk")     == 0) {
+                if (ac < 2) { printf("Brug: psk <kodeord>\r\n"); continue; }
+                strncpy(s_cfg->wifi.password, av[1], sizeof(s_cfg->wifi.password)); printf("PSK: sat (%d tegn)\r\n", (int)strlen(av[1]));
+            }
+            else if (strcasecmp(cmd, "ip")      == 0) {
+                if (ac < 2) { printf("Brug: ip dhcp  eller  ip <ip> <gw> <mask>\r\n"); continue; }
+                if (strcasecmp(av[1], "dhcp") == 0) {
+                    strncpy(s_cfg->wifi.ip, "dhcp", sizeof(s_cfg->wifi.ip)); printf("IP: dhcp\r\n");
+                } else if (ac >= 4) {
+                    strncpy(s_cfg->wifi.ip,      av[1], sizeof(s_cfg->wifi.ip));
+                    strncpy(s_cfg->wifi.gw,      av[2], sizeof(s_cfg->wifi.gw));
+                    strncpy(s_cfg->wifi.netmask, av[3], sizeof(s_cfg->wifi.netmask));
+                    printf("IP: %s  GW: %s  Mask: %s\r\n", s_cfg->wifi.ip, s_cfg->wifi.gw, s_cfg->wifi.netmask);
+                } else { printf("Brug: ip <ip> <gateway> <netmask>\r\n"); }
+            }
+            else { printf("Ukendt: '%s'  (?=hjælp)\r\n", cmd); }
+            continue;
+        }
+
+        // ── CTX_WIFI_AP ───────────────────────────────────────────────────────
+        if (ctx == CTX_WIFI_AP) {
+            if      (strcasecmp(cmd, "enable")  == 0) { s_cfg->wifi.ap_fallback = 1; printf("AP fallback: aktiveret\r\n"); }
+            else if (strcasecmp(cmd, "disable") == 0) { s_cfg->wifi.ap_fallback = 0; printf("AP fallback: deaktiveret\r\n"); }
+            else if (strcasecmp(cmd, "ssid")    == 0) {
+                if (ac < 2) { printf("Brug: ssid <navn>\r\n"); continue; }
+                strncpy(s_cfg->wifi.ap_ssid, av[1], sizeof(s_cfg->wifi.ap_ssid)); printf("AP SSID: %s\r\n", s_cfg->wifi.ap_ssid);
+            }
+            else if (strcasecmp(cmd, "psk")     == 0) {
+                if (ac < 2) { printf("Brug: psk <kodeord>  (tom streng = åben)\r\n"); continue; }
+                strncpy(s_cfg->wifi.ap_password, av[1], sizeof(s_cfg->wifi.ap_password)); printf("AP PSK: sat (%d tegn)\r\n", (int)strlen(av[1]));
+            }
+            else { printf("Ukendt: '%s'  (?=hjælp)\r\n", cmd); }
+            continue;
+        }
+
+        // ── CTX_MODBUS ────────────────────────────────────────────────────────
+        if (ctx == CTX_MODBUS) {
+            iface_config_t *f = &s_cfg->interfaces[modbus_id];
+            if      (strcasecmp(cmd, "enable")   == 0) { f->enabled = 1; printf("Modbus%d: aktiveret\r\n", modbus_id); }
+            else if (strcasecmp(cmd, "disable")  == 0) { f->enabled = 0; printf("Modbus%d: deaktiveret\r\n", modbus_id); }
+            else if (strcasecmp(cmd, "type")     == 0) {
+                if (ac < 2) { printf("Brug: type rs485|rs232\r\n"); continue; }
+                f->type = (strcasecmp(av[1], "rs232") == 0) ? IFACE_TYPE_RS232 : IFACE_TYPE_RS485;
+                printf("Type: %s\r\n", f->type == IFACE_TYPE_RS485 ? "RS485" : "RS232");
+            }
+            else if (strcasecmp(cmd, "uart")     == 0) {
+                if (ac < 2) { printf("Brug: uart hw <num>  eller  uart sw\r\n"); continue; }
+                if (strcasecmp(av[1], "hw") == 0) {
+                    f->uart_mode = IFACE_UART_HW;
+                    f->uart_num  = (ac >= 3) ? atoi(av[2]) : 1;
+                    printf("UART: HW UART%d\r\n", f->uart_num);
+                } else {
+                    f->uart_mode = IFACE_UART_SW; printf("UART: SW (bit-bang)\r\n");
+                }
+            }
+            else if (strcasecmp(cmd, "baudrate") == 0) {
+                if (ac < 2) { printf("Brug: baudrate <baud>\r\n"); continue; }
+                f->baudrate = (uint32_t)atoi(av[1]); printf("Baudrate: %lu\r\n", (unsigned long)f->baudrate);
+            }
+            else if (strcasecmp(cmd, "format")   == 0) {
+                if (ac < 4) { printf("Brug: format <bits> <n|e|o> <stop>  eks: format 8 n 1\r\n"); continue; }
+                f->data_bits = (uint8_t)atoi(av[1]);
+                char pc = (char)tolower((unsigned char)av[2][0]);
+                f->parity    = (pc == 'e') ? 2 : (pc == 'o') ? 1 : 0;
+                f->stop_bits = (uint8_t)atoi(av[3]);
+                printf("Format: %d%c%d\r\n", f->data_bits, (f->parity==2)?'E':(f->parity==1)?'O':'N', f->stop_bits);
+            }
+            else if (strcasecmp(cmd, "timeout")  == 0) {
+                if (ac < 2) { printf("Brug: timeout <ms>\r\n"); continue; }
+                f->timeout_ms = (uint16_t)atoi(av[1]); printf("Timeout: %d ms\r\n", f->timeout_ms);
+            }
+            else if (strcasecmp(cmd, "tx")       == 0) {
+                if (ac < 2) { printf("Brug: tx <gpio>\r\n"); continue; }
+                f->tx_pin = atoi(av[1]); printf("TX GPIO: %d\r\n", f->tx_pin);
+            }
+            else if (strcasecmp(cmd, "rx")       == 0) {
+                if (ac < 2) { printf("Brug: rx <gpio>\r\n"); continue; }
+                f->rx_pin = atoi(av[1]); printf("RX GPIO: %d\r\n", f->rx_pin);
+            }
+            else if (strcasecmp(cmd, "de")       == 0) {
+                if (ac < 2) { printf("Brug: de <gpio>\r\n"); continue; }
+                f->rts_pin = atoi(av[1]); printf("DE GPIO: %d\r\n", f->rts_pin);
+            }
+            else { printf("Ukendt: '%s'  (?=hjælp)\r\n", cmd); }
+            continue;
+        }
+    }
+
+    printf("Forlader konfigurationstilstand. Husk: 'save' + 'reboot'.\r\n");
+    return 0;
+}
+
+static int cmd_question(int argc, char **argv)
+{
+    int ret = 0;
+    esp_console_run("help", &ret);
+    return ret;
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 esp_err_t serial_cli_start(gateway_config_t *cfg)
@@ -408,7 +768,7 @@ esp_err_t serial_cli_start(gateway_config_t *cfg)
     esp_console_repl_config_t repl_config = ESP_CONSOLE_REPL_CONFIG_DEFAULT();
     repl_config.prompt             = "gw>";
     repl_config.max_cmdline_length = 256;
-    repl_config.task_stack_size    = 5120;
+    repl_config.task_stack_size    = 6144;
     repl_config.task_priority      = 3;
     repl_config.max_history_len    = 20;
 
@@ -426,12 +786,15 @@ esp_err_t serial_cli_start(gateway_config_t *cfg)
     esp_console_register_help_command();
 
     static const esp_console_cmd_t cmds[] = {
-        { .command = "show",   .help = "show config — vis komplet konfiguration (IOS-stil)", .hint = NULL, .func = cmd_show,        .argtable = NULL },
-        { .command = "status", .help = "System status: version, IP, uptime, heap",       .hint = NULL, .func = cmd_status,      .argtable = NULL },
-        { .command = "eth",    .help = "Ethernet config (eth enable|disable|type|dhcp|ip|mdc|...)", .hint = NULL, .func = cmd_eth,         .argtable = NULL },
-        { .command = "wifi",   .help = "WiFi config  (wifi on/off/ssid/pass/ip/ap)",     .hint = NULL, .func = cmd_wifi,        .argtable = NULL },
-        { .command = "save",   .help = "Gem konfiguration til NVS",                      .hint = NULL, .func = cmd_save,        .argtable = NULL },
-        { .command = "reboot", .help = "Genstart gateway",                               .hint = NULL, .func = cmd_reboot,      .argtable = NULL },
+        { .command = "?",          .help = "Vis alle kommandoer",                                    .hint = NULL, .func = cmd_question,   .argtable = NULL },
+        { .command = "configure",  .help = "configure terminal — konfigurationstilstand",             .hint = NULL, .func = cmd_configure,  .argtable = NULL },
+        { .command = "conf",       .help = "conf t — kort alias for 'configure terminal'",            .hint = NULL, .func = cmd_configure,  .argtable = NULL },
+        { .command = "show",       .help = "show config — vis komplet konfiguration (IOS-stil)",      .hint = NULL, .func = cmd_show,        .argtable = NULL },
+        { .command = "status",     .help = "System status: version, IP, uptime, heap",               .hint = NULL, .func = cmd_status,      .argtable = NULL },
+        { .command = "eth",        .help = "Ethernet config  (eth ? for hjælp)",                     .hint = NULL, .func = cmd_eth,         .argtable = NULL },
+        { .command = "wifi",       .help = "WiFi config  (wifi ? for hjælp)",                        .hint = NULL, .func = cmd_wifi,        .argtable = NULL },
+        { .command = "save",       .help = "Gem konfiguration til NVS",                              .hint = NULL, .func = cmd_save,        .argtable = NULL },
+        { .command = "reboot",     .help = "Genstart gateway",                                       .hint = NULL, .func = cmd_reboot,      .argtable = NULL },
     };
 
     for (size_t i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {

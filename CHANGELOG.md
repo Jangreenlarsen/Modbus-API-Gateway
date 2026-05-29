@@ -4,6 +4,28 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0027] — 2026-05-29 — CLI: configure terminal + kontekst-sensitiv ?-hjælp
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — tilføjet `configure`/`conf` kommando med nested linenoise REPL og skiftende prompt. `?` kommando på alle niveauer. `eth ?` og `wifi ?` subkommando-hjælp. Stack 5120→6144. `<stdlib.h>` og `<ctype.h>` inkluderet.
+- `firmware/main/core/version.h` — build 0027
+- `version.json` — build 0027
+
+**Nye kommandoer:**
+- `configure terminal` / `conf t` — enter config mode
+- `?` — vis alle kommandoer (alias for help)
+- `eth ?` / `eth type ?` / `eth ip ?` osv. — kontekst-sensitiv hjælp
+- `wifi ?` / `wifi ssid ?` / `wifi ip ?` osv. — kontekst-sensitiv hjælp
+
+**Configure mode prompts:**
+- `gw(config)#` → `interface eth0|wifi|wifi-ap|modbus<N>`
+- `gw(config-eth0)#` → type, enable/disable, ip, mdc, mdio, ...
+- `gw(config-wifi)#` → enable/disable, ssid, psk, ip
+- `gw(config-wifi-ap)#` → enable/disable, ssid, psk
+- `gw(config-modbus0)#` → type, uart, baudrate, format, timeout, tx/rx/de
+
+---
+
 ## [0.1.0 build 0026] — 2026-05-29 — ETH config: Enable/Disable, Type, GPIO pins
 
 **Filer ændret:**

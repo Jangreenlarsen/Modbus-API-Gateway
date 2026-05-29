@@ -2,6 +2,62 @@
 
 ---
 
+## v0.1.0 build 0027 — 2026-05-29 — Configure terminal + kontekst-sensitiv ?-hjælp
+
+**`configure terminal`** (eller `conf t`) giver Cisco IOS-stil konfigurationstilstand med skiftende prompt:
+
+```
+gw> conf t
+Konfigurationstilstand aktiv. '?' = hjælp, 'exit'/'end' = afslut.
+
+gw(config)# ?
+  interface eth0         -- Ethernet
+  interface wifi         -- WiFi STA klient
+  interface wifi-ap      -- WiFi AP hotspot fallback
+  interface modbus<N>    -- Modbus interface N
+  show                   -- vis komplet konfiguration
+  save                   -- gem til NVS
+  exit / end             -- forlad konfigurationstilstand
+
+gw(config)# interface eth0
+
+gw(config-eth0)# ?
+  enable / disable       -- aktiver/deaktiver Ethernet
+  type lan8720|w5500     -- hardware-type
+  ip dhcp                -- DHCP
+  ...
+
+gw(config-eth0)# type lan8720
+Type: LAN8720
+
+gw(config-eth0)# exit
+
+gw(config)# interface wifi
+
+gw(config-wifi)# ssid MitNetværk
+SSID: MitNetværk
+
+gw(config-wifi)# psk HemmeligKode
+PSK: sat (11 tegn)
+
+gw(config-wifi)# exit
+
+gw(config)# save
+Gemt.
+
+gw(config)# end
+Forlader konfigurationstilstand. Husk: 'save' + 'reboot'.
+gw>
+```
+
+**Kontekst-sensitiv `?`-hjælp** på alle niveauer:
+- `eth ?` → alle eth subkommandoer
+- `eth type ?` → `lan8720 | w5500`
+- `wifi ssid ?` → `<SSID navn> (maks 32 tegn)`
+- `?` i gw> prompten → vis alle kommandoer
+
+---
+
 ## v0.1.0 build 0026 — 2026-05-29 — ETH0 komplet config: Enable, Type, GPIO pins
 
 `show config` viser nu al Ethernet-konfiguration, og `eth` kommandoen understøtter alle parametre:
