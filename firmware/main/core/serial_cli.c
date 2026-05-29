@@ -3,7 +3,9 @@
 #include "version.h"
 #include "config_store.h"
 #include "ethernet.h"
+#include "wifi_manager.h"
 #include "esp_console.h"
+#include "esp_wifi.h"
 #include "linenoise/linenoise.h"
 #include "driver/uart_vfs.h"
 #include "esp_log.h"
@@ -110,6 +112,8 @@ static int cmd_wifi(int argc, char **argv)
 {
     if (argc < 2) {
         printf("Brug:\r\n");
+        printf("  wifi status              -- live WiFi status (tilstand, IP, RSSI, MAC)\r\n");
+        printf("  wifi mode                -- aktuel tilstand: klient|AP|deaktiveret\r\n");
         printf("  wifi on                  -- aktiver WiFi STA\r\n");
         printf("  wifi off                 -- deaktiver WiFi\r\n");
         printf("  wifi ssid <navn>         -- sæt netværksnavn\r\n");
@@ -123,7 +127,83 @@ static int cmd_wifi(int argc, char **argv)
 
     const char *sub = argv[1];
 
-    if (strcasecmp(sub, "on") == 0) {
+    if (strcasecmp(sub, "status") == 0) {
+        wifi_status_t ws = wifi_manager_get_status();
+        uint8_t mac[6] = {0};
+        esp_wifi_get_mac(WIFI_IF_STA, mac);
+
+        static const char *state_str[] = {
+            "deaktiveret", "forbinder...", "forbundet", "AP hotspot", "fejl"
+        };
+        const char *st = (ws.state <= WIFI_STATE_ERROR) ? state_str[ws.state] : "ukendt";
+
+        sep();
+        printf("WiFi live status\r\n");
+        printf("  Tilstand  : %s\r\n", st);
+
+        wifi_mode_t mode = WIFI_MODE_NULL;
+        esp_wifi_get_mode(&mode);
+        const char *mode_str = "deaktiveret";
+        if      (mode == WIFI_MODE_STA)   mode_str = "klient (STA)";
+        else if (mode == WIFI_MODE_AP)    mode_str = "AP hotspot";
+        else if (mode == WIFI_MODE_APSTA) mode_str = "klient+AP (APSTA)";
+        printf("  Mode      : %s\r\n", mode_str);
+
+        printf("  MAC (STA) : %02X:%02X:%02X:%02X:%02X:%02X\r\n",
+               mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+
+        if (ws.state == WIFI_STATE_CONNECTED) {
+            wifi_ap_record_t ap = {0};
+            esp_wifi_sta_get_ap_info(&ap);
+            static const char *auth_names[] = {
+                "åben", "WEP", "WPA-PSK", "WPA2-PSK", "WPA/WPA2-PSK",
+                "WPA2-Enterprise", "WPA3-PSK", "WPA2/WPA3-PSK", "WAPI-PSK"
+            };
+            const char *auth = (ap.authmode < 9) ? auth_names[ap.authmode] : "ukendt";
+            printf("  SSID      : %s\r\n", ws.ssid[0] ? ws.ssid : "(ingen)");
+            printf("  IP        : %s\r\n", ws.ip[0]   ? ws.ip   : "0.0.0.0");
+            printf("  RSSI      : %d dBm\r\n", (int)ws.rssi);
+            printf("  Kanal     : %d\r\n", ap.primary);
+            printf("  Auth      : %s\r\n", auth);
+            printf("  BSSID     : %02X:%02X:%02X:%02X:%02X:%02X\r\n",
+                   ap.bssid[0], ap.bssid[1], ap.bssid[2],
+                   ap.bssid[3], ap.bssid[4], ap.bssid[5]);
+        } else if (ws.state == WIFI_STATE_AP_MODE) {
+            uint8_t ap_mac[6] = {0};
+            esp_wifi_get_mac(WIFI_IF_AP, ap_mac);
+            printf("  AP SSID   : %s\r\n", s_cfg->wifi.ap_ssid[0] ? s_cfg->wifi.ap_ssid : "ModbusGW-??????");
+            printf("  AP IP     : 192.168.4.1\r\n");
+            printf("  MAC (AP)  : %02X:%02X:%02X:%02X:%02X:%02X\r\n",
+                   ap_mac[0], ap_mac[1], ap_mac[2],
+                   ap_mac[3], ap_mac[4], ap_mac[5]);
+        } else {
+            printf("  SSID      : %s\r\n", s_cfg->wifi.ssid[0] ? s_cfg->wifi.ssid : "(ikke konfigureret)");
+        }
+        sep();
+        return 0;
+    } else if (strcasecmp(sub, "mode") == 0) {
+        wifi_mode_t mode = WIFI_MODE_NULL;
+        esp_wifi_get_mode(&mode);
+        wifi_status_t ws = wifi_manager_get_status();
+        sep();
+        if (mode == WIFI_MODE_STA || mode == WIFI_MODE_APSTA) {
+            if (ws.state == WIFI_STATE_CONNECTED)
+                printf("WiFi mode: klient (STA) — forbundet til '%s'\r\n", ws.ssid);
+            else if (ws.state == WIFI_STATE_CONNECTING)
+                printf("WiFi mode: klient (STA) — forbinder...\r\n");
+            else
+                printf("WiFi mode: klient (STA) — ikke forbundet\r\n");
+            if (mode == WIFI_MODE_APSTA)
+                printf("           + AP hotspot kører (fallback)\r\n");
+        } else if (mode == WIFI_MODE_AP) {
+            printf("WiFi mode: AP hotspot — '%s'\r\n",
+                   s_cfg->wifi.ap_ssid[0] ? s_cfg->wifi.ap_ssid : "ModbusGW-??????");
+        } else {
+            printf("WiFi mode: deaktiveret\r\n");
+        }
+        sep();
+        return 0;
+    } else if (strcasecmp(sub, "on") == 0) {
         s_cfg->wifi.enabled = 1;
         printf("WiFi aktiveret.\r\n");
     } else if (strcasecmp(sub, "off") == 0) {

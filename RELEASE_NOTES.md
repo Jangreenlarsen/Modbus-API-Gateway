@@ -2,6 +2,23 @@
 
 ---
 
+## v0.1.0 build 0022 — 2026-05-29 — CLI: wifi status og wifi mode
+
+To nye subkommandoer under `wifi`:
+
+**`wifi status`** — live WiFi-status:
+- Tilstand: deaktiveret / forbinder / forbundet / AP hotspot / fejl
+- WiFi mode: klient (STA) / AP / klient+AP (APSTA)
+- MAC-adresse (STA-interface)
+- Ved forbundet: SSID, IP-adresse, signalstyrke (RSSI i dBm), kanal, kryptering (WPA2 etc.), BSSID
+- Ved AP fallback: AP-netværksnavn, IP (192.168.4.1), AP MAC-adresse
+
+**`wifi mode`** — kort tilstandsvisning:
+- Viser om gatewayen kører som WiFi-klient, AP hotspot, eller begge (APSTA fallback)
+- Viser SSID ved aktiv STA-forbindelse
+
+---
+
 ## v0.1.0 build 0021 — 2026-05-29 — CLI: kommandohistorik og cursor-bevægelse
 
 Serial CLI understøtter nu pile-taster fuldt ud:
