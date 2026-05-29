@@ -4,6 +4,15 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0025] — 2026-05-29 — CLI show config: IOS-stil running config
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — `show config` omskrevet til Cisco IOS-stil blokformat. `show_running_config()` udskriver Interface-blokke for ETH0, WIFI, WIFI-AP og alle Modbus-interfaces.
+- `firmware/main/core/version.h` — build 0025
+- `version.json` — build 0025
+
+---
+
 ## [0.1.0 build 0024] — 2026-05-29 — CLI show: komplet konfigurationsvisning
 
 **Filer ændret:**

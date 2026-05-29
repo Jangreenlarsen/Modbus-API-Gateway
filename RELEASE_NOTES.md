@@ -2,6 +2,48 @@
 
 ---
 
+## v0.1.0 build 0025 — 2026-05-29 — CLI show config: IOS-stil running config
+
+`show config` viser nu al konfiguration i Cisco IOS-stil blokformat:
+
+```
+!
+Interface ETH0
+ IP 192.168.1.100
+ Gateway 192.168.1.1
+ Netmask 255.255.255.0
+End interface ETH0
+!
+Interface WIFI
+ Enable
+ mode STA
+ SSID "MitNetværk"
+ PSK "hemmeligt"
+ IP dhcp
+End interface WIFI
+!
+Interface WIFI-AP
+ Enable
+ SSID "ModbusGW-AUTO"
+ PSK none
+ IP 192.168.4.1
+End interface WIFI-AP
+!
+Interface Modbus0
+ Enable
+ Type RS485
+ UART HW UART1
+ com 9600B-8N1
+ Timeout 500ms
+ Tx GPIO 17
+ Rx GPIO 16
+ DE GPIO 4
+End interface Modbus0
+!
+```
+
+---
+
 ## v0.1.0 build 0024 — 2026-05-29 — CLI show: komplet konfigurationsvisning
 
 `show` kommandoen viser nu **al gemt konfiguration** opdelt i tre sektioner:

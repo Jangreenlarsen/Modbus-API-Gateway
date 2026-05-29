@@ -27,53 +27,86 @@ static void sep(void) { printf("--------------------------------\r\n"); }
 
 // ── cmd: show ─────────────────────────────────────────────────────────────────
 
-static int cmd_show(int argc, char **argv)
+static void show_running_config(void)
 {
-    static const char *parity_str[] = { "ingen", "ulige", "lige" };
+    static const char par_char[] = { 'N', 'O', 'E' };  // none, odd, even
 
-    sep();
+    printf("!\r\n");
 
-    // ── Ethernet ──────────────────────────────────────────────────────────────
-    printf("ETHERNET\r\n");
-    printf("  IP      : %s\r\n", s_cfg->ethernet.ip[0]      ? s_cfg->ethernet.ip      : "(ikke sat)");
-    printf("  Gateway : %s\r\n", s_cfg->ethernet.gw[0]      ? s_cfg->ethernet.gw      : "(ikke sat)");
-    printf("  Netmask : %s\r\n", s_cfg->ethernet.netmask[0] ? s_cfg->ethernet.netmask : "(ikke sat)");
+    // ── Interface ETH0 ────────────────────────────────────────────────────────
+    printf("Interface ETH0\r\n");
+    if (strcasecmp(s_cfg->ethernet.ip, "dhcp") == 0 || s_cfg->ethernet.ip[0] == '\0') {
+        printf(" IP dhcp\r\n");
+    } else {
+        printf(" IP %s\r\n",      s_cfg->ethernet.ip);
+        printf(" Gateway %s\r\n", s_cfg->ethernet.gw[0]      ? s_cfg->ethernet.gw      : "0.0.0.0");
+        printf(" Netmask %s\r\n", s_cfg->ethernet.netmask[0] ? s_cfg->ethernet.netmask : "255.255.255.0");
+    }
+    printf("End interface ETH0\r\n");
+    printf("!\r\n");
 
-    // ── WiFi STA ──────────────────────────────────────────────────────────────
-    printf("\r\nWIFI STA\r\n");
-    printf("  Aktiv   : %s\r\n", s_cfg->wifi.enabled ? "ja" : "nej");
-    printf("  SSID    : %s\r\n", s_cfg->wifi.ssid[0]     ? s_cfg->wifi.ssid     : "(ikke sat)");
-    printf("  Password: %s\r\n", s_cfg->wifi.password[0] ? "*** (sat)"          : "(ikke sat)");
-    printf("  IP      : %s\r\n", s_cfg->wifi.ip[0]       ? s_cfg->wifi.ip       : "dhcp");
-    printf("  Gateway : %s\r\n", s_cfg->wifi.gw[0]       ? s_cfg->wifi.gw       : "(dhcp)");
-    printf("  Netmask : %s\r\n", s_cfg->wifi.netmask[0]  ? s_cfg->wifi.netmask  : "(dhcp)");
+    // ── Interface WIFI ────────────────────────────────────────────────────────
+    printf("Interface WIFI\r\n");
+    printf(" %s\r\n", s_cfg->wifi.enabled ? "Enable" : "Disable");
+    printf(" mode STA\r\n");
+    if (s_cfg->wifi.ssid[0])
+        printf(" SSID \"%s\"\r\n", s_cfg->wifi.ssid);
+    if (s_cfg->wifi.password[0])
+        printf(" PSK \"%s\"\r\n",  s_cfg->wifi.password);
+    if (strcasecmp(s_cfg->wifi.ip, "dhcp") == 0 || s_cfg->wifi.ip[0] == '\0') {
+        printf(" IP dhcp\r\n");
+    } else {
+        printf(" IP %s\r\n",      s_cfg->wifi.ip);
+        printf(" Gateway %s\r\n", s_cfg->wifi.gw[0]      ? s_cfg->wifi.gw      : "0.0.0.0");
+        printf(" Netmask %s\r\n", s_cfg->wifi.netmask[0] ? s_cfg->wifi.netmask : "255.255.255.0");
+    }
+    printf("End interface WIFI\r\n");
+    printf("!\r\n");
 
-    // ── WiFi AP fallback ──────────────────────────────────────────────────────
-    printf("\r\nWIFI AP FALLBACK\r\n");
-    printf("  Aktiv   : %s\r\n", s_cfg->wifi.ap_fallback ? "ja" : "nej");
-    printf("  SSID    : %s\r\n", s_cfg->wifi.ap_ssid[0]     ? s_cfg->wifi.ap_ssid     : "ModbusGW-XXXXXX (auto)");
-    printf("  Password: %s\r\n", s_cfg->wifi.ap_password[0] ? "*** (sat)"              : "(åben)");
+    // ── Interface WIFI-AP ─────────────────────────────────────────────────────
+    printf("Interface WIFI-AP\r\n");
+    printf(" %s\r\n", s_cfg->wifi.ap_fallback ? "Enable" : "Disable");
+    printf(" SSID \"%s\"\r\n",
+           s_cfg->wifi.ap_ssid[0] ? s_cfg->wifi.ap_ssid : "ModbusGW-AUTO");
+    if (s_cfg->wifi.ap_password[0])
+        printf(" PSK \"%s\"\r\n", s_cfg->wifi.ap_password);
+    else
+        printf(" PSK none\r\n");
+    printf(" IP 192.168.4.1\r\n");
+    printf("End interface WIFI-AP\r\n");
+    printf("!\r\n");
 
     // ── Modbus interfaces ─────────────────────────────────────────────────────
-    printf("\r\nMODBUS INTERFACES  (%d konfigureret)\r\n", s_cfg->interface_count);
-    if (s_cfg->interface_count == 0) {
-        printf("  (ingen)\r\n");
-    }
     for (int i = 0; i < s_cfg->interface_count; i++) {
         iface_config_t *f = &s_cfg->interfaces[i];
-        const char *par = (f->parity <= 2) ? parity_str[f->parity] : "?";
-        printf("  [%d] %s  %s  UART%d\r\n",
-               f->id,
-               f->type     == IFACE_TYPE_RS485  ? "RS485" : "RS232",
-               f->uart_mode == IFACE_UART_HW    ? "HW"    : "SW",
-               f->uart_num);
-        printf("       Baud    : %lu\r\n",  (unsigned long)f->baudrate);
-        printf("       Format  : %dN%d  paritet=%s\r\n", f->data_bits, f->stop_bits, par);
-        printf("       Timeout : %d ms\r\n", f->timeout_ms);
-        printf("       Pins    : TX=%d  RX=%d  DE/RTS=%d\r\n", f->tx_pin, f->rx_pin, f->rts_pin);
-        printf("       Status  : %s\r\n", f->enabled ? "aktiv" : "slukket");
+        char pch = (f->parity <= 2) ? par_char[f->parity] : 'N';
+
+        printf("Interface Modbus%d\r\n", f->id);
+        printf(" %s\r\n", f->enabled ? "Enable" : "Disable");
+        printf(" Type %s\r\n",       f->type == IFACE_TYPE_RS485 ? "RS485" : "RS232");
+        printf(" UART %s UART%d\r\n", f->uart_mode == IFACE_UART_HW ? "HW" : "SW", f->uart_num);
+        printf(" com %luB-%d%c%d\r\n", (unsigned long)f->baudrate,
+               f->data_bits, pch, f->stop_bits);
+        printf(" Timeout %dms\r\n",   f->timeout_ms);
+        printf(" Tx GPIO %d\r\n",     f->tx_pin);
+        printf(" Rx GPIO %d\r\n",     f->rx_pin);
+        if (f->type == IFACE_TYPE_RS485)
+            printf(" DE GPIO %d\r\n", f->rts_pin);
+        printf("End interface Modbus%d\r\n", f->id);
+        printf("!\r\n");
+    }
+}
+
+static int cmd_show(int argc, char **argv)
+{
+    if (argc >= 2 && strcasecmp(argv[1], "config") == 0) {
+        show_running_config();
+        return 0;
     }
 
+    // uden argument: kort status-oversigt
+    sep();
+    printf("Brug: show config  -- vis komplet konfiguration\r\n");
     sep();
     return 0;
 }
@@ -311,7 +344,7 @@ esp_err_t serial_cli_start(gateway_config_t *cfg)
     esp_console_register_help_command();
 
     static const esp_console_cmd_t cmds[] = {
-        { .command = "show",   .help = "Vis al konfiguration",                           .hint = NULL, .func = cmd_show,        .argtable = NULL },
+        { .command = "show",   .help = "show config — vis komplet konfiguration (IOS-stil)", .hint = NULL, .func = cmd_show,        .argtable = NULL },
         { .command = "status", .help = "System status: version, IP, uptime, heap",       .hint = NULL, .func = cmd_status,      .argtable = NULL },
         { .command = "eth",    .help = "Ethernet IP  (eth dhcp | eth <ip> <gw> <mask>)", .hint = NULL, .func = cmd_eth,         .argtable = NULL },
         { .command = "wifi",   .help = "WiFi config  (wifi on/off/ssid/pass/ip/ap)",     .hint = NULL, .func = cmd_wifi,        .argtable = NULL },
