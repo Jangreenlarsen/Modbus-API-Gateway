@@ -2,6 +2,36 @@
 
 ---
 
+## v0.1.0 build 0032 — 2026-05-29 — WiFi disconnect reason + factory-reset
+
+**Ny kommando:** `factory-reset` — sletter al NVS-konfiguration og genstarter med fabriksindstillinger. Nyttigt ved korrupt config eller ved skift til ny opsætning.
+
+**Bedre WiFi fejldiagnose:** Disconnect-loggen viser nu reason-koden:
+```
+W wifi_mgr: STA retry 1/5 (reason 15)
+```
+Nøgle reason-koder: **15 / 204 = forkert password**, 201 = AP ikke fundet, 202 = auth fejl, 200 = beacon timeout.
+
+---
+
+## v0.1.0 build 0031 — 2026-05-29 — fix: WiFi STA forbindelsesproblemer
+
+**5 rettelser til WiFi STA:**
+
+**1. Auth-mode threshold** — Gateway afviste WPA-only AP'er og nogle WPA2/WPA3 transition-mode AP'er fordi threshold var sat til `WPA2_PSK`. Ændret til `WPA_PSK` som accepterer WPA og stærkere.
+
+**2. Gateway giver op aldrig** — Tidligere stoppede WiFi forsøg permanent efter 5 fejlede retries. På en gateway der booter FØR routeren er klar, betød det ingen WiFi uden reboot. Nu forsøger WiFi igen uendeligt — FAIL_BIT sættes stadig (for AP-fallback trigger), men forbindelsesforsøg fortsætter i baggrunden.
+
+**3. Double-init crash** — `wifi_manager_reconfigure()` kaldte `wifi_manager_init()` som opretter WiFi-stack strukturer på ny. Andet opkald resulterede i fejl/crash fordi netifs og drivers allerede eksisterede. Rettet med `s_initialized` guard.
+
+**4. State ved reconnect** — `WIFI_FAIL_BIT` blev sat men aldrig ryddet ved succesfuld forbindelse. Rettet så state korrekt vises som "forbundet" igen efter AP-fallback → router kommer online.
+
+**5. AP-fallback mode-skift** — I ESP-IDF v5.x kræver APSTA-mode aktivering stop + start. Uden dette startede AP'en ikke korrekt. Rettet i `start_ap_fallback()`.
+
+**Quoted SSID/password** — `configure terminal` → `interface wifi` → `ssid "Mit netværk"` understøtter nu anførselstegn så SSID og PSK med mellemrum gemmes korrekt.
+
+---
+
 ## v0.1.0 build 0030 — 2026-05-29 — fix: gem-rutine korrupterede data
 
 **Problem:** `save`-kommandoen gemte tilfældigt indhold i stedet for den aktuelle konfiguration.

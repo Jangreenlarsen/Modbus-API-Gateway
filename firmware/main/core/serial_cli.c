@@ -11,6 +11,7 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_timer.h"
+#include "nvs_flash.h"
 #include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -302,8 +303,8 @@ static int cmd_wifi(int argc, char **argv)
         printf("  wifi mode                -- aktuel tilstand: klient|AP|deaktiveret\r\n");
         printf("  wifi on                  -- aktiver WiFi STA\r\n");
         printf("  wifi off                 -- deaktiver WiFi\r\n");
-        printf("  wifi ssid <navn>         -- sæt netværksnavn\r\n");
-        printf("  wifi pass <kodeord>      -- sæt adgangskode\r\n");
+        printf("  wifi ssid <navn>         -- sæt netværksnavn  (brug \"\" ved mellemrum)\r\n");
+        printf("  wifi pass <kodeord>      -- sæt adgangskode   (brug \"\" ved mellemrum)\r\n");
         printf("  wifi ip dhcp             -- DHCP (standard)\r\n");
         printf("  wifi ip <ip>             -- statisk IP\r\n");
         printf("  wifi ap on|off           -- AP fallback hotspot\r\n");
@@ -444,6 +445,19 @@ static int cmd_reboot(int argc, char **argv)
     return 0;
 }
 
+// ── cmd: factory-reset ────────────────────────────────────────────────────────
+
+static int cmd_factory_reset(int argc, char **argv)
+{
+    printf("ADVARSEL: Sletter al NVS-konfiguration og genstarter!\r\n");
+    printf("Genstart med fabriksindstillinger...\r\n");
+    fflush(stdout);
+    vTaskDelay(pdMS_TO_TICKS(200));
+    nvs_flash_erase();
+    esp_restart();
+    return 0;
+}
+
 // ── Configure terminal ────────────────────────────────────────────────────────
 
 #define CFG_MAX_ARGC 10
@@ -455,9 +469,17 @@ static int cfg_tokenize(char *buf, char **argv)
     while (*p && argc < CFG_MAX_ARGC) {
         while (*p == ' ' || *p == '\t') p++;
         if (!*p) break;
-        argv[argc++] = p;
-        while (*p && *p != ' ' && *p != '\t') p++;
-        if (*p) *p++ = '\0';
+        if (*p == '"') {
+            // Quoted token — bevarer mellemrum: ssid "Mit netværk"
+            p++;
+            argv[argc++] = p;
+            while (*p && *p != '"') p++;
+            if (*p) *p++ = '\0';
+        } else {
+            argv[argc++] = p;
+            while (*p && *p != ' ' && *p != '\t') p++;
+            if (*p) *p++ = '\0';
+        }
     }
     return argc;
 }
@@ -793,8 +815,9 @@ esp_err_t serial_cli_start(gateway_config_t *cfg)
         { .command = "status",     .help = "System status: version, IP, uptime, heap",               .hint = NULL, .func = cmd_status,      .argtable = NULL },
         { .command = "eth",        .help = "Ethernet config  (eth ? for hjælp)",                     .hint = NULL, .func = cmd_eth,         .argtable = NULL },
         { .command = "wifi",       .help = "WiFi config  (wifi ? for hjælp)",                        .hint = NULL, .func = cmd_wifi,        .argtable = NULL },
-        { .command = "save",       .help = "Gem konfiguration til NVS",                              .hint = NULL, .func = cmd_save,        .argtable = NULL },
-        { .command = "reboot",     .help = "Genstart gateway",                                       .hint = NULL, .func = cmd_reboot,      .argtable = NULL },
+        { .command = "save",          .help = "Gem konfiguration til NVS",                           .hint = NULL, .func = cmd_save,          .argtable = NULL },
+        { .command = "reboot",        .help = "Genstart gateway",                                    .hint = NULL, .func = cmd_reboot,        .argtable = NULL },
+        { .command = "factory-reset", .help = "Slet al NVS-config og genstart med fabriksindst.",   .hint = NULL, .func = cmd_factory_reset, .argtable = NULL },
     };
 
     for (size_t i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {
