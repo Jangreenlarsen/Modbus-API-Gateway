@@ -32,6 +32,7 @@ typedef struct {
 typedef enum {
     ETH_HW_LAN8720,   // RMII intern MAC (LAN8720/LAN8742)
     ETH_HW_W5500,     // SPI ekstern MAC (W5500)
+    ETH_HW_NONE,      // Ikke valgt — ingen GPIO pins vises
 } eth_hw_t;
 
 typedef struct {

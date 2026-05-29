@@ -2,6 +2,50 @@
 
 ---
 
+## v0.1.0 build 0029 — 2026-05-29 — ETH GPIO: kun relevante pins for valgt type
+
+`show config` og `?`-hjælp viser nu kun de GPIO-pins der er relevante for den valgte Ethernet-controller:
+
+**LAN8720 valgt:**
+```
+Interface ETH0
+ Enable
+ Type LAN8720
+ PHY-addr 0
+ MDC      GPIO 23
+ MDIO     GPIO 18
+End interface ETH0
+```
+
+**W5500 valgt:**
+```
+Interface ETH0
+ Enable
+ Type W5500
+ SPI-CS   GPIO 5
+ SPI-MOSI GPIO 23
+ SPI-MISO GPIO 19
+ SPI-SCLK GPIO 18
+End interface ETH0
+```
+
+**Ingen type valgt (`eth type none`):**
+```
+Interface ETH0
+ Disable
+ Type none
+ IP dhcp
+End interface ETH0
+```
+
+I configure mode (`conf t` → `interface eth0`) giver forkert type en klar fejl:
+```
+gw(config-eth0)# cs 5
+Fejl: 'cs' er kun for W5500  (brug 'type w5500' først)
+```
+
+---
+
 ## v0.1.0 build 0028 — 2026-05-29 — fix: WiFi SSID altid vist + NVS struct-version
 
 **Rettede problemer:**

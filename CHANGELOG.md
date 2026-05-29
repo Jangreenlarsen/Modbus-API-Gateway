@@ -4,6 +4,16 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0029] — 2026-05-29 — ETH GPIO type-gates: kun relevante pins vises og accepteres
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — `ETH_HW_NONE` tilføjet til `eth_hw_t` enum
+- `firmware/main/core/serial_cli.c` — `eth_print_help(hw_type)` fælles funktion. `show config` og `?`-hjælp viser kun GPIO-pins for valgt type. Configure mode afviser LAN8720-pins ved W5500 og omvendt. `eth type none` understøttet.
+- `firmware/main/core/version.h` — build 0029
+- `version.json` — build 0029
+
+---
+
 ## [0.1.0 build 0028] — 2026-05-29 — fix: NVS struct-version + WiFi SSID altid vist
 
 **Filer ændret:**
