@@ -2,6 +2,42 @@
 
 ---
 
+## v0.1.0 build 0024 — 2026-05-29 — CLI show: komplet konfigurationsvisning
+
+`show` kommandoen viser nu **al gemt konfiguration** opdelt i tre sektioner:
+
+```
+--------------------------------
+ETHERNET
+  IP      : 192.168.1.100
+  Gateway : 192.168.1.1
+  Netmask : 255.255.255.0
+
+WIFI STA
+  Aktiv   : ja
+  SSID    : MitNetværk
+  Password: *** (sat)
+  IP      : dhcp
+  Gateway : (dhcp)
+  Netmask : (dhcp)
+
+WIFI AP FALLBACK
+  Aktiv   : ja
+  SSID    : ModbusGW-XXXXXX (auto)
+  Password: (åben)
+
+MODBUS INTERFACES  (1 konfigureret)
+  [0] RS485  HW  UART1
+       Baud    : 9600
+       Format  : 8N1  paritet=ingen
+       Timeout : 500 ms
+       Pins    : TX=17  RX=16  DE/RTS=4
+       Status  : aktiv
+--------------------------------
+```
+
+---
+
 ## v0.1.0 build 0023 — 2026-05-29 — API endpoint-oversigt på /api og /api/v1
 
 `GET http://ip/api` eller `GET http://ip/api/v1/` returnerer nu en komplet liste over alle tilgængelige endpoints:

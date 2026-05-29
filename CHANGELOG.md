@@ -4,6 +4,21 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0024] — 2026-05-29 — CLI show: komplet konfigurationsvisning
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — `cmd_show()` omskrevet: viser nu alle felter fra `gateway_config_t`
+- `firmware/main/core/version.h` — build 0024
+- `version.json` — build 0024
+
+**Viser nu:**
+- ETHERNET: ip, gateway, netmask
+- WIFI STA: aktiv, ssid, password (maskeret), ip, gateway, netmask
+- WIFI AP FALLBACK: aktiv, ap-ssid, ap-password (maskeret)
+- MODBUS INTERFACES: type, HW/SW, uart_num, baudrate, data_bits+stop_bits+parity, timeout_ms, pins (TX/RX/DE), status
+
+---
+
 ## [0.1.0 build 0023] — 2026-05-29 — API index endpoint: /api og /api/v1 returnerer endpoint-liste
 
 **Filer ændret:**

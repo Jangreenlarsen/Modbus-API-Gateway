@@ -29,29 +29,51 @@ static void sep(void) { printf("--------------------------------\r\n"); }
 
 static int cmd_show(int argc, char **argv)
 {
+    static const char *parity_str[] = { "ingen", "ulige", "lige" };
+
     sep();
-    printf("Ethernet\r\n");
-    printf("  IP:      %s\r\n", s_cfg->ethernet.ip);
-    printf("  GW:      %s\r\n", s_cfg->ethernet.gw);
-    printf("  Netmask: %s\r\n\r\n", s_cfg->ethernet.netmask);
 
-    printf("WiFi\r\n");
-    printf("  Aktiv:      %s\r\n", s_cfg->wifi.enabled ? "ja" : "nej");
-    printf("  SSID:       %s\r\n", s_cfg->wifi.ssid[0] ? s_cfg->wifi.ssid : "(ikke sat)");
-    printf("  IP:         %s\r\n", s_cfg->wifi.ip[0]   ? s_cfg->wifi.ip   : "dhcp");
-    printf("  AP fallback:%s\r\n\r\n", s_cfg->wifi.ap_fallback ? "ja" : "nej");
+    // ── Ethernet ──────────────────────────────────────────────────────────────
+    printf("ETHERNET\r\n");
+    printf("  IP      : %s\r\n", s_cfg->ethernet.ip[0]      ? s_cfg->ethernet.ip      : "(ikke sat)");
+    printf("  Gateway : %s\r\n", s_cfg->ethernet.gw[0]      ? s_cfg->ethernet.gw      : "(ikke sat)");
+    printf("  Netmask : %s\r\n", s_cfg->ethernet.netmask[0] ? s_cfg->ethernet.netmask : "(ikke sat)");
 
-    printf("Modbus interfaces: %d\r\n", s_cfg->interface_count);
+    // ── WiFi STA ──────────────────────────────────────────────────────────────
+    printf("\r\nWIFI STA\r\n");
+    printf("  Aktiv   : %s\r\n", s_cfg->wifi.enabled ? "ja" : "nej");
+    printf("  SSID    : %s\r\n", s_cfg->wifi.ssid[0]     ? s_cfg->wifi.ssid     : "(ikke sat)");
+    printf("  Password: %s\r\n", s_cfg->wifi.password[0] ? "*** (sat)"          : "(ikke sat)");
+    printf("  IP      : %s\r\n", s_cfg->wifi.ip[0]       ? s_cfg->wifi.ip       : "dhcp");
+    printf("  Gateway : %s\r\n", s_cfg->wifi.gw[0]       ? s_cfg->wifi.gw       : "(dhcp)");
+    printf("  Netmask : %s\r\n", s_cfg->wifi.netmask[0]  ? s_cfg->wifi.netmask  : "(dhcp)");
+
+    // ── WiFi AP fallback ──────────────────────────────────────────────────────
+    printf("\r\nWIFI AP FALLBACK\r\n");
+    printf("  Aktiv   : %s\r\n", s_cfg->wifi.ap_fallback ? "ja" : "nej");
+    printf("  SSID    : %s\r\n", s_cfg->wifi.ap_ssid[0]     ? s_cfg->wifi.ap_ssid     : "ModbusGW-XXXXXX (auto)");
+    printf("  Password: %s\r\n", s_cfg->wifi.ap_password[0] ? "*** (sat)"              : "(åben)");
+
+    // ── Modbus interfaces ─────────────────────────────────────────────────────
+    printf("\r\nMODBUS INTERFACES  (%d konfigureret)\r\n", s_cfg->interface_count);
+    if (s_cfg->interface_count == 0) {
+        printf("  (ingen)\r\n");
+    }
     for (int i = 0; i < s_cfg->interface_count; i++) {
         iface_config_t *f = &s_cfg->interfaces[i];
-        printf("  [%d] %-5s %-3s %6lu baud  TX=%d RX=%d DE=%d  %s\r\n",
+        const char *par = (f->parity <= 2) ? parity_str[f->parity] : "?";
+        printf("  [%d] %s  %s  UART%d\r\n",
                f->id,
-               f->type == IFACE_TYPE_RS485 ? "RS485" : "RS232",
-               f->uart_mode == IFACE_UART_HW ? "HW" : "SW",
-               (unsigned long)f->baudrate,
-               f->tx_pin, f->rx_pin, f->rts_pin,
-               f->enabled ? "aktiv" : "slukket");
+               f->type     == IFACE_TYPE_RS485  ? "RS485" : "RS232",
+               f->uart_mode == IFACE_UART_HW    ? "HW"    : "SW",
+               f->uart_num);
+        printf("       Baud    : %lu\r\n",  (unsigned long)f->baudrate);
+        printf("       Format  : %dN%d  paritet=%s\r\n", f->data_bits, f->stop_bits, par);
+        printf("       Timeout : %d ms\r\n", f->timeout_ms);
+        printf("       Pins    : TX=%d  RX=%d  DE/RTS=%d\r\n", f->tx_pin, f->rx_pin, f->rts_pin);
+        printf("       Status  : %s\r\n", f->enabled ? "aktiv" : "slukket");
     }
+
     sep();
     return 0;
 }
