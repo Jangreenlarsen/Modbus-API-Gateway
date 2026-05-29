@@ -4,6 +4,19 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0020] — 2026-05-29 — sdkconfig: core dump deaktiveret
+
+**Filer ændret:**
+- `sdkconfig.defaults` — tilføjet `CONFIG_ESP_COREDUMP_ENABLE_TO_NONE=y`: deaktiverer core dump (ingen coredump-partition i partitionstabellen). Reducerer espcoredump overhead.
+- `firmware/main/core/version.h` — build 0020
+- `version.json` — build 0020
+
+**Resultater:**
+- Flash: 69.0% (1084607 bytes) — uændret fra b0019 (coredump-stubs var allerede små)
+- Note: COMPONENTS-filtrering (til at ekskludere mqtt, fatfs, wifi_provisioning mm.) er ikke kompatibel med PlatformIO's ESP-IDF EXTRA_COMPONENT_DIRS-integration. main-komponenten ekskluderes fejlagtigt. Dokumenteret i FEATURES.md som known limitation.
+
+---
+
 ## [0.1.0 build 0019] — 2026-05-29 — optimering: build-tid + flash-størrelse
 
 **Filer ændret:**

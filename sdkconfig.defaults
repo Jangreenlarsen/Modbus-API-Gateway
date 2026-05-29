@@ -96,3 +96,7 @@ CONFIG_SPI_FLASH_SUPPORT_XMC_CHIP=n
 
 # ── Compiler optimering — størrelse ──────────────────────────────────────────
 CONFIG_COMPILER_OPTIMIZATION_SIZE=y
+
+# ── Core dump — deaktiveret (ingen coredump-partition i partitionstabellen) ────
+# "None" valget: ingen dump til flash eller UART — reducerer espcoredump overhead
+CONFIG_ESP_COREDUMP_ENABLE_TO_NONE=y

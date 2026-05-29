@@ -2,6 +2,12 @@
 
 ---
 
+## v0.1.0 build 0020 — 2026-05-29 — Core dump deaktiveret
+
+Core dump er deaktiveret (ingen coredump-partition i partitionstabellen). Reducerer espcoredump-komponentens overhead.
+
+---
+
 ## v0.1.0 build 0019 — 2026-05-29 — Build-optimering: 134 KB flash sparet + hurtigere version-bumps
 
 Firmware-image reduceret fra 77,5% (1219 KB) til 69,0% (1085 KB) — 134 KB frigjort. Ubrugte komponenter fjernet fra build: Bluetooth (Bluedroid + NimBLE), TLS 1.0/1.1, sjældne elliptiske kurver, AES-CCM, PKCS12, DHE-PSK, SLIP, PPP og overflødige SPI flash-drivere. Boya flash-chip nu korrekt identificeret (ingen boot-advarsel).
