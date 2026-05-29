@@ -1,9 +1,7 @@
 #pragma once
 #include <stdint.h>
 
-#define GATEWAY_VERSION     "0.1.0"
-#define GATEWAY_BUILD       "0018"
-#define GATEWAY_MAX_IFACES  8       // 2 HW UART + op til 6 SW UART
+#define GATEWAY_MAX_IFACES  8   // 2 HW UART + op til 6 SW UART
 
 typedef enum {
     IFACE_TYPE_RS485,

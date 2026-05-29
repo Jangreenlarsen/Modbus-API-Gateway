@@ -2,6 +2,14 @@
 
 ---
 
+## v0.1.0 build 0019 — 2026-05-29 — Build-optimering: 134 KB flash sparet + hurtigere version-bumps
+
+Firmware-image reduceret fra 77,5% (1219 KB) til 69,0% (1085 KB) — 134 KB frigjort. Ubrugte komponenter fjernet fra build: Bluetooth (Bluedroid + NimBLE), TLS 1.0/1.1, sjældne elliptiske kurver, AES-CCM, PKCS12, DHE-PSK, SLIP, PPP og overflødige SPI flash-drivere. Boya flash-chip nu korrekt identificeret (ingen boot-advarsel).
+
+Version og build-nummer er flyttet til `version.h` (inkluderes kun af 4 filer mod tidligere 13). Fremtidige version-bumps recompilerer nu kun ~4 filer i stedet for alle 13 — byggetid for version-only ændringer: ca. 6 sekunder.
+
+---
+
 ## v0.1.0 build 0018 — 2026-05-29 — CLI-prompt vises kun én gang
 
 CLI-prompten `gw>` vises nu kun én gang efter hvert Enter — ikke to gange. Rod-årsag: ESP-IDF's standard UART RX-mode (`CR`) oversætter `\r`→`\n`, men Windows-terminaler sender `\r\n` (to tegn) som begge tolkes som Enter. Løst ved at skifte til `CRLF`-mode der konsumerer `\r\n` som ét enkelt `\n`.

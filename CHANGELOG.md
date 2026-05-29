@@ -4,6 +4,29 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0019] — 2026-05-29 — optimering: build-tid + flash-størrelse
+
+**Filer ændret:**
+- `firmware/main/core/version.h` — NY FIL: eneste kilde til GATEWAY_VERSION/GATEWAY_BUILD. Ændringer her recompilerer kun 4 filer i stedet for alle 13 som inkluderer config.h → version-bumps går fra ~4 min til ~30-60 sek
+- `firmware/main/core/config.h` — fjernet GATEWAY_VERSION og GATEWAY_BUILD (moved til version.h)
+- `firmware/main/main.c` — tilføjet `#include "version.h"`
+- `firmware/main/core/serial_cli.c` — tilføjet `#include "version.h"`
+- `firmware/main/api/routes/system.c` — tilføjet `#include "version.h"`
+- `firmware/main/ota/ota_manager.c` — tilføjet `#include "version.h"`
+- `sdkconfig.defaults` — deaktiveret yderligere ubrugte komponenter:
+  - mbedTLS: TLS 1.0/1.1 (GitHub kræver 1.2+), SECP192R1/SECP224R1/SECP256K1 kurver, CCM, PKCS12, DHE-PSK
+  - lwIP: SLIP protokol
+  - SPI Flash: aktiveret Boya chip (fixer boot-advarsel), deaktiveret ISSI/MXIC/TH/XMC
+- `version.json` — build 0019
+
+**Resultater:**
+- Flash: 77.5% (1219KB) → 69.0% (1085KB) — **134KB sparet**
+- RAM: 11.2% (36.8KB) → 10.5% (34.4KB) — 2.4KB sparet
+- Boot: `spi_flash: detected chip: boya` — flash-chip korrekt genkendt, ingen advarsel
+- Næste version-bump: kun ~30 sek build (4 filer) i stedet for ~4 min (13+ filer)
+
+---
+
 ## [0.1.0 build 0018] — 2026-05-29 — fix: dobbelt CLI-prompt ved Enter
 
 **Filer ændret:**

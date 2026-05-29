@@ -52,27 +52,47 @@ CONFIG_ESP_CONSOLE_UART_BAUDRATE=115200
 # ── Task watchdog ────────────────────────────────────────────────────────────
 CONFIG_ESP_TASK_WDT_TIMEOUT_S=30
 
-# ── Bluetooth — DEAKTIVERET (ikke brugt, største enkelt-besparelse) ──────────
+# ── Bluetooth — ikke brugt ───────────────────────────────────────────────────
 CONFIG_BT_ENABLED=n
-CONFIG_BLUEDROID_ENABLED=n
-CONFIG_NIMBLE_ENABLED=n
+CONFIG_BT_BLUEDROID_ENABLED=n
+CONFIG_BT_NIMBLE_ENABLED=n
 
-# ── mbedTLS — kun TLS-klient behøves (OTA fra GitHub HTTPS) ─────────────────
+# ── mbedTLS — kun TLS-klient (OTA fra GitHub HTTPS) ──────────────────────────
+# Server-side TLS — ikke brugt
 CONFIG_MBEDTLS_TLS_SERVER=n
+# Forældede protokolversioner (GitHub kræver TLS 1.2+)
+CONFIG_MBEDTLS_SSL_PROTO_TLS1=n
+CONFIG_MBEDTLS_SSL_PROTO_TLS1_1=n
+# Ubrugte elliptiske kurver
 CONFIG_MBEDTLS_ECP_DP_BP256R1_ENABLED=n
 CONFIG_MBEDTLS_ECP_DP_BP384R1_ENABLED=n
 CONFIG_MBEDTLS_ECP_DP_BP512R1_ENABLED=n
+CONFIG_MBEDTLS_ECP_DP_SECP192R1_ENABLED=n
+CONFIG_MBEDTLS_ECP_DP_SECP224R1_ENABLED=n
+CONFIG_MBEDTLS_ECP_DP_SECP256K1_ENABLED=n
 CONFIG_MBEDTLS_ECP_DP_CURVE25519_ENABLED=n
+# Ubrugte cipher suites og formater
 CONFIG_MBEDTLS_RIPEMD160_C=n
 CONFIG_MBEDTLS_BLOWFISH_C=n
 CONFIG_MBEDTLS_XTEA_C=n
 CONFIG_MBEDTLS_CAMELLIA_C=n
 CONFIG_MBEDTLS_3DES_C=n
 CONFIG_MBEDTLS_RC4_DISABLED=y
+CONFIG_MBEDTLS_CCM_C=n
+CONFIG_MBEDTLS_PKCS12_C=n
+CONFIG_MBEDTLS_DHE_PSK_ENABLED=n
 
-# ── lwIP — trim ubrugte protokoller ─────────────────────────────────────────
+# ── lwIP — trim ubrugte protokoller ──────────────────────────────────────────
 CONFIG_LWIP_IPV6=n
 CONFIG_LWIP_PPP_SUPPORT=n
+CONFIG_LWIP_SLIP_SUPPORT=n
+
+# ── SPI Flash — aktiver Boya chip (fixer boot-advarsel), trim resten ─────────
+CONFIG_SPI_FLASH_SUPPORT_BOYA_CHIP=y
+CONFIG_SPI_FLASH_SUPPORT_ISSI_CHIP=n
+CONFIG_SPI_FLASH_SUPPORT_MXIC_CHIP=n
+CONFIG_SPI_FLASH_SUPPORT_TH_CHIP=n
+CONFIG_SPI_FLASH_SUPPORT_XMC_CHIP=n
 
 # ── Compiler optimering — størrelse ──────────────────────────────────────────
 CONFIG_COMPILER_OPTIMIZATION_SIZE=y

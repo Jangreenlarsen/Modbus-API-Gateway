@@ -3,6 +3,7 @@
 #include "nvs_flash.h"
 
 #include "config.h"
+#include "version.h"
 #include "ethernet.h"
 #include "wifi_manager.h"
 #include "config_store.h"

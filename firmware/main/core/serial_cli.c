@@ -1,5 +1,6 @@
 #include "serial_cli.h"
 #include "config.h"
+#include "version.h"
 #include "config_store.h"
 #include "ethernet.h"
 #include "esp_console.h"

@@ -1,5 +1,6 @@
 #include "ota_manager.h"
 #include "config.h"
+#include "version.h"
 #include "esp_log.h"
 #include "esp_http_client.h"
 #include "esp_https_ota.h"
