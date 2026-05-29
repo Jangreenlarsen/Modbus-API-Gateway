@@ -4,6 +4,27 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0022] — 2026-05-29 — CLI: wifi status + wifi mode kommandoer
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — tilføjet `wifi status` og `wifi mode` subkommandoer. Inkluderer nu `wifi_manager.h` og `esp_wifi.h`.
+- `firmware/main/core/version.h` — build 0022
+- `version.json` — build 0022
+
+**`wifi status` viser:**
+- Live tilstand (deaktiveret / forbinder / forbundet / AP hotspot / fejl)
+- WiFi mode (klient STA / AP / APSTA)
+- MAC-adresse (STA)
+- Ved forbundet: SSID, IP, RSSI (dBm), kanal, auth-type, BSSID
+- Ved AP fallback: AP SSID, AP IP (192.168.4.1), AP MAC
+
+**`wifi mode` viser:**
+- Kort status: klient (STA) / AP hotspot / deaktiveret
+- Viser forbundet SSID hvis STA er connected
+- Viser AP-info hvis APSTA-mode (fallback kører)
+
+---
+
 ## [0.1.0 build 0021] — 2026-05-29 — CLI: kommandohistorik + cursor-bevægelse (←→)
 
 **Filer ændret:**
