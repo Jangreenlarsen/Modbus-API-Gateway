@@ -2,6 +2,18 @@
 
 ---
 
+## v0.1.0 build 0032 — 2026-05-29 — WiFi disconnect reason + factory-reset
+
+**Ny kommando:** `factory-reset` — sletter al NVS-konfiguration og genstarter med fabriksindstillinger. Nyttigt ved korrupt config eller ved skift til ny opsætning.
+
+**Bedre WiFi fejldiagnose:** Disconnect-loggen viser nu reason-koden:
+```
+W wifi_mgr: STA retry 1/5 (reason 15)
+```
+Nøgle reason-koder: **15 / 204 = forkert password**, 201 = AP ikke fundet, 202 = auth fejl, 200 = beacon timeout.
+
+---
+
 ## v0.1.0 build 0031 — 2026-05-29 — fix: WiFi STA forbindelsesproblemer
 
 **5 rettelser til WiFi STA:**

@@ -34,12 +34,15 @@ static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id, void *da
         esp_wifi_connect();
         s_status.state = WIFI_STATE_CONNECTING;
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
+        wifi_event_sta_disconnected_t *disc = (wifi_event_sta_disconnected_t *)data;
+        // Reason 15=4WAY_HANDSHAKE_TIMEOUT 202=AUTH_FAIL 204=HANDSHAKE_TIMEOUT → forkert PSK
         s_status.state = WIFI_STATE_CONNECTING;
         s_retry++;
         if (s_retry <= WIFI_STA_MAX_RETRY) {
-            ESP_LOGW(TAG, "STA retry %d/%d", s_retry, WIFI_STA_MAX_RETRY);
+            ESP_LOGW(TAG, "STA retry %d/%d (reason %d)", s_retry, WIFI_STA_MAX_RETRY, disc->reason);
         } else {
-            ESP_LOGE(TAG, "STA utilgængelig (forsøg %d) — fortsat forsøger", s_retry);
+            ESP_LOGE(TAG, "STA utilgængelig (forsøg %d, reason %d) — fortsat forsøger",
+                     s_retry, disc->reason);
             if (s_retry == WIFI_STA_MAX_RETRY + 1) {
                 // Sæt FAIL_BIT én gang for at trigge AP-fallback logik i init
                 s_status.state = WIFI_STATE_ERROR;

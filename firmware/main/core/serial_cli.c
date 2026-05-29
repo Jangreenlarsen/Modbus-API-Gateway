@@ -11,6 +11,7 @@
 #include "esp_log.h"
 #include "esp_system.h"
 #include "esp_timer.h"
+#include "nvs_flash.h"
 #include "esp_heap_caps.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -444,6 +445,19 @@ static int cmd_reboot(int argc, char **argv)
     return 0;
 }
 
+// ── cmd: factory-reset ────────────────────────────────────────────────────────
+
+static int cmd_factory_reset(int argc, char **argv)
+{
+    printf("ADVARSEL: Sletter al NVS-konfiguration og genstarter!\r\n");
+    printf("Genstart med fabriksindstillinger...\r\n");
+    fflush(stdout);
+    vTaskDelay(pdMS_TO_TICKS(200));
+    nvs_flash_erase();
+    esp_restart();
+    return 0;
+}
+
 // ── Configure terminal ────────────────────────────────────────────────────────
 
 #define CFG_MAX_ARGC 10
@@ -801,8 +815,9 @@ esp_err_t serial_cli_start(gateway_config_t *cfg)
         { .command = "status",     .help = "System status: version, IP, uptime, heap",               .hint = NULL, .func = cmd_status,      .argtable = NULL },
         { .command = "eth",        .help = "Ethernet config  (eth ? for hjælp)",                     .hint = NULL, .func = cmd_eth,         .argtable = NULL },
         { .command = "wifi",       .help = "WiFi config  (wifi ? for hjælp)",                        .hint = NULL, .func = cmd_wifi,        .argtable = NULL },
-        { .command = "save",       .help = "Gem konfiguration til NVS",                              .hint = NULL, .func = cmd_save,        .argtable = NULL },
-        { .command = "reboot",     .help = "Genstart gateway",                                       .hint = NULL, .func = cmd_reboot,      .argtable = NULL },
+        { .command = "save",          .help = "Gem konfiguration til NVS",                           .hint = NULL, .func = cmd_save,          .argtable = NULL },
+        { .command = "reboot",        .help = "Genstart gateway",                                    .hint = NULL, .func = cmd_reboot,        .argtable = NULL },
+        { .command = "factory-reset", .help = "Slet al NVS-config og genstart med fabriksindst.",   .hint = NULL, .func = cmd_factory_reset, .argtable = NULL },
     };
 
     for (size_t i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {

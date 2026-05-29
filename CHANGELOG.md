@@ -4,6 +4,18 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0032] — 2026-05-29 — diagnose: WiFi disconnect reason + factory-reset kommando
+
+**Filer ændret:**
+- `firmware/main/core/wifi_manager.c` — disconnect-log viser nu reason-kode (reason 15/204 = forkert PSK)
+- `firmware/main/core/serial_cli.c` — ny `factory-reset` kommando (sletter NVS + reboot)
+- `firmware/main/core/version.h` — build 0032
+- `version.json` — build 0032
+
+**Baggrund:** WiFi HANDSHAKE_TIMEOUT (reason 204) opstod fordi NVS indeholdt garbage-password fra pre-b0030-perioden (dangling pointer korrupterede `save`). Reason-koden er nu synlig i loggen for fremtidig diagnose. `factory-reset` giver nem recovery ved korrupt NVS.
+
+---
+
 ## [0.1.0 build 0031] — 2026-05-29 — fix: WiFi STA — retry, auth threshold, double-init, quotes
 
 **Filer ændret:**
