@@ -35,6 +35,22 @@ static void show_running_config(void)
 
     // ── Interface ETH0 ────────────────────────────────────────────────────────
     printf("Interface ETH0\r\n");
+    printf(" %s\r\n", s_cfg->ethernet.enabled ? "Enable" : "Disable");
+    printf(" Type %s\r\n", s_cfg->ethernet.hw_type == ETH_HW_W5500 ? "W5500" : "LAN8720");
+    if (s_cfg->ethernet.hw_type == ETH_HW_W5500) {
+        printf(" SPI-CS   GPIO %d\r\n",   s_cfg->ethernet.spi_cs_gpio);
+        printf(" SPI-MOSI GPIO %d\r\n",   s_cfg->ethernet.spi_mosi_gpio);
+        printf(" SPI-MISO GPIO %d\r\n",   s_cfg->ethernet.spi_miso_gpio);
+        printf(" SPI-SCLK GPIO %d\r\n",   s_cfg->ethernet.spi_sclk_gpio);
+        if (s_cfg->ethernet.spi_int_gpio >= 0)
+            printf(" SPI-INT  GPIO %d\r\n", s_cfg->ethernet.spi_int_gpio);
+    } else {
+        printf(" PHY-addr %d\r\n",        s_cfg->ethernet.phy_addr);
+        printf(" MDC      GPIO %d\r\n",   s_cfg->ethernet.mdc_gpio);
+        printf(" MDIO     GPIO %d\r\n",   s_cfg->ethernet.mdio_gpio);
+        if (s_cfg->ethernet.phy_rst_gpio >= 0)
+            printf(" PHY-RST  GPIO %d\r\n", s_cfg->ethernet.phy_rst_gpio);
+    }
     if (strcasecmp(s_cfg->ethernet.ip, "dhcp") == 0 || s_cfg->ethernet.ip[0] == '\0') {
         printf(" IP dhcp\r\n");
     } else {
@@ -135,16 +151,82 @@ static int cmd_eth(int argc, char **argv)
 {
     if (argc < 2) {
         printf("Brug:\r\n");
+        printf("  eth enable                            -- aktiver Ethernet\r\n");
+        printf("  eth disable                           -- deaktiver Ethernet\r\n");
+        printf("  eth type lan8720|w5500                -- hardware-type\r\n");
         printf("  eth dhcp                              -- DHCP\r\n");
         printf("  eth <ip> <gateway> <netmask>          -- statisk IP\r\n");
-        printf("  Eks: eth 192.168.1.100 192.168.1.1 255.255.255.0\r\n");
+        printf("LAN8720 RMII:\r\n");
+        printf("  eth phy-addr <0-31>                   -- PHY adresse\r\n");
+        printf("  eth mdc <gpio>                        -- MDC pin\r\n");
+        printf("  eth mdio <gpio>                       -- MDIO pin\r\n");
+        printf("  eth phy-rst <gpio|-1>                 -- PHY reset pin (-1=ingen)\r\n");
+        printf("W5500 SPI:\r\n");
+        printf("  eth cs <gpio>                         -- SPI CS pin\r\n");
+        printf("  eth mosi <gpio>                       -- SPI MOSI pin\r\n");
+        printf("  eth miso <gpio>                       -- SPI MISO pin\r\n");
+        printf("  eth sclk <gpio>                       -- SPI SCLK pin\r\n");
+        printf("  eth int <gpio|-1>                     -- SPI INT pin (-1=pollet)\r\n");
         return 1;
     }
 
-    if (strcasecmp(argv[1], "dhcp") == 0) {
-        strncpy(s_cfg->ethernet.ip,      "dhcp",      sizeof(s_cfg->ethernet.ip));
-        strncpy(s_cfg->ethernet.gw,      "0.0.0.0",   sizeof(s_cfg->ethernet.gw));
-        strncpy(s_cfg->ethernet.netmask, "0.0.0.0",   sizeof(s_cfg->ethernet.netmask));
+    const char *sub = argv[1];
+
+    if (strcasecmp(sub, "enable") == 0) {
+        s_cfg->ethernet.enabled = 1;
+        printf("Ethernet aktiveret.\r\n");
+    } else if (strcasecmp(sub, "disable") == 0) {
+        s_cfg->ethernet.enabled = 0;
+        printf("Ethernet deaktiveret.\r\n");
+    } else if (strcasecmp(sub, "type") == 0) {
+        if (argc < 3) { printf("Fejl: lan8720 eller w5500\r\n"); return 1; }
+        if (strcasecmp(argv[2], "w5500") == 0) {
+            s_cfg->ethernet.hw_type = ETH_HW_W5500;
+            printf("Ethernet type: W5500 (SPI)\r\n");
+        } else {
+            s_cfg->ethernet.hw_type = ETH_HW_LAN8720;
+            printf("Ethernet type: LAN8720 (RMII)\r\n");
+        }
+    } else if (strcasecmp(sub, "phy-addr") == 0) {
+        if (argc < 3) { printf("Fejl: angiv PHY adresse\r\n"); return 1; }
+        s_cfg->ethernet.phy_addr = atoi(argv[2]);
+        printf("PHY adresse: %d\r\n", s_cfg->ethernet.phy_addr);
+    } else if (strcasecmp(sub, "mdc") == 0) {
+        if (argc < 3) { printf("Fejl: angiv GPIO\r\n"); return 1; }
+        s_cfg->ethernet.mdc_gpio = atoi(argv[2]);
+        printf("MDC GPIO: %d\r\n", s_cfg->ethernet.mdc_gpio);
+    } else if (strcasecmp(sub, "mdio") == 0) {
+        if (argc < 3) { printf("Fejl: angiv GPIO\r\n"); return 1; }
+        s_cfg->ethernet.mdio_gpio = atoi(argv[2]);
+        printf("MDIO GPIO: %d\r\n", s_cfg->ethernet.mdio_gpio);
+    } else if (strcasecmp(sub, "phy-rst") == 0) {
+        if (argc < 3) { printf("Fejl: angiv GPIO eller -1\r\n"); return 1; }
+        s_cfg->ethernet.phy_rst_gpio = atoi(argv[2]);
+        printf("PHY RST GPIO: %d\r\n", s_cfg->ethernet.phy_rst_gpio);
+    } else if (strcasecmp(sub, "cs") == 0) {
+        if (argc < 3) { printf("Fejl: angiv GPIO\r\n"); return 1; }
+        s_cfg->ethernet.spi_cs_gpio = atoi(argv[2]);
+        printf("SPI CS GPIO: %d\r\n", s_cfg->ethernet.spi_cs_gpio);
+    } else if (strcasecmp(sub, "mosi") == 0) {
+        if (argc < 3) { printf("Fejl: angiv GPIO\r\n"); return 1; }
+        s_cfg->ethernet.spi_mosi_gpio = atoi(argv[2]);
+        printf("SPI MOSI GPIO: %d\r\n", s_cfg->ethernet.spi_mosi_gpio);
+    } else if (strcasecmp(sub, "miso") == 0) {
+        if (argc < 3) { printf("Fejl: angiv GPIO\r\n"); return 1; }
+        s_cfg->ethernet.spi_miso_gpio = atoi(argv[2]);
+        printf("SPI MISO GPIO: %d\r\n", s_cfg->ethernet.spi_miso_gpio);
+    } else if (strcasecmp(sub, "sclk") == 0) {
+        if (argc < 3) { printf("Fejl: angiv GPIO\r\n"); return 1; }
+        s_cfg->ethernet.spi_sclk_gpio = atoi(argv[2]);
+        printf("SPI SCLK GPIO: %d\r\n", s_cfg->ethernet.spi_sclk_gpio);
+    } else if (strcasecmp(sub, "int") == 0) {
+        if (argc < 3) { printf("Fejl: angiv GPIO eller -1\r\n"); return 1; }
+        s_cfg->ethernet.spi_int_gpio = atoi(argv[2]);
+        printf("SPI INT GPIO: %d\r\n", s_cfg->ethernet.spi_int_gpio);
+    } else if (strcasecmp(sub, "dhcp") == 0) {
+        strncpy(s_cfg->ethernet.ip,      "dhcp",    sizeof(s_cfg->ethernet.ip));
+        strncpy(s_cfg->ethernet.gw,      "0.0.0.0", sizeof(s_cfg->ethernet.gw));
+        strncpy(s_cfg->ethernet.netmask, "0.0.0.0", sizeof(s_cfg->ethernet.netmask));
         printf("Ethernet: DHCP\r\n");
     } else {
         if (argc < 4) {
@@ -346,7 +428,7 @@ esp_err_t serial_cli_start(gateway_config_t *cfg)
     static const esp_console_cmd_t cmds[] = {
         { .command = "show",   .help = "show config — vis komplet konfiguration (IOS-stil)", .hint = NULL, .func = cmd_show,        .argtable = NULL },
         { .command = "status", .help = "System status: version, IP, uptime, heap",       .hint = NULL, .func = cmd_status,      .argtable = NULL },
-        { .command = "eth",    .help = "Ethernet IP  (eth dhcp | eth <ip> <gw> <mask>)", .hint = NULL, .func = cmd_eth,         .argtable = NULL },
+        { .command = "eth",    .help = "Ethernet config (eth enable|disable|type|dhcp|ip|mdc|...)", .hint = NULL, .func = cmd_eth,         .argtable = NULL },
         { .command = "wifi",   .help = "WiFi config  (wifi on/off/ssid/pass/ip/ap)",     .hint = NULL, .func = cmd_wifi,        .argtable = NULL },
         { .command = "save",   .help = "Gem konfiguration til NVS",                      .hint = NULL, .func = cmd_save,        .argtable = NULL },
         { .command = "reboot", .help = "Genstart gateway",                               .hint = NULL, .func = cmd_reboot,      .argtable = NULL },

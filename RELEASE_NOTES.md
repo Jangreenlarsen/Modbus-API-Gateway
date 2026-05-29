@@ -2,6 +2,39 @@
 
 ---
 
+## v0.1.0 build 0026 — 2026-05-29 — ETH0 komplet config: Enable, Type, GPIO pins
+
+`show config` viser nu al Ethernet-konfiguration, og `eth` kommandoen understøtter alle parametre:
+
+```
+Interface ETH0
+ Enable
+ Type LAN8720
+ PHY-addr 0
+ MDC      GPIO 23
+ MDIO     GPIO 18
+ IP dhcp
+End interface ETH0
+```
+
+Eller ved W5500 SPI:
+```
+Interface ETH0
+ Enable
+ Type W5500
+ SPI-CS   GPIO 5
+ SPI-MOSI GPIO 23
+ SPI-MISO GPIO 19
+ SPI-SCLK GPIO 18
+ SPI-INT  GPIO 26
+ IP dhcp
+End interface ETH0
+```
+
+**`eth` subkommandoer:** `enable`, `disable`, `type lan8720|w5500`, `dhcp`, `<ip> <gw> <mask>`, `phy-addr`, `mdc`, `mdio`, `phy-rst`, `cs`, `mosi`, `miso`, `sclk`, `int`
+
+---
+
 ## v0.1.0 build 0025 — 2026-05-29 — CLI show config: IOS-stil running config
 
 `show config` viser nu al konfiguration i Cisco IOS-stil blokformat:
