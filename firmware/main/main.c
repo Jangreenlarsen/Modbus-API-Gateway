@@ -27,7 +27,10 @@ void app_main(void)
     ESP_ERROR_CHECK(nvs_err);
 
     // 2. Indlæs konfiguration fra NVS (eller brug defaults)
-    gateway_config_t cfg;
+    // static: cfg lever i BSS-segmentet (hele programmets levetid), ikke på
+    // app_main's stack. Når app_main returnerer sletter FreeRTOS main-tasken
+    // og frigiver stacken — s_cfg i serial_cli.c ville ellers blive dangling.
+    static gateway_config_t cfg;
     config_store_load(&cfg);
 
     // 3. Serial CLI — startes tidligt så IP kan konfigureres uden netværk

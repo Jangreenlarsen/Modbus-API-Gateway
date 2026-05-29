@@ -4,6 +4,43 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0030] — 2026-05-29 — fix: dangling pointer — cfg static i app_main
+
+**Filer ændret:**
+- `firmware/main/main.c` — `gateway_config_t cfg` gjort `static` så det lever i BSS, ikke på app_main's stack
+- `firmware/main/core/version.h` — build 0030
+- `version.json` — build 0030
+
+**Rodårsag fikset:** `app_main` returnerer efter at have startet alle tasks. FreeRTOS sletter main-tasken og frigiver dens stack. `s_cfg` i `serial_cli.c` pegede på stack-allokeret `cfg` og blev dangling pointer. Al efterfølgende gem/læs via `s_cfg` arbejdede på frigjort hukommelse → data-korruption. `static` placerer `cfg` i BSS-segmentet (levetid = hele programmets kørsel).
+
+---
+
+## [0.1.0 build 0029] — 2026-05-29 — ETH GPIO type-gates: kun relevante pins vises og accepteres
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — `ETH_HW_NONE` tilføjet til `eth_hw_t` enum
+- `firmware/main/core/serial_cli.c` — `eth_print_help(hw_type)` fælles funktion. `show config` og `?`-hjælp viser kun GPIO-pins for valgt type. Configure mode afviser LAN8720-pins ved W5500 og omvendt. `eth type none` understøttet.
+- `firmware/main/core/version.h` — build 0029
+- `version.json` — build 0029
+
+---
+
+## [0.1.0 build 0028] — 2026-05-29 — fix: NVS struct-version + WiFi SSID altid vist
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — `CONFIG_STRUCT_VERSION 3` + `uint32_t version` felt i `gateway_config_t`
+- `firmware/main/core/config.c` — `config_set_defaults` sætter `cfg->version = CONFIG_STRUCT_VERSION`
+- `firmware/main/storage/config_store.c` — load checker `cfg->version != CONFIG_STRUCT_VERSION` → defaults
+- `firmware/main/core/serial_cli.c` — `show config` WIFI-blok viser altid SSID og PSK (med fallback-tekst). PSK vises aldrig i klartekst.
+- `firmware/main/core/version.h` — build 0028
+- `version.json` — build 0028
+
+**Rodårsag fikset:** Struct-layout ændring (b0026: eth_config_t voksede) forskydte wifi-felternes offset i RAM. Gammelt NVS-blob med anden layout-version nulstilles nu automatisk til defaults ved boot.
+
+**NVS-note:** Første boot efter flash nulstiller NVS til defaults — rekonfigurér og `save`.
+
+---
+
 ## [0.1.0 build 0027] — 2026-05-29 — CLI: configure terminal + kontekst-sensitiv ?-hjælp
 
 **Filer ændret:**
