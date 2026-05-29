@@ -4,6 +4,26 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0031] — 2026-05-29 — fix: WiFi STA — retry, auth threshold, double-init, quotes
+
+**Filer ændret:**
+- `firmware/main/core/wifi_manager.c` — 5 rettelser (se nedenfor)
+- `firmware/main/core/serial_cli.c` — cfg_tokenize: quote-support til SSID/PSK med mellemrum
+- `firmware/main/core/version.h` — build 0031
+- `version.json` — build 0031
+
+**Rettelser i wifi_manager.c:**
+1. **Threshold.authmode**: `WIFI_AUTH_WPA2_PSK` → `WIFI_AUTH_WPA_PSK` — accepterer nu WPA og stærkere. WPA2_PSK afviste WPA-only AP'er og visse WPA2/WPA3 transition-modes.
+2. **Infinite retry**: `esp_wifi_connect()` kaldes nu altid ved disconnect — gateway giver ikke op efter 5 forsøg. FAIL_BIT sættes stadig (for AP-fallback trigger), men STA fortsætter med at forsøge forbindelsen.
+3. **Double-init guard**: `s_initialized` flag forhindrer at `esp_netif_create_default_wifi_sta/ap` + `esp_wifi_init` + event handler registrering kaldes to gange ved `wifi_manager_reconfigure()`.
+4. **FAIL_BIT ryddes**: `xEventGroupClearBits(FAIL_BIT)` tilføjet ved succesfuld forbindelse — korrekt state ved reconnect efter AP-fallback.
+5. **start_ap_fallback**: tilføjet `esp_wifi_stop() + esp_wifi_start()` — påkrævet for korrekt APSTA-mode aktivering i ESP-IDF v5.x.
+
+**Rettelse i serial_cli.c:**
+- `cfg_tokenize`: understøtter nu `"quoted strings"` — SSID og PSK med mellemrum gemmes korrekt i configure-mode.
+
+---
+
 ## [0.1.0 build 0030] — 2026-05-29 — fix: dangling pointer — cfg static i app_main
 
 **Filer ændret:**

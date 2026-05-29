@@ -20,32 +20,40 @@ static const char *TAG = "wifi_mgr";
 static EventGroupHandle_t s_wifi_eg;
 static wifi_status_t      s_status = { .state = WIFI_STATE_DISABLED };
 static wifi_config_gw_t   s_cfg;
-static esp_netif_t       *s_sta_netif = NULL;
-static esp_netif_t       *s_ap_netif  = NULL;
-static int                s_retry     = 0;
+static esp_netif_t       *s_sta_netif  = NULL;
+static esp_netif_t       *s_ap_netif   = NULL;
+static int                s_retry      = 0;
+static bool               s_initialized = false;
 
 // ── Event handlers ────────────────────────────────────────────────────────────
 
 static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
     if (base == WIFI_EVENT && id == WIFI_EVENT_STA_START) {
+        s_retry = 0;
         esp_wifi_connect();
         s_status.state = WIFI_STATE_CONNECTING;
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
-        if (s_retry < WIFI_STA_MAX_RETRY) {
-            esp_wifi_connect();
-            s_retry++;
+        s_status.state = WIFI_STATE_CONNECTING;
+        s_retry++;
+        if (s_retry <= WIFI_STA_MAX_RETRY) {
             ESP_LOGW(TAG, "STA retry %d/%d", s_retry, WIFI_STA_MAX_RETRY);
         } else {
-            ESP_LOGE(TAG, "STA failed after %d retries", WIFI_STA_MAX_RETRY);
-            xEventGroupSetBits(s_wifi_eg, WIFI_FAIL_BIT);
+            ESP_LOGE(TAG, "STA utilgængelig (forsøg %d) — fortsat forsøger", s_retry);
+            if (s_retry == WIFI_STA_MAX_RETRY + 1) {
+                // Sæt FAIL_BIT én gang for at trigge AP-fallback logik i init
+                s_status.state = WIFI_STATE_ERROR;
+                xEventGroupSetBits(s_wifi_eg, WIFI_FAIL_BIT);
+            }
         }
+        esp_wifi_connect();  // altid forsøg igen — gateway skal ikke give op
     } else if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t *ev = (ip_event_got_ip_t *)data;
         snprintf(s_status.ip, sizeof(s_status.ip), IPSTR, IP2STR(&ev->ip_info.ip));
         s_status.state = WIFI_STATE_CONNECTED;
         s_retry = 0;
-        ESP_LOGI(TAG, "WiFi STA connected — IP: %s", s_status.ip);
+        xEventGroupClearBits(s_wifi_eg, WIFI_FAIL_BIT);
+        ESP_LOGI(TAG, "WiFi STA forbundet — IP: %s", s_status.ip);
         xEventGroupSetBits(s_wifi_eg, WIFI_CONNECTED_BIT);
     }
 }
@@ -75,14 +83,18 @@ static void start_ap_fallback(void)
         ap_cfg.ap.authmode = WIFI_AUTH_OPEN;
     }
 
+    // Stop + mode-skift + start er nødvendigt for at AP aktiveres korrekt i v5.x.
+    // WIFI_EVENT_STA_START fyres igen → STA genoptager forbindelsesforsøg i baggrunden.
+    esp_wifi_stop();
     esp_wifi_set_mode(WIFI_MODE_APSTA);
     esp_wifi_set_config(WIFI_IF_AP, &ap_cfg);
+    esp_wifi_start();
 
     s_status.state = WIFI_STATE_AP_MODE;
     strncpy(s_status.ssid, ap_ssid, sizeof(s_status.ssid));
     strncpy(s_status.ip, "192.168.4.1", sizeof(s_status.ip));
 
-    ESP_LOGI(TAG, "AP fallback started — SSID: %s  IP: 192.168.4.1", ap_ssid);
+    ESP_LOGI(TAG, "AP fallback aktiv — SSID: %s  IP: 192.168.4.1", ap_ssid);
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -96,9 +108,21 @@ esp_err_t wifi_manager_init(const wifi_config_gw_t *cfg)
         return ESP_OK;
     }
 
-    s_wifi_eg   = xEventGroupCreate();
-    s_sta_netif = esp_netif_create_default_wifi_sta();
-    s_ap_netif  = esp_netif_create_default_wifi_ap();
+    // Én gang: opret netifs, wifi-driver og event handlers.
+    // Undgår double-create ved kald fra wifi_manager_reconfigure.
+    if (!s_initialized) {
+        s_wifi_eg   = xEventGroupCreate();
+        s_sta_netif = esp_netif_create_default_wifi_sta();
+        s_ap_netif  = esp_netif_create_default_wifi_ap();
+
+        wifi_init_config_t init_cfg = WIFI_INIT_CONFIG_DEFAULT();
+        ESP_ERROR_CHECK(esp_wifi_init(&init_cfg));
+
+        esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_wifi_event, NULL);
+        esp_event_handler_register(IP_EVENT,   IP_EVENT_STA_GOT_IP, on_wifi_event, NULL);
+
+        s_initialized = true;
+    }
 
     // Statisk IP hvis ikke "dhcp" — ellers forbliver DHCP-klient aktiv (default)
     if (cfg->ip[0] && strcmp(cfg->ip, "dhcp") != 0) {
@@ -115,23 +139,22 @@ esp_err_t wifi_manager_init(const wifi_config_gw_t *cfg)
         ESP_LOGI(TAG, "WiFi STA DHCP aktiv");
     }
 
-    wifi_init_config_t init_cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&init_cfg));
-
-    esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, on_wifi_event, NULL);
-    esp_event_handler_register(IP_EVENT,   IP_EVENT_STA_GOT_IP, on_wifi_event, NULL);
-
     wifi_config_t sta_cfg = {};
     strncpy((char*)sta_cfg.sta.ssid,     cfg->ssid,     sizeof(sta_cfg.sta.ssid));
     strncpy((char*)sta_cfg.sta.password, cfg->password, sizeof(sta_cfg.sta.password));
-    sta_cfg.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+    // WIFI_AUTH_WPA_PSK: accepterer WPA og stærkere (WPA2, WPA3).
+    // WPA2_PSK var for strikt og afviste WPA-only AP'er og visse transition-modes.
+    sta_cfg.sta.threshold.authmode  = WIFI_AUTH_WPA_PSK;
+    sta_cfg.sta.pmf_cfg.capable     = true;
+    sta_cfg.sta.pmf_cfg.required    = false;
 
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_cfg));
     ESP_ERROR_CHECK(esp_wifi_start());
 
     strncpy(s_status.ssid, cfg->ssid, sizeof(s_status.ssid));
-    ESP_LOGI(TAG, "WiFi STA connecting to: %s", cfg->ssid);
+    ESP_LOGI(TAG, "WiFi STA forbinder til: %s",
+             cfg->ssid[0] ? cfg->ssid : "(ingen SSID konfigureret)");
 
     // Vent på forbindelse eller fejl (max 10 sek)
     EventBits_t bits = xEventGroupWaitBits(s_wifi_eg,
@@ -142,7 +165,7 @@ esp_err_t wifi_manager_init(const wifi_config_gw_t *cfg)
             start_ap_fallback();
         } else {
             s_status.state = WIFI_STATE_ERROR;
-            ESP_LOGE(TAG, "WiFi STA failed, AP fallback disabled");
+            ESP_LOGE(TAG, "WiFi STA fejlede, AP fallback deaktiveret — fortsat forsøger");
         }
     }
     return ESP_OK;
@@ -184,8 +207,10 @@ char *wifi_manager_scan(void)
 
 esp_err_t wifi_manager_reconfigure(const wifi_config_gw_t *cfg)
 {
-    esp_wifi_stop();
+    if (s_initialized) {
+        esp_wifi_stop();
+    }
     s_retry = 0;
-    xEventGroupClearBits(s_wifi_eg, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT);
+    if (s_wifi_eg) xEventGroupClearBits(s_wifi_eg, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT);
     return wifi_manager_init(cfg);
 }

@@ -302,8 +302,8 @@ static int cmd_wifi(int argc, char **argv)
         printf("  wifi mode                -- aktuel tilstand: klient|AP|deaktiveret\r\n");
         printf("  wifi on                  -- aktiver WiFi STA\r\n");
         printf("  wifi off                 -- deaktiver WiFi\r\n");
-        printf("  wifi ssid <navn>         -- sæt netværksnavn\r\n");
-        printf("  wifi pass <kodeord>      -- sæt adgangskode\r\n");
+        printf("  wifi ssid <navn>         -- sæt netværksnavn  (brug \"\" ved mellemrum)\r\n");
+        printf("  wifi pass <kodeord>      -- sæt adgangskode   (brug \"\" ved mellemrum)\r\n");
         printf("  wifi ip dhcp             -- DHCP (standard)\r\n");
         printf("  wifi ip <ip>             -- statisk IP\r\n");
         printf("  wifi ap on|off           -- AP fallback hotspot\r\n");
@@ -455,9 +455,17 @@ static int cfg_tokenize(char *buf, char **argv)
     while (*p && argc < CFG_MAX_ARGC) {
         while (*p == ' ' || *p == '\t') p++;
         if (!*p) break;
-        argv[argc++] = p;
-        while (*p && *p != ' ' && *p != '\t') p++;
-        if (*p) *p++ = '\0';
+        if (*p == '"') {
+            // Quoted token — bevarer mellemrum: ssid "Mit netværk"
+            p++;
+            argv[argc++] = p;
+            while (*p && *p != '"') p++;
+            if (*p) *p++ = '\0';
+        } else {
+            argv[argc++] = p;
+            while (*p && *p != ' ' && *p != '\t') p++;
+            if (*p) *p++ = '\0';
+        }
     }
     return argc;
 }
