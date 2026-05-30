@@ -10,6 +10,7 @@
 #include "driver/uart_vfs.h"
 #include "esp_log.h"
 #include "esp_system.h"
+#include "esp_chip_info.h"
 #include "esp_timer.h"
 #include "nvs_flash.h"
 #include "esp_heap_caps.h"
@@ -57,6 +58,133 @@ static void eth_print_help(eth_hw_t hw_type)
     }
 }
 
+// ── show helpers ──────────────────────────────────────────────────────────────
+
+static void show_wifi_detail(void)
+{
+    wifi_status_t ws = wifi_manager_get_status();
+    uint8_t mac[6] = {0};
+    esp_wifi_get_mac(WIFI_IF_STA, mac);
+
+    static const char *state_str[] = {
+        "deaktiveret", "forbinder...", "forbundet", "AP hotspot", "fejl"
+    };
+    const char *st = (ws.state <= WIFI_STATE_ERROR) ? state_str[ws.state] : "ukendt";
+
+    wifi_mode_t mode = WIFI_MODE_NULL;
+    esp_wifi_get_mode(&mode);
+    const char *mode_str = "deaktiveret";
+    if      (mode == WIFI_MODE_STA)   mode_str = "klient (STA)";
+    else if (mode == WIFI_MODE_AP)    mode_str = "AP hotspot";
+    else if (mode == WIFI_MODE_APSTA) mode_str = "klient+AP (APSTA)";
+
+    sep();
+    printf("WiFi status\r\n");
+    printf("  Tilstand  : %s\r\n", st);
+    printf("  Mode      : %s\r\n", mode_str);
+    printf("  MAC (STA) : %02X:%02X:%02X:%02X:%02X:%02X\r\n",
+           mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+
+    if (ws.state == WIFI_STATE_CONNECTED) {
+        wifi_ap_record_t ap = {0};
+        esp_wifi_sta_get_ap_info(&ap);
+        static const char *auth_names[] = {
+            "åben", "WEP", "WPA-PSK", "WPA2-PSK", "WPA/WPA2-PSK",
+            "WPA2-Enterprise", "WPA3-PSK", "WPA2/WPA3-PSK", "WAPI-PSK"
+        };
+        const char *auth = (ap.authmode < 9) ? auth_names[ap.authmode] : "ukendt";
+        printf("  SSID      : %s\r\n", ws.ssid[0] ? ws.ssid : "(ingen)");
+        printf("  IP        : %s\r\n", ws.ip[0]   ? ws.ip   : "0.0.0.0");
+        printf("  RSSI      : %d dBm\r\n", (int)ws.rssi);
+        printf("  Kanal     : %d\r\n", ap.primary);
+        printf("  Auth      : %s\r\n", auth);
+        printf("  BSSID     : %02X:%02X:%02X:%02X:%02X:%02X\r\n",
+               ap.bssid[0], ap.bssid[1], ap.bssid[2],
+               ap.bssid[3], ap.bssid[4], ap.bssid[5]);
+    } else if (ws.state == WIFI_STATE_AP_MODE) {
+        uint8_t ap_mac[6] = {0};
+        esp_wifi_get_mac(WIFI_IF_AP, ap_mac);
+        printf("  AP SSID   : %s\r\n", s_cfg->wifi.ap_ssid[0] ? s_cfg->wifi.ap_ssid : "ModbusGW-??????");
+        printf("  AP IP     : 192.168.4.1\r\n");
+        printf("  MAC (AP)  : %02X:%02X:%02X:%02X:%02X:%02X\r\n",
+               ap_mac[0], ap_mac[1], ap_mac[2],
+               ap_mac[3], ap_mac[4], ap_mac[5]);
+    } else {
+        printf("  SSID      : %s\r\n", s_cfg->wifi.ssid[0] ? s_cfg->wifi.ssid : "(ikke konfigureret)");
+    }
+    sep();
+}
+
+static void show_status(void)
+{
+    char eth_ip[16];
+    ethernet_get_ip(eth_ip, sizeof(eth_ip));
+    wifi_status_t ws = wifi_manager_get_status();
+    uint64_t up = (uint64_t)(esp_timer_get_time() / 1000000ULL);
+    uint32_t heap_kb = esp_get_free_heap_size() / 1024;
+
+    static const char *wifi_state_str[] = {
+        "deaktiveret", "forbinder...", "forbundet", "AP hotspot", "fejl"
+    };
+
+    sep();
+    printf("System\r\n");
+    printf("  Version   : v%s b%s\r\n", GATEWAY_VERSION, GATEWAY_BUILD);
+    printf("  Uptime    : %llud %02lluh %02llum %02llus\r\n",
+           up / 86400, (up % 86400) / 3600, (up % 3600) / 60, up % 60);
+    printf("  Heap      : %lu KB fri\r\n", (unsigned long)heap_kb);
+    printf("\r\n");
+
+    printf("Netværk\r\n");
+    printf("  Ethernet  : %s\r\n",
+           strcmp(eth_ip, "0.0.0.0") == 0 ? "ikke tilgængeligt" : eth_ip);
+    printf("  WiFi      : %s",
+           (ws.state <= WIFI_STATE_ERROR) ? wifi_state_str[ws.state] : "ukendt");
+    if (ws.state == WIFI_STATE_CONNECTED)
+        printf("  %s  (%s  %d dBm)", ws.ip, ws.ssid, (int)ws.rssi);
+    printf("\r\n\r\n");
+
+    printf("API server\r\n");
+    printf("  Status    : %s  port %d\r\n",
+           s_cfg->api.enabled ? "kører" : "deaktiveret", s_cfg->api.port);
+    printf("  Auth      : %s\r\n",
+           s_cfg->api.auth_enabled ? "aktiveret (X-API-Key)" : "deaktiveret");
+    printf("\r\n");
+
+    printf("Modbus\r\n");
+    static const char par_ch[] = { 'N', 'O', 'E' };
+    for (int i = 0; i < s_cfg->interface_count; i++) {
+        iface_config_t *f = &s_cfg->interfaces[i];
+        char pc = (f->parity <= 2) ? par_ch[f->parity] : 'N';
+        printf("  Modbus%-2d  : %s  %s  %luB-%d%c%d  UART%d\r\n",
+               f->id,
+               f->enabled ? "aktiv  " : "inaktiv",
+               f->type == IFACE_TYPE_RS485 ? "RS485" : "RS232",
+               (unsigned long)f->baudrate,
+               f->data_bits, pc, f->stop_bits,
+               f->uart_num);
+    }
+    sep();
+}
+
+static void show_version(void)
+{
+    esp_chip_info_t chip = {0};
+    esp_chip_info(&chip);
+
+    sep();
+    printf("Modbus API Gateway\r\n");
+    printf("  Version   : v%s\r\n", GATEWAY_VERSION);
+    printf("  Build     : %s\r\n",  GATEWAY_BUILD);
+    printf("  ESP-IDF   : %s\r\n",  esp_get_idf_version());
+    printf("  Chip      : ESP32  rev%d  %d cores\r\n", chip.revision, chip.cores);
+    printf("  Flash     : %s\r\n",
+           (chip.features & CHIP_FEATURE_EMB_FLASH) ? "intern" : "ekstern SPI");
+    printf("  WiFi+BT   : %s\r\n",
+           (chip.features & CHIP_FEATURE_BT) ? "WiFi + BT" : "WiFi");
+    sep();
+}
+
 // ── cmd: show ─────────────────────────────────────────────────────────────────
 
 static void show_running_config(void)
@@ -70,21 +198,19 @@ static void show_running_config(void)
     printf(" %s\r\n", s_cfg->ethernet.enabled ? "Enable" : "Disable");
     switch (s_cfg->ethernet.hw_type) {
         case ETH_HW_LAN8720:
-            printf(" Type LAN8720\r\n");
-            printf(" PHY-addr %d\r\n",      s_cfg->ethernet.phy_addr);
-            printf(" MDC      GPIO %d\r\n", s_cfg->ethernet.mdc_gpio);
-            printf(" MDIO     GPIO %d\r\n", s_cfg->ethernet.mdio_gpio);
-            if (s_cfg->ethernet.phy_rst_gpio >= 0)
-                printf(" PHY-RST  GPIO %d\r\n", s_cfg->ethernet.phy_rst_gpio);
+            printf(" type lan8720\r\n");
+            printf(" phy-addr %d\r\n", s_cfg->ethernet.phy_addr);
+            printf(" mdc %d\r\n",      s_cfg->ethernet.mdc_gpio);
+            printf(" mdio %d\r\n",     s_cfg->ethernet.mdio_gpio);
+            printf(" phy-rst %d\r\n",  s_cfg->ethernet.phy_rst_gpio);
             break;
         case ETH_HW_W5500:
-            printf(" Type W5500\r\n");
-            printf(" SPI-CS   GPIO %d\r\n", s_cfg->ethernet.spi_cs_gpio);
-            printf(" SPI-MOSI GPIO %d\r\n", s_cfg->ethernet.spi_mosi_gpio);
-            printf(" SPI-MISO GPIO %d\r\n", s_cfg->ethernet.spi_miso_gpio);
-            printf(" SPI-SCLK GPIO %d\r\n", s_cfg->ethernet.spi_sclk_gpio);
-            if (s_cfg->ethernet.spi_int_gpio >= 0)
-                printf(" SPI-INT  GPIO %d\r\n", s_cfg->ethernet.spi_int_gpio);
+            printf(" type w5500\r\n");
+            printf(" cs %d\r\n",   s_cfg->ethernet.spi_cs_gpio);
+            printf(" mosi %d\r\n", s_cfg->ethernet.spi_mosi_gpio);
+            printf(" miso %d\r\n", s_cfg->ethernet.spi_miso_gpio);
+            printf(" sclk %d\r\n", s_cfg->ethernet.spi_sclk_gpio);
+            printf(" int %d\r\n",  s_cfg->ethernet.spi_int_gpio);
             break;
         default:
             printf(" Type none\r\n");
@@ -158,42 +284,32 @@ static void show_running_config(void)
 
 static int cmd_show(int argc, char **argv)
 {
-    if (argc >= 2 && strcasecmp(argv[1], "config") == 0) {
-        show_running_config();
+    if (argc < 2) {
+        sep();
+        printf("Brug:\r\n");
+        printf("  show status   -- generel system-status\r\n");
+        printf("  show version  -- firmware-version og chip-info\r\n");
+        printf("  show wifi     -- detaljeret WiFi-status\r\n");
+        printf("  show config   -- komplet konfiguration (IOS-stil)\r\n");
+        sep();
         return 0;
     }
-
-    // uden argument: kort status-oversigt
-    sep();
-    printf("Brug: show config  -- vis komplet konfiguration\r\n");
-    sep();
+    if      (strcasecmp(argv[1], "status")  == 0) show_status();
+    else if (strcasecmp(argv[1], "version") == 0) show_version();
+    else if (strcasecmp(argv[1], "wifi")    == 0) show_wifi_detail();
+    else if (strcasecmp(argv[1], "config")  == 0) show_running_config();
+    else {
+        printf("Ukendt: 'show %s'  (show ? for hjælp)\r\n", argv[1]);
+        return 1;
+    }
     return 0;
 }
 
-// ── cmd: status ───────────────────────────────────────────────────────────────
+// ── cmd: status (alias for show status) ───────────────────────────────────────
 
 static int cmd_status(int argc, char **argv)
 {
-    char eth_ip[16];
-    ethernet_get_ip(eth_ip, sizeof(eth_ip));
-    wifi_status_t ws = wifi_manager_get_status();
-    uint64_t uptime_s = (uint64_t)(esp_timer_get_time() / 1000000ULL);
-    uint32_t heap_kb  = esp_get_free_heap_size() / 1024;
-
-    static const char *wifi_state_str[] = {
-        "deaktiveret", "forbinder...", "forbundet", "AP hotspot", "fejl"
-    };
-
-    sep();
-    printf("Version : v%s b%s\r\n", GATEWAY_VERSION, GATEWAY_BUILD);
-    printf("Uptime  : %llu s\r\n", uptime_s);
-    printf("Eth IP  : %s\r\n", strcmp(eth_ip, "0.0.0.0") == 0 ? "ikke tilgængeligt" : eth_ip);
-    printf("WiFi    : %s", (ws.state <= WIFI_STATE_ERROR) ? wifi_state_str[ws.state] : "ukendt");
-    if (ws.state == WIFI_STATE_CONNECTED)
-        printf("  %s  (%s)", ws.ip[0] ? ws.ip : "?", ws.ssid[0] ? ws.ssid : "?");
-    printf("\r\n");
-    printf("Heap    : %lu KB fri\r\n", (unsigned long)heap_kb);
-    sep();
+    show_status();
     return 0;
 }
 
@@ -334,58 +450,7 @@ static int cmd_wifi(int argc, char **argv)
     const char *sub = argv[1];
 
     if (strcasecmp(sub, "status") == 0) {
-        wifi_status_t ws = wifi_manager_get_status();
-        uint8_t mac[6] = {0};
-        esp_wifi_get_mac(WIFI_IF_STA, mac);
-
-        static const char *state_str[] = {
-            "deaktiveret", "forbinder...", "forbundet", "AP hotspot", "fejl"
-        };
-        const char *st = (ws.state <= WIFI_STATE_ERROR) ? state_str[ws.state] : "ukendt";
-
-        sep();
-        printf("WiFi live status\r\n");
-        printf("  Tilstand  : %s\r\n", st);
-
-        wifi_mode_t mode = WIFI_MODE_NULL;
-        esp_wifi_get_mode(&mode);
-        const char *mode_str = "deaktiveret";
-        if      (mode == WIFI_MODE_STA)   mode_str = "klient (STA)";
-        else if (mode == WIFI_MODE_AP)    mode_str = "AP hotspot";
-        else if (mode == WIFI_MODE_APSTA) mode_str = "klient+AP (APSTA)";
-        printf("  Mode      : %s\r\n", mode_str);
-
-        printf("  MAC (STA) : %02X:%02X:%02X:%02X:%02X:%02X\r\n",
-               mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-
-        if (ws.state == WIFI_STATE_CONNECTED) {
-            wifi_ap_record_t ap = {0};
-            esp_wifi_sta_get_ap_info(&ap);
-            static const char *auth_names[] = {
-                "åben", "WEP", "WPA-PSK", "WPA2-PSK", "WPA/WPA2-PSK",
-                "WPA2-Enterprise", "WPA3-PSK", "WPA2/WPA3-PSK", "WAPI-PSK"
-            };
-            const char *auth = (ap.authmode < 9) ? auth_names[ap.authmode] : "ukendt";
-            printf("  SSID      : %s\r\n", ws.ssid[0] ? ws.ssid : "(ingen)");
-            printf("  IP        : %s\r\n", ws.ip[0]   ? ws.ip   : "0.0.0.0");
-            printf("  RSSI      : %d dBm\r\n", (int)ws.rssi);
-            printf("  Kanal     : %d\r\n", ap.primary);
-            printf("  Auth      : %s\r\n", auth);
-            printf("  BSSID     : %02X:%02X:%02X:%02X:%02X:%02X\r\n",
-                   ap.bssid[0], ap.bssid[1], ap.bssid[2],
-                   ap.bssid[3], ap.bssid[4], ap.bssid[5]);
-        } else if (ws.state == WIFI_STATE_AP_MODE) {
-            uint8_t ap_mac[6] = {0};
-            esp_wifi_get_mac(WIFI_IF_AP, ap_mac);
-            printf("  AP SSID   : %s\r\n", s_cfg->wifi.ap_ssid[0] ? s_cfg->wifi.ap_ssid : "ModbusGW-??????");
-            printf("  AP IP     : 192.168.4.1\r\n");
-            printf("  MAC (AP)  : %02X:%02X:%02X:%02X:%02X:%02X\r\n",
-                   ap_mac[0], ap_mac[1], ap_mac[2],
-                   ap_mac[3], ap_mac[4], ap_mac[5]);
-        } else {
-            printf("  SSID      : %s\r\n", s_cfg->wifi.ssid[0] ? s_cfg->wifi.ssid : "(ikke konfigureret)");
-        }
-        sep();
+        show_wifi_detail();
         return 0;
     } else if (strcasecmp(sub, "mode") == 0) {
         wifi_mode_t mode = WIFI_MODE_NULL;

@@ -4,6 +4,36 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0042] — 2026-05-30 — fix: show config Ethernet GPIO-linjer matcher CLI-kommandoer
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — `show_running_config()`: GPIO-linjer for LAN8720/W5500 ændret til CLI-format
+- `firmware/main/core/version.h` — build 0042
+- `version.json` — build 0042
+
+**Problem:** `show config` printede `SPI-CS   GPIO 23` og `MDC      GPIO 23`. CLI-kommandoerne er `cs 23` og `mdc 23`. Copy-paste fra show config gav `atoi("GPIO") = 0`.
+
+**Fix:** Output er nu identisk med CLI-kommandoerne — `cs`, `mosi`, `miso`, `sclk`, `int`, `mdc`, `mdio`, `phy-addr`, `phy-rst` uden "GPIO"-præfix og "SPI-"-præfix.
+
+---
+
+## [0.1.0 build 0041] — 2026-05-30 — feat: show status/version/wifi kommandoer
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — `show_status()`, `show_version()`, `show_wifi_detail()` + omskrevet `cmd_show()` + `cmd_status()`
+- `firmware/main/core/version.h` — build 0041
+- `version.json` — build 0041
+
+**Nye CLI-kommandoer:**
+- `show status` — system (version, uptime d/h/m/s, heap), netværk (Eth+WiFi+RSSI), API-server, Modbus-interfaces
+- `show version` — firmware v/build, ESP-IDF version, chip-model/revision/cores, flash-type
+- `show wifi` — detaljeret WiFi (tilstand, mode, MAC, SSID, IP, RSSI, kanal, auth, BSSID)
+- `show config` — uændret (IOS-stil konfiguration)
+- `status` — alias for `show status`
+- `wifi status` — alias for `show wifi`
+
+---
+
 ## [0.1.0 build 0040] — 2026-05-30 — feat: API server config + CLI interface api + auth
 
 **Filer ændret:**
