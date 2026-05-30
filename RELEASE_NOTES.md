@@ -2,6 +2,25 @@
 
 ---
 
+## v0.1.0 build 0046 — 2026-05-30 — W5500 SPI Ethernet driver
+
+W5500 Ethernet virker nu. `ethernet.c` er omskrevet til at bruge konfigureret hardware-type:
+
+- **LAN8720**: RMII intern MAC (uændret)
+- **W5500**: SPI2 bus, 20 MHz, hardware RST-puls på konfigureret GPIO, INT-pin eller polling
+
+`sdkconfig.defaults` opdateret med `CONFIG_ETH_SPI_ETHERNET_W5500=y` så det medfølger ved nye builds.
+
+Uart-log ved W5500 init:
+```
+I ethernet: W5500 RST puls på GPIO 33
+I ethernet: SPI2 bus: MOSI=13 MISO=12 SCLK=14 CS=23
+I ethernet: W5500 SPI Ethernet initialiseret  INT=34  poll=nej
+I ethernet: Got IP: 192.168.x.x
+```
+
+---
+
 ## v0.1.0 build 0045 — 2026-05-30 — fix: build-fejl + show config paste-kompatibilitet
 
 - **Build-fejl:** `ethernet.h` manglede `#include <stdbool.h>` → `unknown type 'bool'`. Rettet.
