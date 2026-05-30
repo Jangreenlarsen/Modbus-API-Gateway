@@ -4,13 +4,66 @@
 #include "cJSON.h"
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
-static gateway_config_t *s_cfg = NULL;
+// ── URI-parsing — accepter både ID og navn ──────────────────────────────────
+// /api/v1/interfaces/0/...      → id = 0
+// /api/v1/interfaces/floor1/... → opslag på navn → id
+// Returns -1 hvis ikke fundet.
+static int resolve_iface(const gateway_config_t *cfg, const char *key)
+{
+    if (!key || !*key) return -1;
+    // Hvis det starter med ciffer, tolk som ID
+    if (isdigit((unsigned char)key[0])) {
+        int id = atoi(key);
+        if (id >= 0 && id < cfg->interface_count) return id;
+        return -1;
+    }
+    // Ellers navn-opslag (case-insensitive)
+    for (int i = 0; i < cfg->interface_count; i++) {
+        if (strcasecmp(cfg->interfaces[i].name, key) == 0) return i;
+    }
+    return -1;
+}
+
+// Udtræk segment efter "/api/v1/interfaces/" — fx "0" eller "floor1" eller "floor1/config"
+// Skriver kun selve nøglen (uden trailing /config eller andre suffixer) til out_key.
+static int parse_iface_key(const char *uri, char *out_key, size_t out_sz)
+{
+    const char *prefix = "/api/v1/interfaces/";
+    const char *p = strstr(uri, prefix);
+    if (!p) return -1;
+    p += strlen(prefix);
+    size_t n = 0;
+    while (*p && *p != '/' && *p != '?' && n + 1 < out_sz) {
+        out_key[n++] = *p++;
+    }
+    out_key[n] = '\0';
+    return (int)n;
+}
+
+// Returnerer true hvis URI'en er en config-request (ingen suffix eller /config).
+// FC-routes (/slaves/...) skal ikke håndteres af config-handleren.
+static bool is_config_request(const char *uri)
+{
+    const char *prefix = "/api/v1/interfaces/";
+    const char *p = strstr(uri, prefix);
+    if (!p) return false;
+    p += strlen(prefix);
+    // Skip nøgle-segment
+    while (*p && *p != '/' && *p != '?') p++;
+    // Trim query
+    if (*p == '\0' || *p == '?') return true;
+    // *p == '/'  → kig på suffix
+    if (strncmp(p, "/config", 7) == 0 && (p[7] == '\0' || p[7] == '?')) return true;
+    return false;
+}
 
 static cJSON *iface_to_json(const iface_config_t *iface)
 {
     cJSON *obj = cJSON_CreateObject();
     cJSON_AddNumberToObject(obj, "id",         iface->id);
+    cJSON_AddStringToObject(obj, "name",       iface->name);
     cJSON_AddStringToObject(obj, "type",       iface->type == IFACE_TYPE_RS485 ? "RS485" : "RS232");
     cJSON_AddStringToObject(obj, "uart_mode",  iface->uart_mode == IFACE_UART_HW ? "hw" : "sw");
     cJSON_AddStringToObject(obj, "mode",       iface->mode == IFACE_MODE_SLAVE ? "slave" : "master");
@@ -42,10 +95,17 @@ static esp_err_t get_interfaces_handler(httpd_req_t *req)
 
 static esp_err_t get_interface_handler(httpd_req_t *req)
 {
-    int id = 0; sscanf(req->uri, "/api/v1/interfaces/%d", &id);
-    gateway_config_t cfg; config_store_load(&cfg);
     httpd_resp_set_type(req, "application/json");
-    if (id >= cfg.interface_count) {
+    if (!is_config_request(req->uri)) {
+        httpd_resp_set_status(req, "404 Not Found");
+        httpd_resp_sendstr(req, "{\"error\":\"not a config route\"}");
+        return ESP_OK;
+    }
+    char key[32] = {0};
+    parse_iface_key(req->uri, key, sizeof(key));
+    gateway_config_t cfg; config_store_load(&cfg);
+    int id = resolve_iface(&cfg, key);
+    if (id < 0) {
         httpd_resp_set_status(req, "404 Not Found");
         httpd_resp_sendstr(req, "{\"error\":\"interface not found\"}");
         return ESP_OK;
@@ -55,19 +115,59 @@ static esp_err_t get_interface_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-static esp_err_t put_interface_config_handler(httpd_req_t *req)
+// Læs hele bodyen — httpd_req_recv kan returnere partial reads
+static int recv_body(httpd_req_t *req, char *buf, int cap)
 {
-    int id = 0; sscanf(req->uri, "/api/v1/interfaces/%d/config", &id);
-    char body[512] = {0};
-    httpd_req_recv(req, body, sizeof(body) - 1);
-    cJSON *json = cJSON_Parse(body);
-
-    gateway_config_t cfg; config_store_load(&cfg);
-    if (id >= cfg.interface_count) {
-        httpd_resp_send_err(req, HTTPD_404_NOT_FOUND, "Interface not found"); cJSON_Delete(json); return ESP_OK;
+    int remaining = req->content_len;
+    if (remaining < 0) remaining = 0;
+    if (remaining > cap - 1) remaining = cap - 1;
+    int total = 0;
+    while (remaining > 0) {
+        int n = httpd_req_recv(req, buf + total, remaining);
+        if (n == HTTPD_SOCK_ERR_TIMEOUT) continue;
+        if (n <= 0) break;
+        total += n; remaining -= n;
     }
+    buf[total] = '\0';
+    return total;
+}
+
+// PUT /api/v1/interfaces/{id|name}      (og /api/v1/interfaces/{id|name}/config — bagudkompatibel)
+static esp_err_t put_interface_handler(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "application/json");
+    if (!is_config_request(req->uri)) {
+        httpd_resp_set_status(req, "404 Not Found");
+        httpd_resp_sendstr(req, "{\"error\":\"not a config route\"}");
+        return ESP_OK;
+    }
+
+    char body[768] = {0};
+    recv_body(req, body, sizeof(body));
+
+    char key[32] = {0};
+    parse_iface_key(req->uri, key, sizeof(key));
+    gateway_config_t cfg; config_store_load(&cfg);
+    int id = resolve_iface(&cfg, key);
+    if (id < 0) {
+        httpd_resp_set_status(req, "404 Not Found");
+        httpd_resp_sendstr(req, "{\"error\":\"interface not found\"}");
+        return ESP_OK;
+    }
+
+    cJSON *json = cJSON_Parse(body);
+    if (!json) {
+        httpd_resp_set_status(req, "400 Bad Request");
+        httpd_resp_sendstr(req, "{\"error\":\"invalid JSON body\"}");
+        return ESP_OK;
+    }
+
     iface_config_t *iface = &cfg.interfaces[id];
     cJSON *v;
+    if ((v = cJSON_GetObjectItem(json, "name"))       && cJSON_IsString(v) && v->valuestring[0]) {
+        strncpy(iface->name, v->valuestring, sizeof(iface->name) - 1);
+        iface->name[sizeof(iface->name) - 1] = '\0';
+    }
     if ((v = cJSON_GetObjectItem(json, "baudrate"))   && cJSON_IsNumber(v)) iface->baudrate   = v->valueint;
     if ((v = cJSON_GetObjectItem(json, "parity"))     && cJSON_IsNumber(v)) iface->parity     = v->valueint;
     if ((v = cJSON_GetObjectItem(json, "stop_bits"))  && cJSON_IsNumber(v)) iface->stop_bits  = v->valueint;
@@ -83,15 +183,23 @@ static esp_err_t put_interface_config_handler(httpd_req_t *req)
         if      (strcasecmp(v->valuestring, "RS232") == 0) iface->type = IFACE_TYPE_RS232;
         else if (strcasecmp(v->valuestring, "RS485") == 0) iface->type = IFACE_TYPE_RS485;
     }
-    if ((v = cJSON_GetObjectItem(json, "tx_pin"))     && cJSON_IsNumber(v)) iface->tx_pin  = v->valueint;
-    if ((v = cJSON_GetObjectItem(json, "rx_pin"))     && cJSON_IsNumber(v)) iface->rx_pin  = v->valueint;
-    if ((v = cJSON_GetObjectItem(json, "rts_pin"))    && cJSON_IsNumber(v)) iface->rts_pin = v->valueint;
+    if ((v = cJSON_GetObjectItem(json, "uart_mode")) && cJSON_IsString(v)) {
+        if      (strcasecmp(v->valuestring, "hw") == 0) iface->uart_mode = IFACE_UART_HW;
+        else if (strcasecmp(v->valuestring, "sw") == 0) iface->uart_mode = IFACE_UART_SW;
+    }
+    if ((v = cJSON_GetObjectItem(json, "uart"))       && cJSON_IsNumber(v)) iface->uart_num = v->valueint;
+    if ((v = cJSON_GetObjectItem(json, "tx_pin"))     && cJSON_IsNumber(v)) iface->tx_pin   = v->valueint;
+    if ((v = cJSON_GetObjectItem(json, "rx_pin"))     && cJSON_IsNumber(v)) iface->rx_pin   = v->valueint;
+    if ((v = cJSON_GetObjectItem(json, "rts_pin"))    && cJSON_IsNumber(v)) iface->rts_pin  = v->valueint;
     cJSON_Delete(json);
 
     config_store_save(&cfg);
-    httpd_resp_set_type(req, "application/json");
-    char *s = cJSON_PrintUnformatted(iface_to_json(iface));
-    httpd_resp_sendstr(req, s); free(s);
+
+    cJSON *resp = iface_to_json(iface);
+    char *s = cJSON_PrintUnformatted(resp);
+    cJSON_Delete(resp);
+    httpd_resp_sendstr(req, s);
+    free(s);
     return ESP_OK;
 }
 
@@ -109,6 +217,7 @@ static esp_err_t post_interface_handler(httpd_req_t *req)
     iface_config_t *nf = &cfg.interfaces[id];
     memset(nf, 0, sizeof(*nf));
     nf->id         = (uint8_t)id;
+    snprintf(nf->name, sizeof(nf->name), "modbus%d", id);
     nf->type       = IFACE_TYPE_RS485;
     nf->uart_mode  = IFACE_UART_SW;
     nf->mode       = IFACE_MODE_MASTER;
@@ -131,13 +240,20 @@ static esp_err_t post_interface_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-// DELETE /api/v1/interfaces/{id}  →  sletter og renummererer remaining
+// DELETE /api/v1/interfaces/{id|name}
 static esp_err_t delete_interface_handler(httpd_req_t *req)
 {
-    int id = 0; sscanf(req->uri, "/api/v1/interfaces/%d", &id);
-    gateway_config_t cfg; config_store_load(&cfg);
     httpd_resp_set_type(req, "application/json");
-    if (id < 0 || id >= cfg.interface_count) {
+    if (!is_config_request(req->uri)) {
+        httpd_resp_set_status(req, "404 Not Found");
+        httpd_resp_sendstr(req, "{\"error\":\"not a config route\"}");
+        return ESP_OK;
+    }
+    char key[32] = {0};
+    parse_iface_key(req->uri, key, sizeof(key));
+    gateway_config_t cfg; config_store_load(&cfg);
+    int id = resolve_iface(&cfg, key);
+    if (id < 0) {
         httpd_resp_set_status(req, "404 Not Found");
         httpd_resp_sendstr(req, "{\"error\":\"interface not found\"}");
         return ESP_OK;
@@ -157,8 +273,11 @@ static esp_err_t delete_interface_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-const httpd_uri_t route_get_interfaces       = { .uri="/api/v1/interfaces",          .method=HTTP_GET,    .handler=get_interfaces_handler };
-const httpd_uri_t route_get_interface        = { .uri="/api/v1/interfaces/*",        .method=HTTP_GET,    .handler=get_interface_handler };
-const httpd_uri_t route_put_interface_config = { .uri="/api/v1/interfaces/*/config", .method=HTTP_PUT,    .handler=put_interface_config_handler };
-const httpd_uri_t route_post_interface       = { .uri="/api/v1/interfaces",          .method=HTTP_POST,   .handler=post_interface_handler };
-const httpd_uri_t route_delete_interface     = { .uri="/api/v1/interfaces/*",        .method=HTTP_DELETE, .handler=delete_interface_handler };
+// VIGTIGT: ESP-IDF's httpd_uri_match_wildcard behandler kun * AT SLUTNINGEN
+// af URI'en som wildcard. Midt-stjerner (fx /interfaces/*/config) matcher
+// IKKE — derfor bruger vi trailing wildcard og parser URI'en i handleren.
+const httpd_uri_t route_get_interfaces       = { .uri="/api/v1/interfaces",   .method=HTTP_GET,    .handler=get_interfaces_handler };
+const httpd_uri_t route_get_interface        = { .uri="/api/v1/interfaces/*", .method=HTTP_GET,    .handler=get_interface_handler };
+const httpd_uri_t route_put_interface_config = { .uri="/api/v1/interfaces/*", .method=HTTP_PUT,    .handler=put_interface_handler };
+const httpd_uri_t route_post_interface       = { .uri="/api/v1/interfaces",   .method=HTTP_POST,   .handler=post_interface_handler };
+const httpd_uri_t route_delete_interface     = { .uri="/api/v1/interfaces/*", .method=HTTP_DELETE, .handler=delete_interface_handler };

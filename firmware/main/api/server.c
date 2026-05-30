@@ -63,9 +63,9 @@ static esp_err_t api_index_handler(httpd_req_t *req)
     EP("GET",  "/api/v1/system/ota/status",                                   "OTA-opdateringsstatus");
     EP("GET",  "/api/v1/interfaces",                                          "List alle Modbus-interfaces");
     EP("POST", "/api/v1/interfaces",                                          "Opret nyt Modbus-interface (SW-UART master, defaults)");
-    EP("GET",  "/api/v1/interfaces/:id",                                      "Hent interface-konfiguration");
-    EP("PUT",  "/api/v1/interfaces/:id/config",                               "Opdatér interface-konfiguration (mode, slave_addr, baudrate, ...)");
-    EP("DELETE","/api/v1/interfaces/:id",                                     "Slet Modbus-interface og renummerér");
+    EP("GET",  "/api/v1/interfaces/:key",                                     "Hent interface-config — :key er id (0,1,..) ELLER navn-alias");
+    EP("PUT",  "/api/v1/interfaces/:key",                                     "Opdatér interface (name, mode, slave_addr, baudrate, type, tx_pin, rx_pin, rts_pin, ...)");
+    EP("DELETE","/api/v1/interfaces/:key",                                    "Slet Modbus-interface og renummerér");
     EP("GET",  "/api/v1/interfaces/:id/slaves/:sid/coils?start=N&count=N",    "FC01: læs coils (1-bit R/W)");
     EP("GET",  "/api/v1/interfaces/:id/slaves/:sid/discrete-inputs?start=N&count=N", "FC02: læs discrete inputs (1-bit R)");
     EP("GET",  "/api/v1/interfaces/:id/slaves/:sid/holding-registers?start=N&count=N", "FC03: læs holding registers (16-bit R/W)");

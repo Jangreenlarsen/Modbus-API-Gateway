@@ -1,5 +1,6 @@
 #include "config.h"
 #include <string.h>
+#include <stdio.h>
 
 void config_set_defaults(gateway_config_t *cfg)
 {
@@ -9,6 +10,7 @@ void config_set_defaults(gateway_config_t *cfg)
 
     iface_config_t *iface = &cfg->interfaces[0];
     iface->id         = 0;
+    snprintf(iface->name, sizeof(iface->name), "modbus0");
     iface->type       = IFACE_TYPE_RS485;
     iface->uart_mode  = IFACE_UART_HW;
     iface->mode       = IFACE_MODE_MASTER;
@@ -71,5 +73,8 @@ void config_sanitize(gateway_config_t *cfg)
             iface->slave_addr = 1;
         if (iface->mode != IFACE_MODE_MASTER && iface->mode != IFACE_MODE_SLAVE)
             iface->mode = IFACE_MODE_MASTER;
+        iface->name[sizeof(iface->name) - 1] = '\0';
+        if (iface->name[0] == '\0')
+            snprintf(iface->name, sizeof(iface->name), "modbus%d", i);
     }
 }

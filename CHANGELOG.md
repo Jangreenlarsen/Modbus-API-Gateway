@@ -4,6 +4,24 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.3.0 build 0059] — 2026-05-30 — fix: PUT 405-fejl + feat: navn-alias + GPIO pins i GUI
+
+**Root cause for 405-fejl:** ESP-IDF `httpd_uri_match_wildcard` behandler kun `*` ved slutningen af URI-mønstre som wildcard. `/api/v1/interfaces/*/config` matchede aldrig nogen request → PUT save returnerede 405 Method Not Allowed.
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — `name[24]` felt i `iface_config_t`; `CONFIG_STRUCT_VERSION` 8→9
+- `firmware/main/core/config.c` — default-navne `modbus0`, `modbus1`, ...; sanitize sikrer null-termination
+- `firmware/main/api/routes/interfaces.c` — trailing wildcard `/api/v1/interfaces/*` for GET/PUT/DELETE; `resolve_iface()` accepterer både numerisk ID og navn-alias; `is_config_request()` undgår at fange FC-routes; PUT håndterer både `/{key}` og `/{key}/config`; udvidet med `name`, `type`, `uart_mode`, `tx_pin`, `rx_pin`, `rts_pin` felter; bedre body-recv (loop indtil content_len bytes); memory leak fix i iface_to_json response
+- `firmware/main/api/server.c` — api_index opdateret med `:key` notation
+- `firmware/main/api/routes/mgmt.c` — Navn (API alias) felt, RS485/RS232 Type-selector, TX/RX/DE GPIO felter pr. interface; status-tab viser navn; saveIfc sender alle nye felter til PUT `/interfaces/{id}`
+- `firmware/main/core/serial_cli.c` — `name <navn>` kommando i CTX_MODBUS; show config viser `Name`; show status viser navn ved siden af ID
+- `firmware/main/core/version.h` — 0.3.0 build 0059
+- `version.json` — 0.3.0 build 0059
+
+**Kendt issue:** FC01-FC10 routes (`/api/v1/interfaces/N/slaves/M/...`) har samme middle-wildcard problem og matcher aldrig. Notereret i BUGS.md som åben — kræver master dispatcher-handler.
+
+---
+
 ## [0.3.0 build 0058] — 2026-05-30 — feat: master/slave + add/delete interface i web GUI
 
 **Filer ændret:**

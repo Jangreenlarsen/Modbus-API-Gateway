@@ -227,8 +227,8 @@ static void show_status(void)
     for (int i = 0; i < s_cfg->interface_count; i++) {
         iface_config_t *f = &s_cfg->interfaces[i];
         char pc = (f->parity <= 2) ? par_ch[f->parity] : 'N';
-        printf("  Modbus%-2d  : %s  %s  %luB-%d%c%d  UART%d\r\n",
-               f->id,
+        printf("  Modbus%-2d %-12s: %s  %s  %luB-%d%c%d  UART%d\r\n",
+               f->id, f->name[0] ? f->name : "",
                f->enabled ? "aktiv  " : "inaktiv",
                f->type == IFACE_TYPE_RS485 ? "RS485" : "RS232",
                (unsigned long)f->baudrate,
@@ -344,6 +344,8 @@ static void show_running_config(void)
 
         printf("Interface Modbus%d\r\n", f->id);
         printf(" %s\r\n", f->enabled ? "Enable" : "Disable");
+        if (f->name[0])
+            printf(" Name %s\r\n",   f->name);
         printf(" Mode %s\r\n",        f->mode == IFACE_MODE_SLAVE ? "Slave" : "Master");
         if (f->mode == IFACE_MODE_SLAVE)
             printf(" Addr %d\r\n",   f->slave_addr);
@@ -769,6 +771,7 @@ static void cfg_help_wifi_ap(void) {
 
 static void cfg_help_modbus(void) {
     printf("  enable / disable       -- aktiver/deaktiver interface\r\n");
+    printf("  name <navn>            -- brugervenligt navn (alias i API, max 23 tegn)\r\n");
     printf("  mode master|slave      -- Modbus rolle (master sender, slave svarer)\r\n");
     printf("  addr <1-247>           -- slave-adresse  (kun slave mode)\r\n");
     printf("  type rs485|rs232       -- interface-type\r\n");
@@ -1031,6 +1034,12 @@ static int cmd_configure(int argc, char **argv)
             iface_config_t *f = &s_cfg->interfaces[modbus_id];
             if      (strcasecmp(cmd, "enable")   == 0) { f->enabled = 1; printf("Modbus%d: aktiveret\r\n", modbus_id); }
             else if (strcasecmp(cmd, "disable")  == 0) { f->enabled = 0; printf("Modbus%d: deaktiveret\r\n", modbus_id); }
+            else if (strcasecmp(cmd, "name")     == 0) {
+                if (ac < 2) { printf("Brug: name <navn>  (max 23 tegn)\r\n"); continue; }
+                strncpy(f->name, av[1], sizeof(f->name) - 1);
+                f->name[sizeof(f->name) - 1] = '\0';
+                printf("Navn: %s\r\n", f->name);
+            }
             else if (strcasecmp(cmd, "mode")     == 0) {
                 if (ac < 2) { printf("Brug: mode master|slave\r\n"); continue; }
                 if (strcasecmp(av[1], "slave") == 0) {

@@ -20,6 +20,7 @@ typedef enum {
 
 typedef struct {
     uint8_t           id;
+    char              name[24];     // brugervenligt navn — kan bruges som alias i API
     iface_type_t      type;
     iface_uart_mode_t uart_mode;
     iface_mode_t      mode;        // master eller slave
@@ -86,7 +87,7 @@ typedef struct {
 
 // Bump CONFIG_STRUCT_VERSION ved ENHVER ændring af gateway_config_t eller sub-structs.
 // NVS-load afviser blob hvis version ikke matcher → defaults indlæses.
-#define CONFIG_STRUCT_VERSION  8
+#define CONFIG_STRUCT_VERSION  9
 
 typedef struct {
     uint32_t         version;          // skal matche CONFIG_STRUCT_VERSION
