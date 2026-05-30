@@ -4,6 +4,17 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0039] — 2026-05-30 — fix: status viser WiFi IP og tilstand
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — `cmd_status()`: tilføjet WiFi tilstand og IP
+- `firmware/main/core/version.h` — build 0039
+- `version.json` — build 0039
+
+**Ændring:** `status`-kommandoen viste kun Ethernet-IP. Nu vises også WiFi-tilstand og IP når WiFi er forbundet.
+
+---
+
 ## [0.1.0 build 0038] — 2026-05-30 — fix: WiFi DHCP kører ikke efter connect (korrupt IP-felt i NVS)
 
 **Filer ændret:**

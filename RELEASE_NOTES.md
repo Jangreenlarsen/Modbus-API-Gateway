@@ -2,6 +2,15 @@
 
 ---
 
+## v0.1.0 build 0039 — 2026-05-30 — status viser WiFi IP
+
+`status`-kommandoen viser nu WiFi-tilstand og IP-adresse:
+```
+WiFi    : forbundet  192.168.10.45  (MitNetværk)
+```
+
+---
+
 ## v0.1.0 build 0038 — 2026-05-30 — fix: WiFi forbinder men får aldrig IP-adresse
 
 **Problem:** Gateway associerede korrekt med AP (PSK OK, WLC viste klient tilkoblet), men modtog aldrig en IP-adresse via DHCP.
