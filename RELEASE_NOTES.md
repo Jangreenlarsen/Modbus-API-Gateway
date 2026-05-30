@@ -2,6 +2,13 @@
 
 ---
 
+## v0.1.0 build 0045 — 2026-05-30 — fix: build-fejl + show config paste-kompatibilitet
+
+- **Build-fejl:** `ethernet.h` manglede `#include <stdbool.h>` → `unknown type 'bool'`. Rettet.
+- **show config:** `mode STA` fjernet (ingen tilsvarende CLI-kommando). AP PSK vises kun hvis kodeord er sat — ellers `! PSK (ingen — åbent netværk)` som kommentarlinje.
+
+---
+
 ## v0.1.0 build 0044 — 2026-05-30 — show ethernet
 
 Ny kommando `show ethernet` (alias `show eth`) viser detaljeret Ethernet-status:

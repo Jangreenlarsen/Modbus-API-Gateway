@@ -4,6 +4,18 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0045] — 2026-05-30 — fix: build-fejl stdbool + show config paste-kompatibilitet
+
+**Filer ændret:**
+- `firmware/main/core/ethernet.h` — `#include <stdbool.h>` tilføjet (fix: unknown type 'bool')
+- `firmware/main/core/serial_cli.c` — `show_running_config()`: fjernet `mode STA` (ingen CLI-kommando); AP PSK vises kun hvis sat, ellers `! PSK (ingen — åbent netværk)`
+- `firmware/main/core/version.h` — build 0045
+- `version.json` — build 0045
+
+**Problem:** `ethernet.h` brugte `bool` uden `stdbool.h` → compile-fejl. `show config` printede `mode STA` og `PSK none (åben)` som ikke er gyldige CLI-kommandoer.
+
+---
+
 ## [0.1.0 build 0044] — 2026-05-30 — feat: show ethernet kommando med live status og GPIO-detaljer
 
 **Filer ændret:**
