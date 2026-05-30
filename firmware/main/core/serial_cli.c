@@ -296,7 +296,6 @@ static void show_running_config(void)
     // ── Interface WIFI ────────────────────────────────────────────────────────
     printf("Interface WIFI\r\n");
     printf(" %s\r\n", s_cfg->wifi.enabled ? "Enable" : "Disable");
-    printf(" mode STA\r\n");
     printf(" SSID \"%s\"\r\n", s_cfg->wifi.ssid[0] ? s_cfg->wifi.ssid : "(ikke sat)");
     printf(" PSK %s\r\n",      s_cfg->wifi.password[0] ? s_cfg->wifi.password : "(ikke sat)");
     if (strcasecmp(s_cfg->wifi.ip, "dhcp") == 0 || s_cfg->wifi.ip[0] == '\0') {
@@ -323,7 +322,10 @@ static void show_running_config(void)
     printf("Interface WIFI-AP\r\n");
     printf(" %s\r\n", s_cfg->wifi.ap_fallback ? "Enable" : "Disable");
     printf(" SSID \"%s\"\r\n", s_cfg->wifi.ap_ssid[0] ? s_cfg->wifi.ap_ssid : "ModbusGW-AUTO");
-    printf(" PSK %s\r\n",      s_cfg->wifi.ap_password[0] ? s_cfg->wifi.ap_password : "none (åben)");
+    if (s_cfg->wifi.ap_password[0])
+        printf(" PSK %s\r\n", s_cfg->wifi.ap_password);
+    else
+        printf("! PSK (ingen — åbent netværk)\r\n");
     printf(" IP 192.168.4.1\r\n");
     printf("End interface WIFI-AP\r\n");
     printf("!\r\n");
