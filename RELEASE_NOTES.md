@@ -2,6 +2,48 @@
 
 ---
 
+## v0.2.1 build 0053 — 2026-05-30 — W5500 som standard hardware-profil
+
+W5500 SPI Ethernet er nu default-konfiguration ved `erase_nvs` / factory reset:
+
+| Pin  | GPIO |
+|------|------|
+| CS   | 23   |
+| MOSI | 13   |
+| MISO | 12   |
+| SCLK | 14   |
+| RST  | 33   |
+| INT  | 34   |
+| Clock| 10 MHz |
+
+---
+
+## v0.2.1 build 0052 — 2026-05-30 — W5500 ydeevne-fix
+
+**Problem:** Netværkslatency på 100–800ms (normalt < 5ms) på W5500 SPI Ethernet.
+
+**Årsager og løsninger:**
+
+1. **SPI clock 20 MHz → 10 MHz default**  
+   Dupont-ledninger og prototypekabling kan ikke pålideligt drive 20 MHz SPI. Stille bitfejl forårsager TCP-retransmissions og framedrops. Ny default er 10 MHz. Kan justeres via CLI:
+   ```
+   configure terminal
+   interface eth0
+   spi-clock 8     ← forsigtig (langt kabel)
+   spi-clock 10    ← standard default
+   spi-clock 20    ← kun ved kort, skærmet kabel
+   save
+   reboot
+   ```
+
+2. **INT pin advarsel**  
+   Uden INT pin kører W5500-driveren i polling-mode (~10ms per pakke-detektion). `show ethernet` viser nu tydelig ADVARSEL. Tilslut INT pin og konfigurer med `int <gpio>` for interrupt-drevet tilstand (< 1ms latency).
+
+3. **HTTP socket-håndtering**  
+   `lru_purge_enable` aktiveret — serveren frigiver automatisk den ældste forbindelse under pres i stedet for at afvise nye klienter.
+
+---
+
 ## v0.2.0 build 0051 — 2026-05-30 — Modbus slave mode + dynamiske interfaces
 
 **Modbus slave mode**  
