@@ -2,6 +2,18 @@
 
 ---
 
+## v0.1.0 build 0038 — 2026-05-30 — fix: WiFi forbinder men får aldrig IP-adresse
+
+**Problem:** Gateway associerede korrekt med AP (PSK OK, WLC viste klient tilkoblet), men modtog aldrig en IP-adresse via DHCP.
+
+**Årsag:** Tidligere NVS-korruption (b0030-buggen) kunne efterlade `wifi.ip`-feltet med garbage-data. Init-koden tolkede det som en statisk IP-konfiguration og stoppede DHCP-klienten. WiFi-laget fungerede, men DHCP-laget var slukket.
+
+**Fix:**
+- IP-feltet valideres nu med `ip4addr_aton()` inden DHCP stoppes. Korrupt/ugyldig IP giver advarsel og falder automatisk til DHCP.
+- `WIFI_EVENT_STA_CONNECTED` genstarter eksplicit DHCP-klienten efter 4-way handshake — DHCP kører garanteret uanset tidligere tilstand.
+
+---
+
 ## v0.1.0 build 0037 — 2026-05-30 — show config viser PSK i clear text
 
 `show config` viser nu WiFi-passwords i klartekst i stedet for `*** (sat)`. Gør det muligt at verificere at korrekt password er gemt i NVS.
