@@ -4,6 +4,18 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0049] — 2026-05-30 — fix: OTA check crash — stack overflow i httpd task
+
+**Filer ændret:**
+- `firmware/main/ota/ota_manager.c` — `char buf[4096]` ændret til `malloc(4096)` (fjerner 4KB fra stack)
+- `firmware/main/api/server.c` — `hcfg.stack_size = 16384` (var 4096 default)
+- `firmware/main/core/version.h` — build 0049
+- `version.json` — build 0049
+
+**Årsag:** `ota_check()` køres synkront i httpd-tasken. Stack-forbrug: 4KB response-buffer + ~1KB `ota_info_t` + ~8-12KB TLS-handshake mod GitHub = overflow → crash → boot. **Fix:** buffer på heap + httpd stack øget til 16KB.
+
+---
+
 ## [0.1.0 build 0048] — 2026-05-30 — fix: /mgmt build-fejl — HTML embedded som C-streng
 
 **Filer ændret:**
