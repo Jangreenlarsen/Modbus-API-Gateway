@@ -4,6 +4,17 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0037] — 2026-05-30 — fix: show config viser PSK i clear text
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — `show_running_config()`: PSK vises i klartekst (WiFi STA + AP)
+- `firmware/main/core/version.h` — build 0037
+- `version.json` — build 0037
+
+**Ændring:** `show config` viste tidligere `*** (sat)` for WiFi-passwords. Nu vises den faktiske PSK-værdi fra NVS, så man kan verificere at korrekt password er gemt.
+
+---
+
 ## [0.1.0 build 0036] — 2026-05-30 — feat: debug/no debug kommandoer — runtime log-niveau styring
 
 **Filer ændret:**
