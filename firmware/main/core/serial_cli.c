@@ -458,6 +458,63 @@ static int cmd_factory_reset(int argc, char **argv)
     return 0;
 }
 
+// ── cmd: debug / no debug ────────────────────────────────────────────────────
+
+static int cmd_debug(int argc, char **argv)
+{
+    // debug              → alt på VERBOSE (så meget som sdkconfig tillader)
+    // debug <komponent>  → specifik komponent verbose
+    // debug ?            → hjælp
+    if (argc >= 2 && strcmp(argv[argc - 1], "?") == 0) {
+        printf("  debug              -- alt verbose\r\n");
+        printf("  debug wifi         -- WiFi driver + wifi_mgr verbose\r\n");
+        printf("  debug <tag>        -- specifik ESP-IDF komponent verbose\r\n");
+        printf("  no debug           -- stille (kun WARN + ERROR)\r\n");
+        printf("  no debug <tag>     -- stil specifik komponent\r\n");
+        return 0;
+    }
+    if (argc >= 2) {
+        const char *tag = argv[1];
+        if (strcasecmp(tag, "wifi") == 0) {
+            esp_log_level_set("wifi",     ESP_LOG_VERBOSE);
+            esp_log_level_set("wifi_mgr", ESP_LOG_VERBOSE);
+            printf("Debug: wifi + wifi_mgr → VERBOSE\r\n");
+        } else {
+            esp_log_level_set(tag, ESP_LOG_VERBOSE);
+            printf("Debug: '%s' → VERBOSE\r\n", tag);
+        }
+    } else {
+        esp_log_level_set("*", ESP_LOG_VERBOSE);
+        printf("Debug: alt → VERBOSE\r\n");
+    }
+    return 0;
+}
+
+static int cmd_no(int argc, char **argv)
+{
+    // no debug              → alt på WARN (stille: INFO fra driver skjult)
+    // no debug <komponent>  → specifik komponent på WARN
+    if (argc < 2 || strcasecmp(argv[1], "debug") != 0) {
+        printf("Brug: no debug [<komponent>]\r\n");
+        return 1;
+    }
+    if (argc >= 3) {
+        const char *tag = argv[2];
+        if (strcasecmp(tag, "wifi") == 0) {
+            esp_log_level_set("wifi",     ESP_LOG_WARN);
+            esp_log_level_set("wifi_mgr", ESP_LOG_WARN);
+            printf("No debug: wifi + wifi_mgr → WARN\r\n");
+        } else {
+            esp_log_level_set(tag, ESP_LOG_WARN);
+            printf("No debug: '%s' → WARN\r\n", tag);
+        }
+    } else {
+        esp_log_level_set("*", ESP_LOG_WARN);
+        printf("No debug: alt → WARN (kun WARN + ERROR vises)\r\n");
+    }
+    return 0;
+}
+
 // ── Configure terminal ────────────────────────────────────────────────────────
 
 #define CFG_MAX_ARGC 10
@@ -818,6 +875,8 @@ esp_err_t serial_cli_start(gateway_config_t *cfg)
         { .command = "save",          .help = "Gem konfiguration til NVS",                           .hint = NULL, .func = cmd_save,          .argtable = NULL },
         { .command = "reboot",        .help = "Genstart gateway",                                    .hint = NULL, .func = cmd_reboot,        .argtable = NULL },
         { .command = "factory-reset", .help = "Slet al NVS-config og genstart med fabriksindst.",   .hint = NULL, .func = cmd_factory_reset, .argtable = NULL },
+        { .command = "debug",         .help = "debug [<tag>] — verbose log  (debug ? for hjælp)",   .hint = NULL, .func = cmd_debug,         .argtable = NULL },
+        { .command = "no",            .help = "no debug [<tag>] — stilmod (kun WARN+ERROR)",        .hint = NULL, .func = cmd_no,            .argtable = NULL },
     };
 
     for (size_t i = 0; i < sizeof(cmds) / sizeof(cmds[0]); i++) {

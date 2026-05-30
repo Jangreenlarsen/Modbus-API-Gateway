@@ -2,6 +2,35 @@
 
 ---
 
+## v0.1.0 build 0036 — 2026-05-30 — debug/no debug — runtime log-niveau styring
+
+Nye CLI-kommandoer til at styre log-output uden genstart:
+
+```
+gw> debug           ← alt verbose (se alt)
+gw> debug wifi      ← kun WiFi verbose
+gw> debug <tag>     ← specifik komponent verbose
+gw> no debug        ← alt stille (kun WARN + ERROR)
+gw> no debug wifi   ← WiFi-komponenter stille
+gw> debug ?         ← vis hjælp
+```
+
+Nyttigt ved fejlsøgning: tænd verbose på præcis det du undersøger, sluk igen når du er færdig — ingen genstart nødvendig.
+
+---
+
+## v0.1.0 build 0035 — 2026-05-29 — WiFi 30s backoff — CLI brugbar under reconnect
+
+Efter 5 fejlede WiFi-forsøg venter gateway nu 30 sekunder inden næste forsøg. Terminalen viser én loglinje hvert 30. sekund i stedet for én hvert 3. sekund. CLI er fuldt brugbar mens WiFi reconnect foregår i baggrunden.
+
+---
+
+## v0.1.0 build 0034 — 2026-05-29 — fix: WiFi threshold WPA2_PSK for WLC-kompatibilitet
+
+`WIFI_AUTH_WPA_PSK` threshold (b0031) inkluderede WPA1/TKIP-kapabiliteter i association request. Enterprise WLC'er med CCMP-only policy afviser dette under 4-way handshake → `4WAY_HANDSHAKE_TIMEOUT (reason 15)`. Threshold ændret tilbage til `WPA2_PSK` — ESP32 annoncerer kun WPA2/CCMP.
+
+---
+
 ## v0.1.0 build 0033 — 2026-05-29 — fix: WiFi PMF — SA_QUERY_TIMEOUT på enterprise WLC
 
 **Problem:** WiFi forbandt (auth → assoc → run) men fik aldrig en IP-adresse. WLC viste enheden som associated. Disconnect reason 205 = `SA_QUERY_TIMEOUT`.

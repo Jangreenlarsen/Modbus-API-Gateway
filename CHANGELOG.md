@@ -4,6 +4,48 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0036] — 2026-05-30 — feat: debug/no debug kommandoer — runtime log-niveau styring
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — `cmd_debug()` og `cmd_no()` tilføjet + registreret
+- `firmware/main/core/version.h` — build 0036
+- `version.json` — build 0036
+
+**Nye kommandoer:**
+- `debug` — sætter alle komponenter til VERBOSE
+- `debug wifi` — kun WiFi-driver + wifi_mgr → VERBOSE
+- `debug <tag>` — specifik ESP-IDF komponent → VERBOSE
+- `no debug` — alle komponenter → WARN (stille tilstand)
+- `no debug wifi` — WiFi-relaterede komponenter → WARN
+- `no debug <tag>` — specifik komponent → WARN
+- `debug ?` / `no debug ?` — inline hjælp
+
+Bruger `esp_log_level_set()` til at justere log-niveau pr. komponent-tag uden genstart.
+
+---
+
+## [0.1.0 build 0035] — 2026-05-29 — fix: WiFi 30s backoff efter max retries — undgår log-spam
+
+**Filer ændret:**
+- `firmware/main/core/wifi_manager.c` — `esp_timer` backoff: 30s pause efter 5 fejlede forsøg
+- `firmware/main/core/version.h` — build 0035
+- `version.json` — build 0035
+
+**Problem:** WiFi retry-loop kørte hvert ~3. sekund og flooded terminalen med log-linjer, umuliggjorde CLI-brug. **Fix:** `retry_schedule()` starter en 30-sekunders `esp_timer` efter de første 5 retries. Ét loglinje hvert 30. sekund i stedet for hvert 3. sekund. `retry_cancel()` annullerer timeren ved forbundet/stop/reconfigure. WIFI_EVENT_STA_START nulstiller counter og annullerer timer.
+
+---
+
+## [0.1.0 build 0034] — 2026-05-29 — fix: WiFi threshold WPA_PSK → WPA2_PSK (WLC CCMP-krav)
+
+**Filer ændret:**
+- `firmware/main/core/wifi_manager.c` — threshold tilbage til `WIFI_AUTH_WPA2_PSK`
+- `firmware/main/core/version.h` — build 0034
+- `version.json` — build 0034
+
+**Årsag:** `WIFI_AUTH_WPA_PSK` (indført i b0031) fik ESP32 til at inkludere WPA1/TKIP i association request. Enterprise WLC'er der kun accepterer CCMP kan afvise dette under 4-way handshake → `4WAY_HANDSHAKE_TIMEOUT (reason 15)`. `WPA2_PSK` threshold sikrer at ESP32 udelukkende annoncerer WPA2/CCMP.
+
+---
+
 ## [0.1.0 build 0033] — 2026-05-29 — fix: WiFi PMF fjernet — SA_QUERY_TIMEOUT på enterprise WLC
 
 **Filer ændret:**
