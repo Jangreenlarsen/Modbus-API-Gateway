@@ -4,6 +4,21 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0046] — 2026-05-30 — feat: W5500 SPI Ethernet driver implementeret
+
+**Filer ændret:**
+- `firmware/main/core/ethernet.c` — omskrevet: `init_lan8720()` + `init_w5500()` separeret; dispatcher på `cfg->hw_type`; RST-puls, SPI2 bus init, W5500 MAC+PHY oprettelse, fejlhåndtering
+- `sdkconfig.defaults` — `CONFIG_ETH_USE_SPI_ETHERNET=y` og `CONFIG_ETH_SPI_ETHERNET_W5500=y` tilføjet
+- `sdkconfig.esp32dev` — `CONFIG_ETH_SPI_ETHERNET_W5500=y` aktiveret
+- `firmware/main/core/version.h` — build 0046
+- `version.json` — build 0046
+
+**Fejlårsag:** `ethernet.c` var hardcodet til LAN8720 RMII og ignorerede `cfg->hw_type`. W5500 GPIO-konfiguration fra config blev aldrig brugt. `CONFIG_ETH_SPI_ETHERNET_W5500` var ikke aktiveret i sdkconfig.
+
+**Implementering:** SPI2 (HSPI) bus + W5500 MAC (`esp_eth_mac_new_w5500`) + PHY (`esp_eth_phy_new_w5500`). Hardware RST-puls på konfigurerbar GPIO. INT-pin (-1 = polling). 20 MHz SPI clock.
+
+---
+
 ## [0.1.0 build 0045] — 2026-05-30 — fix: build-fejl stdbool + show config paste-kompatibilitet
 
 **Filer ændret:**
