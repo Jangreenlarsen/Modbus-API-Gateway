@@ -47,13 +47,15 @@ MED gateway — ét enkelt kontaktpunkt:
 
 ## Funktioner
 
-- **Fuld Modbus RTU master** — understøtter alle standard function codes (FC01–FC10/FC0F)
-- **x antal RS485/RS232 interfaces** — alle tilsluttet samme ESP32
-- **REST API over Ethernet** — 1:1 mapping af Modbus-operationer til HTTP endpoints
-- **Lokal datacache** — seneste kendte registerværdier gemt i flash (overlever strømfald)
+- **Fuld Modbus RTU master OG slave** — alle standard function codes (FC01–FC10/FC0F). Hvert interface kan konfigureres som enten master (sender forespørgsler) eller slave (besvarer forespørgsler fra ekstern master)
+- **Op til 8 RS485/RS232 interfaces** — 2 HW UART + 6 SW UART bit-bang (≤ 9600 baud)
+- **Dynamisk tilføjelse/sletning af interfaces** — direkte fra web-GUI eller CLI
+- **Navn-alias pr. interface** — referér til `floor1` eller `pumpestation` i URL i stedet for numerisk ID
+- **REST API over Ethernet** — 1:1 mapping af Modbus-operationer til HTTP endpoints, fuld konfiguration via PUT
 - **WebSocket** — real-time push til monitoreringsclients
-- **Webgrænseflade** — konfiguration og live monitorering direkte i browser
-- **OTA firmware-opdatering** — via webgrænseflade
+- **Webgrænseflade** (`/mgmt`) — komplet konfiguration: navn, master/slave, slave-adresse, baudrate, paritet, stop bits, timeout, TX/RX/DE GPIO pins, RS485/RS232 type
+- **CLI over UART0** — IOS-stil konfiguration (`configure terminal` → `interface modbus0`)
+- **OTA firmware-opdatering** — via webgrænseflade og REST API (henter fra GitHub releases)
 
 ---
 
@@ -61,18 +63,32 @@ MED gateway — ét enkelt kontaktpunkt:
 
 Base URL: `http://{gateway-ip}/api/v1`
 
+`{key}` kan være enten numerisk ID (`0`, `1`, ...) eller navn-alias (`floor1`, `pumpestation`, ...) — case-insensitive.
+
+### Modbus operationer
 | Operation | HTTP | Endpoint | Modbus FC |
 |-----------|------|----------|-----------|
-| Læs coils | `GET` | `/interfaces/0/slaves/3/coils?start=0&count=8` | FC01 |
-| Læs digitale indgange | `GET` | `/interfaces/0/slaves/3/discrete-inputs?start=0&count=8` | FC02 |
-| Læs holding registers | `GET` | `/interfaces/0/slaves/3/holding-registers?start=100&count=10` | FC03 |
-| Læs input registers | `GET` | `/interfaces/0/slaves/3/input-registers?start=0&count=5` | FC04 |
-| Skriv coil | `PUT` | `/interfaces/0/slaves/3/coils/0` | FC05 |
-| Skriv register | `PUT` | `/interfaces/0/slaves/3/holding-registers/100` | FC06 |
+| Læs coils | `GET` | `/interfaces/{key}/slaves/{sid}/coils?start=0&count=8` | FC01 |
+| Læs digitale indgange | `GET` | `/interfaces/{key}/slaves/{sid}/discrete-inputs?start=0&count=8` | FC02 |
+| Læs holding registers | `GET` | `/interfaces/{key}/slaves/{sid}/holding-registers?start=100&count=10` | FC03 |
+| Læs input registers | `GET` | `/interfaces/{key}/slaves/{sid}/input-registers?start=0&count=5` | FC04 |
+| Skriv enkelt coil | `PUT` | `/interfaces/{key}/slaves/{sid}/coils/{addr}` | FC05 |
+| Skriv enkelt register | `PUT` | `/interfaces/{key}/slaves/{sid}/holding-registers/{addr}` | FC06 |
+| Skriv flere coils | `PUT` | `/interfaces/{key}/slaves/{sid}/coils?start=0` | FC0F |
+| Skriv flere registers | `PUT` | `/interfaces/{key}/slaves/{sid}/holding-registers?start=0` | FC10 |
 
-**Eksempel — læs 10 holding registers fra slave 3:**
+### Interface-administration
+| Operation | HTTP | Endpoint |
+|-----------|------|----------|
+| List alle interfaces | `GET` | `/interfaces` |
+| Opret nyt interface | `POST` | `/interfaces` |
+| Hent interface-config | `GET` | `/interfaces/{key}` |
+| Opdater interface-config | `PUT` | `/interfaces/{key}` |
+| Slet interface | `DELETE` | `/interfaces/{key}` |
+
+**Eksempel — læs 10 holding registers fra slave 3 (med navn-alias):**
 ```bash
-curl http://192.168.1.100/api/v1/interfaces/0/slaves/3/holding-registers?start=100&count=10
+curl "http://192.168.1.100/api/v1/interfaces/floor1/slaves/3/holding-registers?start=100&count=10"
 ```
 ```json
 {
@@ -85,8 +101,15 @@ curl http://192.168.1.100/api/v1/interfaces/0/slaves/3/holding-registers?start=1
 }
 ```
 
+**Eksempel — opdater interface-konfiguration:**
+```bash
+curl -X PUT http://192.168.1.100/api/v1/interfaces/floor1 \
+  -H "Content-Type: application/json" \
+  -d '{"name":"basement","baudrate":19200,"mode":"slave","slave_addr":5}'
+```
+
 **Eksempel — Node-RED integration:**
-En simpel `http request`-node med URL `http://{gateway-ip}/api/v1/interfaces/0/slaves/3/holding-registers?start=0&count=10` — ingen Modbus-node, ingen seriel port, ingen driver.
+En simpel `http request`-node med URL `http://{gateway-ip}/api/v1/interfaces/floor1/slaves/3/holding-registers?start=0&count=10` — ingen Modbus-node, ingen seriel port, ingen driver.
 
 ---
 

@@ -2,6 +2,55 @@
 
 ---
 
+## v0.3.0 build 0060 — 2026-05-30 — REST API fuldt funktionel + navn-alias + GUI-config
+
+**Stor milepæl:** Alle Modbus FC01-FC10 REST endpoints virker nu, alle interface-felter kan konfigureres fra web GUI, og hvert interface kan navngives og refereres til via navn i URL.
+
+### Nye features
+
+**Navn-alias pr. interface**  
+Sæt et brugervenligt navn og brug det som URL-segment:
+```bash
+curl http://10.1.32.101/api/v1/interfaces/floor1/slaves/3/holding-registers?start=0&count=10
+```
+Konfigureres i:
+- CLI: `gw(config-modbus0)# name floor1`
+- Web GUI: `/mgmt` → RS485 Config → Navn-felt
+- REST: `PUT /api/v1/interfaces/0 -d '{"name":"floor1"}'`
+
+**Komplet interface-config i web GUI**  
+`/mgmt` → RS485 Config tabben understøtter nu:
+- Navn (API alias)
+- Rolle (Master/Slave) — slave-adresse vises kun ved slave-rolle
+- Type (RS485/RS232) — DE GPIO vises kun ved RS485
+- Baudrate, Paritet, Stop bits, Timeout
+- TX GPIO, RX GPIO, DE GPIO
+- **+ Tilføj** og **− Slet** knapper (op til 8 interfaces)
+
+**REST API: opret og slet interfaces**
+```bash
+# Opret nyt interface (defaults: SW-UART master)
+curl -X POST http://10.1.32.101/api/v1/interfaces
+
+# Slet interface og renummerér resterende
+curl -X DELETE http://10.1.32.101/api/v1/interfaces/floor1
+```
+
+### Bug fixes
+
+| Bug | Effekt |
+|-----|--------|
+| FC01-FC10 routes matchede aldrig (ESP-IDF httpd midt-wildcard) | **ALLE** Modbus REST-operationer var i praksis ubrugelige før — virker nu |
+| PUT /interfaces/N/config returnerede 405 Method Not Allowed | "Gem" knappen i GUI virkede ikke |
+| W5500 ~700-1300ms ping latency (ISR-miss bug) | Konsistent ~5ms ping efter workaround-task |
+| W5500 init crash når både INT-pin og poll_period_ms blev sat | Boot-fejl ved interrupt-mode |
+| mgmt-siden viste statiske "Indlæser..." labels | JS SyntaxError forhindrede al API-kald fra siden |
+
+### Implementeringsdetalje
+ESP-IDF's `httpd_uri_match_wildcard` behandler kun `*` ved slutningen af et URI-mønster — midt-stjerner er bogstavelige tegn. Alle `/api/v1/interfaces/*` GET og PUT registreres derfor på samme trailing-wildcard og dispatches af `master_get_dispatcher` / `master_put_dispatcher` i [interfaces.c](firmware/main/api/routes/interfaces.c) baseret på URI-suffix.
+
+---
+
 ## v0.2.1 build 0053 — 2026-05-30 — W5500 som standard hardware-profil
 
 W5500 SPI Ethernet er nu default-konfiguration ved `erase_nvs` / factory reset:
