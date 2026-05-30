@@ -2,6 +2,31 @@
 
 ---
 
+## v0.2.0 build 0051 — 2026-05-30 — Modbus slave mode + dynamiske interfaces
+
+**Modbus slave mode**  
+Hvert Modbus interface kan nu konfigureres som enten **master** (sender forespørgsler) eller **slave** (besvarer forespørgsler fra en ekstern Modbus master). Slave mode kræver HW-UART (SW-UART understøttes endnu ikke).
+
+CLI (i `configure terminal` → `interface modbus0`):
+```
+mode slave      — skift til slave rolle
+mode master     — skift til master rolle
+addr 5          — sæt slave-adresse (1–247)
+```
+
+Slaven eksponerer 128 holding-registre, 128 input-registre, 128 coils og 128 discrete inputs (alle initialiseret til 0).
+
+**Dynamisk interface-håndtering**  
+Tilføj og slet interfaces fra CLI uden at genkompilere:
+
+```
+interface modbus1   — opret nyt interface (SW-UART master, GPIO ikke sat)
+no interface modbus1 — slet interface
+```
+Op til 8 interfaces i alt (2 HW-UART + 6 SW-UART). Nye interfaces henter TX/RX/DE GPIO-pins fra konfiguration.
+
+---
+
 ## v0.1.0 build 0047 — 2026-05-30 — Web management side: http://ip/mgmt
 
 Åbn `http://<gateway-ip>/mgmt` i en browser for at se:

@@ -5,6 +5,11 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 
+#define SLAVE_HOLDING_COUNT   128
+#define SLAVE_INPUT_COUNT     128
+#define SLAVE_COIL_COUNT      128
+#define SLAVE_DISCRETE_COUNT  128
+
 typedef struct {
     iface_config_t    cfg;
     SemaphoreHandle_t mutex;      // én transaktion ad gangen pr. interface
@@ -14,6 +19,12 @@ typedef struct {
 
     // SW UART: custom Modbus RTU over bit-bang
     sw_uart_t        *sw_uart;
+
+    // Slave mode: lokalt register-lager (esp-modbus slave peger direkte på disse)
+    uint16_t slave_holding[SLAVE_HOLDING_COUNT];
+    uint16_t slave_input[SLAVE_INPUT_COUNT];
+    uint8_t  slave_coils[(SLAVE_COIL_COUNT + 7) / 8];
+    uint8_t  slave_discrete[(SLAVE_DISCRETE_COUNT + 7) / 8];
 } mb_interface_t;
 
 esp_err_t   mb_interface_init(mb_interface_t *iface, const iface_config_t *cfg);

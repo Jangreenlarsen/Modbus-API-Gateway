@@ -13,10 +13,16 @@ typedef enum {
     IFACE_UART_SW,   // Software UART (GPIO bit-bang + gptimer) — max 9600 baud
 } iface_uart_mode_t;
 
+typedef enum {
+    IFACE_MODE_MASTER = 0,   // Modbus RTU master — sender forespørgsler til slaves
+    IFACE_MODE_SLAVE  = 1,   // Modbus RTU slave  — besvarer forespørgsler fra en master
+} iface_mode_t;
+
 typedef struct {
     uint8_t           id;
     iface_type_t      type;
     iface_uart_mode_t uart_mode;
+    iface_mode_t      mode;        // master eller slave
     int               uart_num;     // HW: UART_NUM_1/2  SW: ignoreret
     uint32_t          baudrate;
     uint8_t           data_bits;
@@ -26,6 +32,7 @@ typedef struct {
     int               tx_pin;
     int               rx_pin;
     int               rts_pin;      // RS485 DE/RE — GPIO_NUM_NC for RS232
+    uint8_t           slave_addr;   // slave-adresse (1–247) — kun relevant i slave-mode
     uint8_t           enabled;
 } iface_config_t;
 
@@ -77,7 +84,7 @@ typedef struct {
 
 // Bump CONFIG_STRUCT_VERSION ved ENHVER ændring af gateway_config_t eller sub-structs.
 // NVS-load afviser blob hvis version ikke matcher → defaults indlæses.
-#define CONFIG_STRUCT_VERSION  5
+#define CONFIG_STRUCT_VERSION  6
 
 typedef struct {
     uint32_t         version;          // skal matche CONFIG_STRUCT_VERSION

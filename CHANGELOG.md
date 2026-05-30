@@ -4,6 +4,25 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.2.0 build 0051] — 2026-05-30 — feat: Modbus slave mode + dynamisk interface-tilføjelse/sletning
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — `iface_mode_t` enum (MASTER/SLAVE); `mode` og `slave_addr` felter i `iface_config_t`; `CONFIG_STRUCT_VERSION` 5→6
+- `firmware/main/core/config.c` — defaults `mode=MASTER, slave_addr=1`; sanitize validerer slave_addr (1–247) og mode
+- `firmware/main/modbus/interface.h` — `SLAVE_*_COUNT` konstanter; slave register-lager (`slave_holding/input/coils/discrete`) i `mb_interface_t`
+- `firmware/main/modbus/interface.c` — `#include esp_modbus_slave.h`; `init_hw_master()` og `init_hw_slave()` udtrukket; `mb_interface_init()` dispatcher på `cfg->mode`; slave sætter 4 register-areas og kalder `mbc_slave_set_descriptor()`; SW-UART slave returnerer `ESP_ERR_NOT_SUPPORTED`
+- `firmware/main/core/serial_cli.c` — CTX_MODBUS: `mode master|slave` og `addr <1-247>` kommandoer; CTX_TOP: `interface modbus<N>` opretter nyt interface hvis N == interface_count; `no interface modbus<N>` sletter og renummererer; `show_running_config` viser Mode + Addr pr. interface; `cfg_help_modbus/top` opdateret
+- `firmware/main/core/version.h` — 0.2.0 build 0051
+- `version.json` — 0.2.0 build 0051
+
+**Design:**
+- esp-modbus master og slave er separate singletons (separate `mbc_master_*` / `mbc_slave_*` contexts) — der kan køre én master HW-UART og én slave HW-UART simultant
+- Slave register-lager allokeres statisk i `mb_interface_t` (~580 bytes pr. interface)
+- SW-UART slave er ikke implementeret (kræver custom bit-bang svar-logik)
+- NVS invalideres ved opstart (CONFIG_STRUCT_VERSION mismatch) → defaults indlæses
+
+---
+
 ## [0.1.0 build 0050] — 2026-05-30 — fix: /mgmt netværk viser Ethernet + WiFi separat
 
 **Filer ændret:**
