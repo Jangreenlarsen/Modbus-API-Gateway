@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Modbus GW — Mgmt</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f0f2f5;color:#222;font-size:14px}
+header{background:#1a2035;color:#fff;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:15px;font-weight:600;letter-spacing:.3px}
+#hdr-info{font-size:12px;opacity:.65}
+nav{background:#fff;border-bottom:2px solid #e0e4ea;display:flex;padding:0 16px;gap:4px}
+nav button{border:none;background:none;padding:11px 18px;cursor:pointer;font-size:13px;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;font-weight:500;transition:color .15s}
+nav button.active{color:#2563eb;border-bottom-color:#2563eb}
+main{padding:20px;max-width:860px;margin:0 auto}
+.page{display:none}.page.active{display:block}
+.card{background:#fff;border-radius:8px;padding:16px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#888;margin-bottom:10px}
+table.info{width:100%;border-collapse:collapse}
+table.info td{padding:6px 0;border-bottom:1px solid #f3f4f6;vertical-align:top}
+table.info td:first-child{color:#666;width:150px;font-size:13px}
+table.info td:last-child{font-weight:500}
+table.info tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700}
+.ok{background:#d1fae5;color:#065f46}
+.warn{background:#fef3c7;color:#92400e}
+.err{background:#fee2e2;color:#991b1b}
+.ifc{background:#fff;border-radius:8px;padding:16px 20px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08);border-left:4px solid #2563eb;transition:border-color .2s}
+.ifc.off{border-left-color:#d1d5db}
+.ifc-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.ifc-name{font-weight:700;font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.grid label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:#666;font-weight:500}
+.grid select,.grid input{border:1px solid #d1d5db;border-radius:5px;padding:6px 8px;font-size:13px;background:#fff;color:#222}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.btn{border:none;padding:8px 16px;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600}
+.btn:disabled{opacity:.5;cursor:default}
+.btn-p{background:#2563eb;color:#fff}
+.btn-s{background:#f3f4f6;color:#374151;border:1px solid #d1d5db}
+.btn-d{background:#ef4444;color:#fff}
+.btn-sm{padding:5px 11px;font-size:12px}
+/* Toggle */
+.tog{display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none}
+.tog input[type=checkbox]{display:none}
+.ttrack{width:36px;height:20px;background:#d1d5db;border-radius:99px;position:relative;transition:background .2s;flex-shrink:0}
+.ttrack::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .2s}
+.tog input:checked+.ttrack{background:#2563eb}
+.tog input:checked+.ttrack::after{left:18px}
+/* Progress */
+.progbar{background:#e5e7eb;border-radius:99px;height:8px;overflow:hidden;margin:10px 0 4px}
+.progfill{height:100%;background:#2563eb;border-radius:99px;transition:width .4s}
+.progtext{font-size:12px;color:#666}
+/* Toast */
+#toast{position:fixed;bottom:20px;right:20px;background:#1a2035;color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;pointer-events:none;z-index:9999}
+#toast.show{opacity:1}
+#toast.err{background:#dc2626}
+</style>
+</head>
+<body>
+<header>
+  <h1>&#9649; Modbus API Gateway &mdash; Management</h1>
+  <span id="hdr-info">indlæser...</span>
+</header>
+<nav>
+  <button class="active" id="btn-status"     onclick="tab('status')">Status</button>
+  <button               id="btn-ota"        onclick="tab('ota')">OTA Opdatering</button>
+  <button               id="btn-interfaces" onclick="tab('interfaces')">RS485 Config</button>
+</nav>
+<main>
+
+<!-- ── STATUS ──────────────────────────────────────────────────────────── -->
+<div id="p-status" class="page active">
+  <div class="card">
+    <div class="card-title">System</div>
+    <table class="info" id="t-sys"><tr><td colspan="2" style="color:#aaa">Indlæser...</td></tr></table>
+  </div>
+  <div class="card">
+    <div class="card-title">Netværk</div>
+    <table class="info" id="t-net"><tr><td colspan="2" style="color:#aaa">Indlæser...</td></tr></table>
+  </div>
+  <div class="card">
+    <div class="card-title">Modbus Interfaces</div>
+    <table class="info" id="t-ifc"><tr><td colspan="2" style="color:#aaa">Indlæser...</td></tr></table>
+  </div>
+  <div class="row" style="justify-content:flex-end">
+    <button class="btn btn-s btn-sm" onclick="loadStatus()">&#8635; Opdater</button>
+    <button class="btn btn-d btn-sm" onclick="doReboot()">Genstart gateway</button>
+  </div>
+</div>
+
+<!-- ── OTA ─────────────────────────────────────────────────────────────── -->
+<div id="p-ota" class="page">
+  <div class="card">
+    <div class="card-title">Firmware Opdatering via GitHub</div>
+    <table class="info" id="t-ota"><tr><td colspan="2" style="color:#aaa">Tryk "Tjek" for at søge</td></tr></table>
+    <div class="row" style="margin-top:14px">
+      <button class="btn btn-s" onclick="otaCheck()">Tjek for opdatering</button>
+      <button class="btn btn-p" id="btn-flash" style="display:none" onclick="otaFlash()">Installer firmware</button>
+    </div>
+    <div id="ota-prog" style="display:none;margin-top:12px">
+      <div class="progbar"><div class="progfill" id="ota-fill" style="width:0%"></div></div>
+      <p class="progtext" id="ota-txt"></p>
+    </div>
+  </div>
+</div>
+
+<!-- ── RS485 CONFIG ────────────────────────────────────────────────────── -->
+<div id="p-interfaces" class="page">
+  <div id="ifc-list"><p style="color:#aaa;padding:12px">Indlæser...</p></div>
+  <div class="row" style="justify-content:flex-end;margin-top:4px">
+    <button class="btn btn-s btn-sm" onclick="loadIfc()">&#8635; Genindlæs</button>
+  </div>
+</div>
+
+</main>
+<div id="toast"></div>
+<script>
+// ── helpers ────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const row = (k,v) => `<tr><td>${k}</td><td>${v}</td></tr>`;
+const badge = (t,c) => `<span class="badge ${c}">${t}</span>`;
+function toast(msg, err) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.className = 'show' + (err ? ' err' : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className = '', 3500);
+}
+async function api(method, path, body) {
+  const r = await fetch(path, {
+    method, headers: {'Content-Type':'application/json'},
+    body: body ? JSON.stringify(body) : undefined
+  });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+// ── tabs ───────────────────────────────────────────────────────────────────
+function tab(id) {
+  ['status','ota','interfaces'].forEach(t => {
+    $('p-'+t).classList.toggle('active', t===id);
+    $('btn-'+t).classList.toggle('active', t===id);
+  });
+  if (id==='status')     loadStatus();
+  if (id==='interfaces') loadIfc();
+}
+
+// ── STATUS ─────────────────────────────────────────────────────────────────
+function fmtUp(s) {
+  return `${Math.floor(s/86400)}d ${String(Math.floor(s%86400/3600)).padStart(2,'0')}h `+
+         `${String(Math.floor(s%3600/60)).padStart(2,'0')}m ${String(s%60).padStart(2,'0')}s`;
+}
+async function loadStatus() {
+  try {
+    const s = await api('GET','/api/v1/system');
+    $('t-sys').innerHTML =
+      row('Version', `v${s.version} b${s.build||'?'}`) +
+      row('Uptime',  fmtUp(s.uptime_s)) +
+      row('Fri heap', Math.round(s.free_heap/1024)+' KB') +
+      row('Eth IP',  s.ip||'—');
+    $('hdr-info').textContent = `v${s.version} &bull; ${s.ip||'?'}`;
+  } catch { $('t-sys').innerHTML = row('Fejl','Ingen forbindelse'); }
+
+  try {
+    const w = await api('GET','/api/v1/system/wifi');
+    const st = {disabled:'Deaktiveret',connecting:'Forbinder...',connected:'Forbundet',ap_mode:'AP hotspot',error:'Fejl'};
+    const cls = {connected:'ok',error:'err',ap_mode:'warn'};
+    let html = row('Tilstand', badge(st[w.state]||w.state, cls[w.state]||'warn'));
+    if (w.ssid) html += row('SSID', w.ssid);
+    if (w.ip)   html += row('WiFi IP', w.ip);
+    if (w.rssi) html += row('RSSI', w.rssi+' dBm');
+    $('t-net').innerHTML = html;
+  } catch { $('t-net').innerHTML = row('WiFi','Ikke tilgængeligt'); }
+
+  try {
+    const ifc = await api('GET','/api/v1/interfaces');
+    const par = ['N','O','E'];
+    $('t-ifc').innerHTML = ifc.length
+      ? ifc.map(f => row(
+          `Modbus${f.id}`,
+          `${f.enabled ? badge('Aktiv','ok') : badge('Inaktiv','err')} &nbsp;`+
+          `${f.type} &nbsp; ${f.baudrate}B-${f.data_bits}${par[f.parity]||'N'}${f.stop_bits} &nbsp; UART${f.uart}`
+        )).join('')
+      : row('','Ingen interfaces');
+  } catch { $('t-ifc').innerHTML = row('','—'); }
+}
+
+// ── OTA ────────────────────────────────────────────────────────────────────
+let _ota = null, _poll = null;
+
+async function otaCheck() {
+  $('t-ota').innerHTML = row('','Tjekker GitHub...');
+  $('btn-flash').style.display = 'none';
+  try {
+    _ota = await api('GET','/api/v1/system/ota/check');
+    $('t-ota').innerHTML =
+      row('Installeret',  _ota.current_version) +
+      row('Tilgængelig', _ota.latest_version||'—') +
+      row('Status', _ota.firmware_available
+        ? badge('Opdatering tilgængelig','warn')
+        : badge('Firmware opdateret','ok'));
+    if (_ota.firmware_available) $('btn-flash').style.display='';
+  } catch {
+    $('t-ota').innerHTML = `<tr><td colspan="2" style="color:#dc2626">Kunne ikke kontakte GitHub</td></tr>`;
+    toast('GitHub ikke tilgængeligt', true);
+  }
+}
+
+async function otaFlash() {
+  if (!_ota?.firmware_url) return;
+  $('btn-flash').disabled = true;
+  $('ota-prog').style.display = '';
+  $('ota-txt').textContent = 'Starter firmware-opdatering...';
+  try {
+    await api('POST','/api/v1/system/ota/firmware',{url:_ota.firmware_url});
+    _poll = setInterval(pollOta, 1500);
+  } catch { toast('OTA fejlede', true); $('btn-flash').disabled=false; }
+}
+
+const OTA_STATE = {idle:'Venter',checking:'Tjekker',downloading:'Downloader',flashing:'Flasher',done:'Færdig — genstarter...',error:'Fejl'};
+async function pollOta() {
+  try {
+    const s = await api('GET','/api/v1/system/ota/status');
+    $('ota-fill').style.width = (s.progress_pct||0)+'%';
+    $('ota-txt').textContent = (OTA_STATE[s.state]||s.state) + (s.error?' — '+s.error:'');
+    if (s.state==='done'||s.state==='error') {
+      clearInterval(_poll);
+      if (s.state==='error') { toast('OTA fejl: '+s.error,true); $('btn-flash').disabled=false; }
+    }
+  } catch {}
+}
+
+// ── RS485 Config ──────────────────────────────────────────────────────────
+const BAUDS = [1200,2400,4800,9600,19200,38400,57600,115200];
+const PARITY = [['Ingen (N)','0'],['Ulige (O)','1'],['Lige (E)','2']];
+
+async function loadIfc() {
+  $('ifc-list').innerHTML = '<p style="color:#aaa;padding:12px">Indlæser...</p>';
+  try {
+    const ifc = await api('GET','/api/v1/interfaces');
+    renderIfc(ifc);
+  } catch { $('ifc-list').innerHTML='<p style="color:#dc2626;padding:12px">Fejl ved indlæsning</p>'; }
+}
+
+function renderIfc(list) {
+  if (!list.length) { $('ifc-list').innerHTML='<p style="color:#aaa;padding:12px">Ingen interfaces</p>'; return; }
+  $('ifc-list').innerHTML = list.map(f => `
+<div class="ifc ${f.enabled?'':'off'}" id="ifc${f.id}">
+  <div class="ifc-hdr">
+    <span class="ifc-name">Modbus${f.id} &mdash; ${f.type} &mdash; UART${f.uart}</span>
+    <label class="tog" title="Aktiveret">
+      <input type="checkbox" id="en${f.id}" ${f.enabled?'checked':''} onchange="toggleIfc(${f.id})">
+      <div class="ttrack"></div>
+      <span style="font-size:12px;color:#666" id="enlbl${f.id}">${f.enabled?'Aktiv':'Inaktiv'}</span>
+    </label>
+  </div>
+  <div class="grid">
+    <label>Baudrate
+      <select id="baud${f.id}">
+        ${BAUDS.map(b=>`<option value="${b}"${b==f.baudrate?' selected':''}>${b}</option>`).join('')}
+      </select>
+    </label>
+    <label>Paritet
+      <select id="par${f.id}">
+        ${PARITY.map(([l,v])=>`<option value="${v}"${v==f.parity?' selected':''}>${l}</option>`).join('')}
+      </select>
+    </label>
+    <label>Stop bits
+      <select id="stop${f.id}">
+        <option value="1"${f.stop_bits==1?' selected':''}>1</option>
+        <option value="2"${f.stop_bits==2?' selected':''}>2</option>
+      </select>
+    </label>
+    <label>Timeout (ms)
+      <input type="number" id="to${f.id}" value="${f.timeout_ms}" min="50" max="5000" step="50">
+    </label>
+  </div>
+  <div class="row" style="justify-content:flex-end">
+    <button class="btn btn-p btn-sm" onclick="saveIfc(${f.id})">Gem Modbus${f.id}</button>
+  </div>
+</div>`).join('');
+}
+
+function toggleIfc(id) {
+  const on = $('en'+id).checked;
+  $('ifc'+id).classList.toggle('off',!on);
+  $('enlbl'+id).textContent = on?'Aktiv':'Inaktiv';
+}
+
+async function saveIfc(id) {
+  const body = {
+    baudrate:   +$('baud'+id).value,
+    parity:     +$('par'+id).value,
+    stop_bits:  +$('stop'+id).value,
+    timeout_ms: +$('to'+id).value,
+    enabled:    $('en'+id).checked,
+  };
+  try {
+    await api('PUT',`/api/v1/interfaces/${id}/config`,body);
+    toast(`Modbus${id} gemt`);
+    loadIfc();
+  } catch { toast(`Fejl ved gem Modbus${id}`,true); }
+}
+
+// ── Reboot ────────────────────────────────────────────────────────────────
+async function doReboot() {
+  if (!confirm('Genstart gateway?')) return;
+  try { await api('POST','/api/v1/system/reboot'); toast('Genstarter...'); } catch {}
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────
+loadStatus();
+</script>
+</body>
+</html>

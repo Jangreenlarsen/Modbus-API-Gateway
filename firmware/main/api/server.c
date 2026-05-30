@@ -7,6 +7,7 @@
 #include "routes/system.h"
 #include "routes/ota.h"
 #include "routes/wifi.h"
+#include "routes/mgmt.h"
 #include "ws_handler.h"
 #include "version.h"
 #include "cJSON.h"
@@ -140,6 +141,9 @@ esp_err_t api_server_start(const api_config_t *cfg)
     httpd_register_uri_handler(s_server, &route_get_wifi_status);
     httpd_register_uri_handler(s_server, &route_put_wifi_config);
     httpd_register_uri_handler(s_server, &route_get_wifi_scan);
+
+    // Management page
+    httpd_register_uri_handler(s_server, &route_get_mgmt);
 
     // WebSocket
     httpd_register_uri_handler(s_server, &route_ws);
