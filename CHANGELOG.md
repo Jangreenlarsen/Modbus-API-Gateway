@@ -4,6 +4,15 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.2.1 build 0053] — 2026-05-30 — fix: W5500 hardware-pins som system-default
+
+**Filer ændret:**
+- `firmware/main/core/config.c` — default Ethernet: W5500 (CS=23 MOSI=13 MISO=12 SCLK=14 RST=33 INT=34 10MHz) i stedet for LAN8720
+- `firmware/main/core/version.h` — build 0053
+- `version.json` — build 0053
+
+---
+
 ## [0.2.1 build 0052] — 2026-05-30 — fix: W5500 SPI clock + polling-advarsel + httpd lru_purge
 
 **Filer ændret:**

@@ -2,6 +2,22 @@
 
 ---
 
+## v0.2.1 build 0053 — 2026-05-30 — W5500 som standard hardware-profil
+
+W5500 SPI Ethernet er nu default-konfiguration ved `erase_nvs` / factory reset:
+
+| Pin  | GPIO |
+|------|------|
+| CS   | 23   |
+| MOSI | 13   |
+| MISO | 12   |
+| SCLK | 14   |
+| RST  | 33   |
+| INT  | 34   |
+| Clock| 10 MHz |
+
+---
+
 ## v0.2.1 build 0052 — 2026-05-30 — W5500 ydeevne-fix
 
 **Problem:** Netværkslatency på 100–800ms (normalt < 5ms) på W5500 SPI Ethernet.
