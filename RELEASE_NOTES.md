@@ -2,6 +2,23 @@
 
 ---
 
+## v0.1.0 build 0036 — 2026-05-30 — debug/no debug — runtime log-niveau styring
+
+Nye CLI-kommandoer til at styre log-output uden genstart:
+
+```
+gw> debug           ← alt verbose (se alt)
+gw> debug wifi      ← kun WiFi verbose
+gw> debug <tag>     ← specifik komponent verbose
+gw> no debug        ← alt stille (kun WARN + ERROR)
+gw> no debug wifi   ← WiFi-komponenter stille
+gw> debug ?         ← vis hjælp
+```
+
+Nyttigt ved fejlsøgning: tænd verbose på præcis det du undersøger, sluk igen når du er færdig — ingen genstart nødvendig.
+
+---
+
 ## v0.1.0 build 0035 — 2026-05-29 — WiFi 30s backoff — CLI brugbar under reconnect
 
 Efter 5 fejlede WiFi-forsøg venter gateway nu 30 sekunder inden næste forsøg. Terminalen viser én loglinje hvert 30. sekund i stedet for én hvert 3. sekund. CLI er fuldt brugbar mens WiFi reconnect foregår i baggrunden.

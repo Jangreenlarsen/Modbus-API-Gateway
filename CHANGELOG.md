@@ -4,6 +4,26 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0036] — 2026-05-30 — feat: debug/no debug kommandoer — runtime log-niveau styring
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — `cmd_debug()` og `cmd_no()` tilføjet + registreret
+- `firmware/main/core/version.h` — build 0036
+- `version.json` — build 0036
+
+**Nye kommandoer:**
+- `debug` — sætter alle komponenter til VERBOSE
+- `debug wifi` — kun WiFi-driver + wifi_mgr → VERBOSE
+- `debug <tag>` — specifik ESP-IDF komponent → VERBOSE
+- `no debug` — alle komponenter → WARN (stille tilstand)
+- `no debug wifi` — WiFi-relaterede komponenter → WARN
+- `no debug <tag>` — specifik komponent → WARN
+- `debug ?` / `no debug ?` — inline hjælp
+
+Bruger `esp_log_level_set()` til at justere log-niveau pr. komponent-tag uden genstart.
+
+---
+
 ## [0.1.0 build 0035] — 2026-05-29 — fix: WiFi 30s backoff efter max retries — undgår log-spam
 
 **Filer ændret:**
