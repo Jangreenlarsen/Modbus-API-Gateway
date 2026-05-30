@@ -2,6 +2,21 @@
 
 ---
 
+## v0.1.0 build 0043 — 2026-05-30 — W5500 RST GPIO pin
+
+W5500 hardware-reset pin kan nu konfigureres:
+
+```
+gw(config-eth)# rst 5        -- sæt RST GPIO til 5
+gw(config-eth)# rst -1       -- deaktivér (-1 = ikke tilsluttet)
+```
+
+`show config` viser nu `rst <gpio>` som del af W5500-sektionen. Default er -1.
+
+**OBS:** CONFIG_STRUCT_VERSION er bumped til 5 — gemt NVS-config nulstilles ved første boot efter flash.
+
+---
+
 ## v0.1.0 build 0041 — 2026-05-30 — show status / version / wifi
 
 Tre nye `show`-kommandoer:

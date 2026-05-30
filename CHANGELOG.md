@@ -4,6 +4,19 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0043] — 2026-05-30 — feat: W5500 RST GPIO pin i config, CLI og show config
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — `spi_rst_gpio` tilføjet til `eth_config_t`; CONFIG_STRUCT_VERSION → 5
+- `firmware/main/core/config.c` — default `spi_rst_gpio = -1`
+- `firmware/main/core/serial_cli.c` — `rst <gpio>` kommando i CTX_ETH (W5500); hjælp og show config opdateret
+- `firmware/main/core/version.h` — build 0043
+- `version.json` — build 0043
+
+**Ændring:** W5500 hardware-reset pin kan nu konfigureres via `rst <gpio|-1>` i `interface ethernet`-konteksten. Default -1 (ikke tilsluttet). CONFIG_STRUCT_VERSION bumped → NVS config nulstilles ved næste boot.
+
+---
+
 ## [0.1.0 build 0042] — 2026-05-30 — fix: show config Ethernet GPIO-linjer matcher CLI-kommandoer
 
 **Filer ændret:**
