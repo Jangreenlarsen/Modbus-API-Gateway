@@ -57,6 +57,16 @@ static void on_wifi_event(void *arg, esp_event_base_t base, int32_t id, void *da
         s_retry = 0;
         esp_wifi_connect();
         s_status.state = WIFI_STATE_CONNECTING;
+    } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_CONNECTED) {
+        // Eksplicit DHCP-restart efter 4-way handshake — sikrer DHCP kører
+        // selv hvis dhcpc_stop() blev kaldt under en tidligere korrupt IP-config
+        if (!s_cfg.ip[0] || strcasecmp(s_cfg.ip, "dhcp") == 0) {
+            esp_netif_dhcpc_stop(s_sta_netif);
+            esp_netif_dhcpc_start(s_sta_netif);
+            ESP_LOGI(TAG, "STA forbundet — DHCP starter");
+        } else {
+            ESP_LOGI(TAG, "STA forbundet — statisk IP: %s", s_cfg.ip);
+        }
     } else if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
         wifi_event_sta_disconnected_t *disc = (wifi_event_sta_disconnected_t *)data;
         // Reason 15=4WAY_HANDSHAKE_TIMEOUT 204=HANDSHAKE_TIMEOUT → sandsynligvis forkert PSK
@@ -163,18 +173,28 @@ esp_err_t wifi_manager_init(const wifi_config_gw_t *cfg)
         s_initialized = true;
     }
 
-    // Statisk IP — eller behold DHCP-klient (default)
-    if (cfg->ip[0] && strcmp(cfg->ip, "dhcp") != 0) {
-        esp_netif_ip_info_t ip_info = {};
-        ip4_addr_t a;
-        ip4addr_aton(cfg->ip,      &a); ip_info.ip.addr      = a.addr;
-        ip4addr_aton(cfg->gw,      &a); ip_info.gw.addr      = a.addr;
-        ip4addr_aton(cfg->netmask, &a); ip_info.netmask.addr = a.addr;
-        esp_netif_dhcpc_stop(s_sta_netif);
-        ESP_ERROR_CHECK(esp_netif_set_ip_info(s_sta_netif, &ip_info));
-        ESP_LOGI(TAG, "WiFi STA static IP: %s  gw %s  mask %s",
-                 cfg->ip, cfg->gw, cfg->netmask);
+    // Statisk IP — eller DHCP. Valider IP-adressen inden DHCP stoppes:
+    // korrupt NVS kan give et ikke-tomt ip-felt der ikke er en gyldig IPv4.
+    if (cfg->ip[0] && strcasecmp(cfg->ip, "dhcp") != 0) {
+        ip4_addr_t test;
+        if (ip4addr_aton(cfg->ip, &test) && test.addr != 0) {
+            esp_netif_ip_info_t ip_info = {};
+            ip4_addr_t a;
+            ip4addr_aton(cfg->ip,      &a); ip_info.ip.addr      = a.addr;
+            ip4addr_aton(cfg->gw,      &a); ip_info.gw.addr      = a.addr;
+            ip4addr_aton(cfg->netmask, &a); ip_info.netmask.addr = a.addr;
+            esp_netif_dhcpc_stop(s_sta_netif);
+            ESP_ERROR_CHECK(esp_netif_set_ip_info(s_sta_netif, &ip_info));
+            ESP_LOGI(TAG, "WiFi STA static IP: %s  gw %s  mask %s",
+                     cfg->ip, cfg->gw, cfg->netmask);
+        } else {
+            ESP_LOGW(TAG, "WiFi IP '%s' ugyldig/korrupt — bruger DHCP", cfg->ip);
+            esp_netif_dhcpc_stop(s_sta_netif);
+            esp_netif_dhcpc_start(s_sta_netif);
+        }
     } else {
+        esp_netif_dhcpc_stop(s_sta_netif);
+        esp_netif_dhcpc_start(s_sta_netif);
         ESP_LOGI(TAG, "WiFi STA DHCP aktiv");
     }
 

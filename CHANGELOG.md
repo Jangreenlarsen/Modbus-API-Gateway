@@ -4,6 +4,43 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0039] — 2026-05-30 — fix: status viser WiFi IP og tilstand
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — `cmd_status()`: tilføjet WiFi tilstand og IP
+- `firmware/main/core/version.h` — build 0039
+- `version.json` — build 0039
+
+**Ændring:** `status`-kommandoen viste kun Ethernet-IP. Nu vises også WiFi-tilstand og IP når WiFi er forbundet.
+
+---
+
+## [0.1.0 build 0038] — 2026-05-30 — fix: WiFi DHCP kører ikke efter connect (korrupt IP-felt i NVS)
+
+**Filer ændret:**
+- `firmware/main/core/wifi_manager.c` — IP-validering + eksplicit DHCP-restart ved STA_CONNECTED
+- `firmware/main/core/version.h` — build 0038
+- `version.json` — build 0038
+
+**Rodårsag:** NVS-korruption (pre-b0030 dangling pointer) kunne sætte `wifi.ip`-feltet til garbage — ikke "dhcp", ikke tom streng. `wifi_manager_init()` ramte da static-IP-branchen og kaldte `esp_netif_dhcpc_stop()`. WiFi associerede korrekt (PSK OK), men DHCP-klienten kørte ikke → klient ses på WLC men får aldrig en IP-adresse.
+
+**Fix 1 — IP-validering:** `ip4addr_aton()` bruges til at verificere at `ip`-feltet er en gyldig IPv4 inden DHCP stoppes. Ugyldig/korrupt værdi logger en advarsel og falder tilbage til DHCP.
+
+**Fix 2 — Eksplicit DHCP-restart ved `WIFI_EVENT_STA_CONNECTED`:** Selv hvis DHCP-tilstanden er uklar fra tidligere init-runs, genstartes DHCP-klienten eksplicit efter 4-way handshake — inden `IP_EVENT_STA_GOT_IP` kan udsendes.
+
+---
+
+## [0.1.0 build 0037] — 2026-05-30 — fix: show config viser PSK i clear text
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — `show_running_config()`: PSK vises i klartekst (WiFi STA + AP)
+- `firmware/main/core/version.h` — build 0037
+- `version.json` — build 0037
+
+**Ændring:** `show config` viste tidligere `*** (sat)` for WiFi-passwords. Nu vises den faktiske PSK-værdi fra NVS, så man kan verificere at korrekt password er gemt.
+
+---
+
 ## [0.1.0 build 0036] — 2026-05-30 — feat: debug/no debug kommandoer — runtime log-niveau styring
 
 **Filer ændret:**

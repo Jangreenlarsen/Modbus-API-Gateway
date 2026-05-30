@@ -105,7 +105,7 @@ static void show_running_config(void)
     printf(" %s\r\n", s_cfg->wifi.enabled ? "Enable" : "Disable");
     printf(" mode STA\r\n");
     printf(" SSID \"%s\"\r\n", s_cfg->wifi.ssid[0] ? s_cfg->wifi.ssid : "(ikke sat)");
-    printf(" PSK %s\r\n",      s_cfg->wifi.password[0] ? "*** (sat)" : "(ikke sat)");
+    printf(" PSK %s\r\n",      s_cfg->wifi.password[0] ? s_cfg->wifi.password : "(ikke sat)");
     if (strcasecmp(s_cfg->wifi.ip, "dhcp") == 0 || s_cfg->wifi.ip[0] == '\0') {
         printf(" IP dhcp\r\n");
     } else {
@@ -120,7 +120,7 @@ static void show_running_config(void)
     printf("Interface WIFI-AP\r\n");
     printf(" %s\r\n", s_cfg->wifi.ap_fallback ? "Enable" : "Disable");
     printf(" SSID \"%s\"\r\n", s_cfg->wifi.ap_ssid[0] ? s_cfg->wifi.ap_ssid : "ModbusGW-AUTO");
-    printf(" PSK %s\r\n",      s_cfg->wifi.ap_password[0] ? "*** (sat)" : "none (åben)");
+    printf(" PSK %s\r\n",      s_cfg->wifi.ap_password[0] ? s_cfg->wifi.ap_password : "none (åben)");
     printf(" IP 192.168.4.1\r\n");
     printf("End interface WIFI-AP\r\n");
     printf("!\r\n");
@@ -166,13 +166,22 @@ static int cmd_status(int argc, char **argv)
 {
     char eth_ip[16];
     ethernet_get_ip(eth_ip, sizeof(eth_ip));
+    wifi_status_t ws = wifi_manager_get_status();
     uint64_t uptime_s = (uint64_t)(esp_timer_get_time() / 1000000ULL);
     uint32_t heap_kb  = esp_get_free_heap_size() / 1024;
+
+    static const char *wifi_state_str[] = {
+        "deaktiveret", "forbinder...", "forbundet", "AP hotspot", "fejl"
+    };
 
     sep();
     printf("Version : v%s b%s\r\n", GATEWAY_VERSION, GATEWAY_BUILD);
     printf("Uptime  : %llu s\r\n", uptime_s);
     printf("Eth IP  : %s\r\n", strcmp(eth_ip, "0.0.0.0") == 0 ? "ikke tilgængeligt" : eth_ip);
+    printf("WiFi    : %s", (ws.state <= WIFI_STATE_ERROR) ? wifi_state_str[ws.state] : "ukendt");
+    if (ws.state == WIFI_STATE_CONNECTED)
+        printf("  %s  (%s)", ws.ip[0] ? ws.ip : "?", ws.ssid[0] ? ws.ssid : "?");
+    printf("\r\n");
     printf("Heap    : %lu KB fri\r\n", (unsigned long)heap_kb);
     sep();
     return 0;
