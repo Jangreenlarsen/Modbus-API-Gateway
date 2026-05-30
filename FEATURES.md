@@ -22,6 +22,10 @@ Status: `planned` | `in-progress` | `done`
 - [x] done    v0.3.0 — GPIO pin-konfiguration (TX, RX, DE) i web GUI + komplet CLI-support (`name`, `tx`, `rx`, `de`, `type`, `uart`, `format`, `timeout`)
 - [x] done    v0.3.0 — FC01-FC10 REST master dispatcher: alle Modbus function codes virker nu via REST (var broken pga. ESP-IDF httpd midt-wildcard begrænsning)
 - [x] done    v0.3.0 — POST /api/v1/interfaces (opret) og DELETE /api/v1/interfaces/{key} (slet+renummerér)
+- [x] done    v0.4.0 — Modbus register cache: read-through, TTL-baseret freshness, LRU eviction (256 entries), hit/miss/error stats, write-through på succes / invalidering ved fejl. Inspireret af Modbus_server_slave_ESP32's async cache.
+- [x] done    v0.4.0 — Cache REST API: `GET /api/v1/cache/stats|entries`, `PUT /api/v1/cache/config`, `POST /api/v1/cache/clear|reset-stats`
+- [x] done    v0.4.0 — Cache tab i /mgmt: live stats, entries-tabel, TTL/enable toggles, clear/reset knapper
+- [x] done    v0.4.0 — CLI `cache` kommandoer (`show cache`, `cache enable/disable/ttl/clear/reset-stats/entries`)
 
 ---
 
@@ -31,6 +35,8 @@ Status: `planned` | `in-progress` | `done`
 - [ ] planned — Lokal register-cache i RAM/NVS (overlever korte Modbus-fejl)
 - [ ] planned — Web frontend monitoreringsside: live register-visning pr. slave med polling-konfiguration
 - [ ] planned — WebSocket push ved register-ændringer (real-time til monitoreringsklienter)
+- [ ] planned — Cache fase 2: async baggrundstask + priority queue (writes > fresh reads > refreshes), per-slave adaptive backoff (porteret fuldt fra Modbus_server_slave_ESP32 design)
+- [ ] planned — Cache NVS-persistens af stats/config (TTL, enabled overlever reboot)
 - [ ] planned — REST API endpoints for slave register-bank (GET/PUT pr. interface for slave-mode-data)
 - [ ] planned — SW-UART slave mode (custom bit-bang svar-implementering)
 - [ ] planned — Alarm/threshold-logik med notifikation via WebSocket

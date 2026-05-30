@@ -2,6 +2,48 @@
 
 ---
 
+## v0.4.0 build 0061 — 2026-05-30 — Modbus register cache + monitoring
+
+**Cache engine** inspireret af `Modbus_server_slave_ESP32`-projektet — eliminerer redundant bus-trafik når flere klienter spørger om samme register inden for TTL-vinduet.
+
+### Funktioner
+- Read-through synchronous cache: 256 entries × 16 bytes = 4 KB RAM
+- TTL-baseret freshness (default 1000ms, 0 = aldrig udløb)
+- LRU eviction når cache er fuld
+- Per-entry: iface, slave, FC, addr, value, status, hits, age
+- Mutex-beskyttet (thread-safe mellem httpd og modbus-tasks)
+- Write-through på succes; invalidering ved fejl
+
+### Cache tab i `/mgmt`
+Ny tab med:
+- **Stats-tabel**: enabled, TTL, entries / max, hits, misses, hit rate %, errors, evictions
+- **Live entries-tabel**: alle aktive cache-entries med kolonner iface/slave/FC/addr/value/status/hits/age
+- **Controls**: enable-toggle, TTL-input, Opdater / Nulstil stats / Tøm cache knapper
+
+### REST endpoints
+```
+GET    /api/v1/cache/stats         → JSON med hits/misses/hit_rate/...
+GET    /api/v1/cache/entries       → array af alle aktive entries
+PUT    /api/v1/cache/config        → {"enabled":true,"ttl_ms":1000}
+POST   /api/v1/cache/clear         → tøm cache
+POST   /api/v1/cache/reset-stats   → nulstil tællere
+```
+
+### CLI
+```
+gw> show cache                     -- statistik
+gw> cache enable / disable
+gw> cache ttl <ms>
+gw> cache clear
+gw> cache reset-stats
+gw> cache entries                  -- list alle entries
+```
+
+### Typisk effekt
+Hvis 3 SCADA-klienter alle poller samme 10 holding registers hvert sekund, var det 30 bus-transaktioner/sek tidligere. Med TTL=1000ms bliver det 10/sek (kun 1 sæt friske reads, resten serveres fra cache). Hit rate på 90%+ er forventeligt ved typisk polling-mønster.
+
+---
+
 ## v0.3.0 build 0060 — 2026-05-30 — REST API fuldt funktionel + navn-alias + GUI-config
 
 **Stor milepæl:** Alle Modbus FC01-FC10 REST endpoints virker nu, alle interface-felter kan konfigureres fra web GUI, og hvert interface kan navngives og refereres til via navn i URL.

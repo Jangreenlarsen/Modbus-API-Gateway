@@ -8,6 +8,7 @@
 #include "wifi_manager.h"
 #include "config_store.h"
 #include "modbus_manager.h"
+#include "register_cache.h"
 #include "server.h"
 #include "serial_cli.h"
 
@@ -46,7 +47,10 @@ void app_main(void)
     // 5. WiFi init
     wifi_manager_init(&cfg.wifi);
 
-    // 6. Modbus interfaces init — fejl er ikke fatal (interface måske ikke tilsluttet)
+    // 6. Register cache (skal initialiseres FØR modbus_manager bruger den)
+    register_cache_init();
+
+    // 7. Modbus interfaces init — fejl er ikke fatal (interface måske ikke tilsluttet)
     esp_err_t mb_err = modbus_manager_init(&cfg);
     if (mb_err != ESP_OK) {
         ESP_LOGW(TAG, "Modbus init fejl (%s) — kører videre uden Modbus", esp_err_to_name(mb_err));

@@ -4,6 +4,7 @@
 #include "config_store.h"
 #include "ethernet.h"
 #include "wifi_manager.h"
+#include "register_cache.h"
 #include "esp_console.h"
 #include "esp_wifi.h"
 #include "linenoise/linenoise.h"
@@ -363,6 +364,76 @@ static void show_running_config(void)
     }
 }
 
+static void show_cache_detail(void)
+{
+    const cache_stats_t *s = cache_get_stats();
+    uint32_t total = s->hits + s->misses;
+    double hit_rate = (total > 0) ? (100.0 * s->hits / total) : 0.0;
+    double util = 100.0 * s->entries_used / (double)CACHE_MAX_ENTRIES;
+
+    sep();
+    printf("Modbus register cache\r\n");
+    printf("  Status      : %s\r\n", s->enabled ? "aktiv" : "deaktiveret");
+    printf("  TTL         : %lu ms%s\r\n",
+           (unsigned long)s->ttl_ms, s->ttl_ms == 0 ? "  (aldrig udløb)" : "");
+    printf("  Entries     : %lu / %d  (%.1f%%)\r\n",
+           (unsigned long)s->entries_used, CACHE_MAX_ENTRIES, util);
+    printf("  Hits        : %lu\r\n", (unsigned long)s->hits);
+    printf("  Misses      : %lu\r\n", (unsigned long)s->misses);
+    printf("  Hit rate    : %.1f%%\r\n", hit_rate);
+    printf("  Errors      : %lu\r\n", (unsigned long)s->errors);
+    printf("  Evictions   : %lu\r\n", (unsigned long)s->evictions);
+    printf("  Total req's : %lu\r\n", (unsigned long)s->total_requests);
+    sep();
+}
+
+static int cmd_cache(int argc, char **argv)
+{
+    if (argc < 2 || strcasecmp(argv[1], "?") == 0) {
+        printf("Brug:\r\n");
+        printf("  cache show                 -- vis statistik\r\n");
+        printf("  cache enable / disable     -- aktiver/deaktiver cache\r\n");
+        printf("  cache ttl <ms>             -- sæt freshness TTL (0=aldrig udløb)\r\n");
+        printf("  cache clear                -- tøm cache (ikke stats)\r\n");
+        printf("  cache reset-stats          -- nulstil hit/miss-tællere\r\n");
+        printf("  cache entries              -- list alle aktive cache-entries\r\n");
+        return 0;
+    }
+    if (strcasecmp(argv[1], "show") == 0) { show_cache_detail(); return 0; }
+    if (strcasecmp(argv[1], "enable")  == 0) { cache_set_enabled(true);  printf("Cache: aktiveret\r\n"); return 0; }
+    if (strcasecmp(argv[1], "disable") == 0) { cache_set_enabled(false); printf("Cache: deaktiveret\r\n"); return 0; }
+    if (strcasecmp(argv[1], "ttl") == 0) {
+        if (argc < 3) { printf("Brug: cache ttl <ms>\r\n"); return 1; }
+        long ms = atol(argv[2]);
+        if (ms < 0) { printf("Fejl: ms skal være >= 0\r\n"); return 1; }
+        cache_set_ttl_ms((uint32_t)ms);
+        printf("Cache TTL: %ld ms\r\n", ms);
+        return 0;
+    }
+    if (strcasecmp(argv[1], "clear") == 0)       { cache_clear(); printf("Cache cleared\r\n"); return 0; }
+    if (strcasecmp(argv[1], "reset-stats") == 0) { cache_reset_stats(); printf("Cache stats reset\r\n"); return 0; }
+    if (strcasecmp(argv[1], "entries") == 0) {
+        cache_entry_t buf[CACHE_MAX_ENTRIES];
+        int n = cache_get_entries(buf, CACHE_MAX_ENTRIES);
+        if (n == 0) { printf("(ingen entries)\r\n"); return 0; }
+        printf("%-5s %-5s %-3s %-5s %-6s %-6s %-6s %s\r\n",
+               "iface", "slave", "fc", "addr", "value", "status", "hits", "age_ms");
+        uint32_t now = (uint32_t)(esp_timer_get_time() / 1000ULL);
+        static const char *fcn[5] = {"?", "coil", "disc", "hold", "inp"};
+        static const char *stn[3] = {"empty", "valid", "error"};
+        for (int i = 0; i < n; i++) {
+            cache_entry_t *e = &buf[i];
+            printf("%-5d %-5d %-3s %-5d %-6d %-6s %-6lu %lu\r\n",
+                   e->iface, e->slave, fcn[e->fc <= 4 ? e->fc : 0], e->addr,
+                   e->value, stn[e->status <= 2 ? e->status : 0],
+                   (unsigned long)e->hits, (unsigned long)(now - e->last_update_ms));
+        }
+        return 0;
+    }
+    printf("Ukendt: '%s'  (cache ? for hjælp)\r\n", argv[1]);
+    return 1;
+}
+
 static int cmd_show(int argc, char **argv)
 {
     if (argc < 2) {
@@ -372,6 +443,7 @@ static int cmd_show(int argc, char **argv)
         printf("  show version   -- firmware-version og chip-info\r\n");
         printf("  show ethernet  -- detaljeret Ethernet-status og GPIO\r\n");
         printf("  show wifi      -- detaljeret WiFi-status\r\n");
+        printf("  show cache     -- Modbus cache statistik\r\n");
         printf("  show config    -- komplet konfiguration (IOS-stil)\r\n");
         sep();
         return 0;
@@ -381,6 +453,7 @@ static int cmd_show(int argc, char **argv)
     else if (strcasecmp(argv[1], "ethernet") == 0) show_eth_detail();
     else if (strcasecmp(argv[1], "eth")      == 0) show_eth_detail();
     else if (strcasecmp(argv[1], "wifi")     == 0) show_wifi_detail();
+    else if (strcasecmp(argv[1], "cache")    == 0) show_cache_detail();
     else if (strcasecmp(argv[1], "config")   == 0) show_running_config();
     else {
         printf("Ukendt: 'show %s'  (show ? for hjælp)\r\n", argv[1]);
@@ -1182,6 +1255,7 @@ esp_err_t serial_cli_start(gateway_config_t *cfg)
         { .command = "status",     .help = "System status: version, IP, uptime, heap",               .hint = NULL, .func = cmd_status,      .argtable = NULL },
         { .command = "eth",        .help = "Ethernet config  (eth ? for hjælp)",                     .hint = NULL, .func = cmd_eth,         .argtable = NULL },
         { .command = "wifi",       .help = "WiFi config  (wifi ? for hjælp)",                        .hint = NULL, .func = cmd_wifi,        .argtable = NULL },
+        { .command = "cache",      .help = "Modbus cache  (cache ? for hjælp)",                     .hint = NULL, .func = cmd_cache,       .argtable = NULL },
         { .command = "save",          .help = "Gem konfiguration til NVS",                           .hint = NULL, .func = cmd_save,          .argtable = NULL },
         { .command = "reboot",        .help = "Genstart gateway",                                    .hint = NULL, .func = cmd_reboot,        .argtable = NULL },
         { .command = "factory-reset", .help = "Slet al NVS-config og genstart med fabriksindst.",   .hint = NULL, .func = cmd_factory_reset, .argtable = NULL },

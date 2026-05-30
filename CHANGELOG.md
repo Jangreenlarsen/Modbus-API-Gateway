@@ -4,6 +4,27 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.0 build 0061] — 2026-05-30 — feat: Modbus register cache + stats/metrics side
+
+**Inspireret af** `Modbus_server_slave_ESP32`'s async cache. Denne version er synchronous (ingen baggrundstask, ingen priority queue) — fase 2 kan tilføje det.
+
+**Filer ændret:**
+- `firmware/main/storage/register_cache.c` + `.h` — fuldt implementeret (var stub før). 256 entries × 16 bytes = 4KB. Linear search find_entry, LRU eviction, TTL-baseret freshness, mutex-beskyttet. Per-entry: iface/slave/fc/addr/value/status/hits/last_update_ms. Stats: hits, misses, errors, evictions, entries_used, ttl_ms, enabled.
+- `firmware/main/modbus/modbus_manager.c` — alle read/write-wrappers tjekker cache først. Reads: hvis ALLE adresser i en multi-register operation er fresh → returnér uden bus-trafik. Misses → kald esp-modbus, gem resultat. Writes: opdatér cache med succesfuldt skrevet værdi, invalidér ved fejl.
+- `firmware/main/api/routes/cache.c` + `.h` — REST endpoints: `GET /cache/stats`, `GET /cache/entries`, `PUT /cache/config`, `POST /cache/clear`, `POST /cache/reset-stats`
+- `firmware/main/api/routes/mgmt.c` — ny **Cache** tab: stats-tabel, entries-tabel med iface/slave/FC/addr/value/status/hits/age, TTL-input, enable-toggle, Tøm/Reset knapper
+- `firmware/main/api/server.c` — cache routes registreret; api_index opdateret
+- `firmware/main/core/serial_cli.c` — `cache` top-level kommando: `cache show|enable|disable|ttl|clear|reset-stats|entries`; `show cache` alias
+- `firmware/main/main.c` — `register_cache_init()` kaldes før `modbus_manager_init()`
+- `firmware/main/CMakeLists.txt` — `api/routes/cache.c` tilføjet
+- `firmware/main/core/version.h` — 0.4.0 build 0061
+- `version.json` — 0.4.0 build 0061
+- `FEATURES.md`, `RELEASE_NOTES.md` — cache-features dokumenteret
+
+**Default TTL: 1000ms.** Cache kan deaktiveres helt via CLI eller REST hvis behov for altid-fresh reads.
+
+---
+
 ## [0.3.0 build 0060] — 2026-05-30 — fix: FC01-FC10 REST routes via master dispatcher
 
 **Filer ændret:**
