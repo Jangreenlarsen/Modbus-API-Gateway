@@ -949,6 +949,22 @@ static int cmd_configure(int argc, char **argv)
                 else if (strcasecmp(cmd, "rst")  == 0) { s_cfg->ethernet.spi_rst_gpio  = val; printf("RST GPIO: %d\r\n", val); }
                 else                                    { s_cfg->ethernet.spi_int_gpio  = val; printf("INT GPIO: %d\r\n", val); }
             }
+            else if (strcasecmp(cmd, "spi-clock") == 0) {
+                if (s_cfg->ethernet.hw_type != ETH_HW_W5500) { printf("Fejl: kun for W5500\r\n"); continue; }
+                if (ac < 2) { printf("Brug: spi-clock <1-36>\r\n"); continue; }
+                int mhz = atoi(av[1]);
+                if (mhz < 1 || mhz > 36) { printf("Fejl: 1-36 MHz\r\n"); continue; }
+                s_cfg->ethernet.spi_clock_mhz = (uint8_t)mhz;
+                printf("SPI clock: %d MHz\r\n", mhz);
+            }
+            else if (strcasecmp(cmd, "poll-ms") == 0) {
+                if (s_cfg->ethernet.hw_type != ETH_HW_W5500) { printf("Fejl: kun for W5500\r\n"); continue; }
+                if (ac < 2) { printf("Brug: poll-ms <1-100>\r\n"); continue; }
+                int ms = atoi(av[1]);
+                if (ms < 1 || ms > 100) { printf("Fejl: 1-100 ms\r\n"); continue; }
+                s_cfg->ethernet.spi_poll_ms = (uint8_t)ms;
+                printf("W5500 poll interval: %d ms  (aktiv ved int=-1)\r\n", ms);
+            }
             else if (strcasecmp(cmd, "ip")       == 0) {
                 if (ac < 2) { printf("Brug: ip dhcp  eller  ip <ip> <gw> <mask>\r\n"); continue; }
                 if (strcasecmp(av[1], "dhcp") == 0) {

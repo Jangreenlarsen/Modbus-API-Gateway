@@ -4,6 +4,19 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.2.1 build 0056] — 2026-05-30 — fix: W5500 ISR-miss workaround (port fra Modbus_server_slave_ESP32)
+
+**Filer ændret:**
+- `firmware/main/core/ethernet.c` — `w5500_int_poll_task()` baggrundstask: poller INT-pin hvert 2ms og sender `xTaskNotifyGive()` direkte til "w5500_tsk" når INT er LOW. Omgår ESP-IDF's edge-triggered GPIO ISR der misser frames når W5500 har multiple pakker i RX-bufferen
+- `firmware/main/core/serial_cli.c` — CTX_ETH parser manglede `spi-clock` og `poll-ms` kommandoer (kun cmd_eth havde dem) → "Ukendt" fejl ved konfiguration
+- `firmware/main/core/version.h` — build 0056
+- `version.json` — build 0056
+
+**Root cause:** ESP-IDF W5500 driver's RX-task ("w5500_tsk") venter på `ulTaskNotifyTake()` med 1000ms timeout. Når GPIO faldende-flanke-ISR misser (multi-frame queue holder INT LOW, ingen ny flanke), vågner tasken kun ved 1000ms timeout → 700-1300ms ping-latency med faldende mønster (88% pakketab).
+**Fix:** Eksakt samme workaround som vi lavede i `Modbus_server_slave_ESP32` projektet — manuel INT-polling task der bypass'er GPIO ISR-laget. Forventet resultat: konsistent ~5ms ping.
+
+---
+
 ## [0.2.1 build 0055] — 2026-05-30 — fix: W5500 init crash — interrupt og polling er mutuelt eksklusive
 
 **Filer ændret:**

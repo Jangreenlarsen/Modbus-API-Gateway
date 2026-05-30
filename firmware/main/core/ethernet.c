@@ -19,6 +19,32 @@ static EventGroupHandle_t s_eth_event_group;
 #define ETH_CONNECTED_BIT BIT0
 static char s_ip[16] = "0.0.0.0";
 static bool s_eth_available = false;
+static int  s_w5500_int_gpio = -1;
+static TaskHandle_t s_w5500_rx_task = NULL;
+
+// ── WORKAROUND for ESP-IDF W5500 edge-triggered ISR-miss ─────────────────────
+// W5500's RX task ("w5500_tsk") venter på ulTaskNotifyTake(timeout=1000ms).
+// Hvis GPIO faldende-flanke-ISR misser (multi-frame queue, INT holdes LOW),
+// vågner tasken kun ved 1000ms timeout → 700-1300ms ping-latency.
+// Workaround: en lavprioritets-task der hvert 2ms tjekker INT-pin, og hvis
+// LOW (W5500 har pending data) sender xTaskNotifyGive() direkte til RX-tasken,
+// helt uden om GPIO ISR-laget. Løst i ESP-IDF v5.x men bug-pattern eksisterer
+// stadig i visse pakke-burst-scenarier.
+static void w5500_int_poll_task(void *arg)
+{
+    while (1) {
+        if (!s_w5500_rx_task) {
+            s_w5500_rx_task = xTaskGetHandle("w5500_tsk");
+            if (s_w5500_rx_task)
+                ESP_LOGI(TAG, "W5500 RX task fundet — INT-polling aktiv (2ms)");
+        }
+        if (s_w5500_rx_task && s_w5500_int_gpio >= 0) {
+            if (gpio_get_level((gpio_num_t)s_w5500_int_gpio) == 0)
+                xTaskNotifyGive(s_w5500_rx_task);
+        }
+        vTaskDelay(pdMS_TO_TICKS(2));
+    }
+}
 
 static void on_got_ip(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
@@ -155,6 +181,13 @@ static esp_err_t init_w5500(const eth_config_t *cfg, esp_netif_t *eth_netif)
     ESP_LOGI(TAG, "W5500 SPI Ethernet initialiseret  %dMHz  INT=%s",
              clk_mhz, (cfg->spi_int_gpio >= 0)
                       ? "interrupt-drevet" : "polling (ingen INT pin)");
+
+    // Start ISR-miss workaround task (kun nyttig i interrupt-mode)
+    if (cfg->spi_int_gpio >= 0) {
+        s_w5500_int_gpio = cfg->spi_int_gpio;
+        xTaskCreate(w5500_int_poll_task, "w5500_int_poll", 2048, NULL, 5, NULL);
+        ESP_LOGI(TAG, "W5500 INT-poll workaround startet (omgår ESP-IDF ISR-miss)");
+    }
     return ESP_OK;
 }
 
