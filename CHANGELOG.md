@@ -4,6 +4,55 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.2.1 build 0057] — 2026-05-30 — fix: mgmt-side JavaScript syntax error
+
+**Filer ændret:**
+- `firmware/main/api/routes/mgmt.c` — interfaces-API-kald hængte udenfor en funktion + ekstra `}` brød hele scriptet → `SyntaxError` ved load → ingen API-kald → siden "frosset" på initiale "Indlæser..."-tekster. Fix: interface-summary flyttet ud i `loadIfcSummary()`, kaldes fra `loadStatus()`
+- `firmware/main/core/version.h` — build 0057
+- `version.json` — build 0057
+
+---
+
+## [0.2.1 build 0056] — 2026-05-30 — fix: W5500 ISR-miss workaround (port fra Modbus_server_slave_ESP32)
+
+**Filer ændret:**
+- `firmware/main/core/ethernet.c` — `w5500_int_poll_task()` baggrundstask: poller INT-pin hvert 2ms og sender `xTaskNotifyGive()` direkte til "w5500_tsk" når INT er LOW. Omgår ESP-IDF's edge-triggered GPIO ISR der misser frames når W5500 har multiple pakker i RX-bufferen
+- `firmware/main/core/serial_cli.c` — CTX_ETH parser manglede `spi-clock` og `poll-ms` kommandoer (kun cmd_eth havde dem) → "Ukendt" fejl ved konfiguration
+- `firmware/main/core/version.h` — build 0056
+- `version.json` — build 0056
+
+**Root cause:** ESP-IDF W5500 driver's RX-task ("w5500_tsk") venter på `ulTaskNotifyTake()` med 1000ms timeout. Når GPIO faldende-flanke-ISR misser (multi-frame queue holder INT LOW, ingen ny flanke), vågner tasken kun ved 1000ms timeout → 700-1300ms ping-latency med faldende mønster (88% pakketab).
+**Fix:** Eksakt samme workaround som vi lavede i `Modbus_server_slave_ESP32` projektet — manuel INT-polling task der bypass'er GPIO ISR-laget. Forventet resultat: konsistent ~5ms ping.
+
+---
+
+## [0.2.1 build 0055] — 2026-05-30 — fix: W5500 init crash — interrupt og polling er mutuelt eksklusive
+
+**Filer ændret:**
+- `firmware/main/core/ethernet.c` — adskil interrupt-mode og polling-mode: enten `int_gpio_num >= 0` med `poll_period_ms=0`, eller `int_gpio_num=-1` med `poll_period_ms=cfg->spi_poll_ms`. ESP-IDF returnerer `invalid configuration argument combination` hvis begge sættes
+- `firmware/main/core/version.h` — build 0055
+- `version.json` — build 0055
+
+**Root cause:** b0054 satte både `int_gpio_num=34` og `poll_period_ms=10` → `esp_eth_mac_new_w5500()` afviste konfigurationen ved boot → ingen Ethernet.
+
+---
+
+## [0.2.1 build 0054] — 2026-05-30 — fix: W5500 interrupt edge-problem + lwIP stack + poll-ms CLI
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — `spi_poll_ms` (uint8_t) i `eth_config_t`; `CONFIG_STRUCT_VERSION` 7→8
+- `firmware/main/core/config.c` — default `spi_poll_ms=10`; sanitize 1–100ms
+- `firmware/main/core/ethernet.c` — `max_transfer_sz=4096` (eksplicit); `poll_period_ms` fra config; advarsel om pull-up krav ved INT-mode
+- `firmware/main/core/serial_cli.c` — `poll-ms <1-100>` kommando; show ethernet + show config viser poll-ms; `?`-hjælp opdateret; note om manglende intern pull-up på GPIO 34–39
+- `sdkconfig.defaults` — `CONFIG_LWIP_TCPIP_TASK_STACK_SIZE=4096`; `CONFIG_LWIP_TCPIP_RECVMBOX_SIZE=64`
+- `firmware/main/core/version.h` — build 0054
+- `version.json` — build 0054
+
+**Root cause:** W5500 ESP-IDF driver bruger edge-triggered interrupt (falling edge). Når W5500 har 2+ frames i RX-bufferen behandles kun første frame, men INT-linjen holdes LOW — ingen ny faldende flanke → ISR fyrer ikke igen → frames 2..N sidder fast.
+**Workaround:** polling-mode med 5ms interval: `int -1`, `poll-ms 5`, save, reboot → konsistent ~2.5ms latency.
+
+---
+
 ## [0.2.1 build 0053] — 2026-05-30 — fix: W5500 hardware-pins som system-default
 
 **Filer ændret:**

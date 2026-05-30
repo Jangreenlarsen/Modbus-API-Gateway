@@ -53,6 +53,8 @@ static void eth_print_help(eth_hw_t hw_type)
             printf("  rst <gpio|-1>         -- hardware reset  (-1=ikke tilsluttet)\r\n");
             printf("  int <gpio|-1>         -- SPI INT pin  (-1=pollet, høj latency!)\r\n");
             printf("  spi-clock <1-36>      -- SPI clock i MHz  (default 10, max 36)\r\n");
+            printf("  poll-ms <1-100>       -- polling interval ms ved int=-1  (default 10)\r\n");
+            printf("  NB: GPIO 34-39 har INGEN intern pull-up — brug ekstern 4.7kohm!\r\n");
             break;
         default:
             printf("  (sæt 'type lan8720' eller 'type w5500' for GPIO-parametre)\r\n");
@@ -175,6 +177,7 @@ static void show_eth_detail(void)
             else
                 printf("  INT       : GPIO %d (interrupt-drevet)\r\n", s_cfg->ethernet.spi_int_gpio);
             printf("  SPI clock : %d MHz\r\n", s_cfg->ethernet.spi_clock_mhz);
+            printf("  Poll-ms   : %d ms  (aktiv ved int=-1)\r\n", s_cfg->ethernet.spi_poll_ms);
             break;
         default:
             printf("  (ingen hardware valgt)\r\n");
@@ -281,6 +284,7 @@ static void show_running_config(void)
             printf(" rst %d\r\n",        s_cfg->ethernet.spi_rst_gpio);
             printf(" int %d\r\n",        s_cfg->ethernet.spi_int_gpio);
             printf(" spi-clock %d\r\n",  s_cfg->ethernet.spi_clock_mhz);
+            printf(" poll-ms %d\r\n",    s_cfg->ethernet.spi_poll_ms);
             break;
         default:
             printf(" Type none\r\n");
@@ -410,6 +414,7 @@ static int cmd_eth(int argc, char **argv)
         else if   (strcasecmp(argv[1], "sclk")    == 0) { printf("  <gpio>  -- SPI SCLK pin  (W5500)\r\n"); }
         else if   (strcasecmp(argv[1], "int")      == 0) { printf("  <gpio>  -- SPI INT pin  -1=pollet  (W5500)\r\n"); }
         else if   (strcasecmp(argv[1], "spi-clock")== 0) { printf("  <1-36>  -- SPI clock i MHz  (10=safe, 20=fast, max 36)  (W5500)\r\n"); }
+        else if   (strcasecmp(argv[1], "poll-ms")  == 0) { printf("  <1-100> -- polling interval ms ved int=-1  (5=lav latency, 10=default)  (W5500)\r\n"); }
         else { eth_print_help(s_cfg->ethernet.hw_type); }
         return 0;
     }
@@ -482,6 +487,12 @@ static int cmd_eth(int argc, char **argv)
         if (mhz < 1 || mhz > 36) { printf("Fejl: SPI clock skal være 1-36 MHz\r\n"); return 1; }
         s_cfg->ethernet.spi_clock_mhz = (uint8_t)mhz;
         printf("SPI clock: %d MHz\r\n", mhz);
+    } else if (strcasecmp(sub, "poll-ms") == 0) {
+        if (argc < 3) { printf("Fejl: angiv ms (1-100)\r\n"); return 1; }
+        int ms = atoi(argv[2]);
+        if (ms < 1 || ms > 100) { printf("Fejl: poll interval skal være 1-100 ms\r\n"); return 1; }
+        s_cfg->ethernet.spi_poll_ms = (uint8_t)ms;
+        printf("W5500 poll interval: %d ms  (aktiv når int=-1)\r\n", ms);
     } else if (strcasecmp(sub, "dhcp") == 0) {
         strncpy(s_cfg->ethernet.ip,      "dhcp",    sizeof(s_cfg->ethernet.ip));
         strncpy(s_cfg->ethernet.gw,      "0.0.0.0", sizeof(s_cfg->ethernet.gw));
@@ -937,6 +948,22 @@ static int cmd_configure(int argc, char **argv)
                 else if (strcasecmp(cmd, "sclk") == 0) { s_cfg->ethernet.spi_sclk_gpio = val; printf("SCLK GPIO: %d\r\n", val); }
                 else if (strcasecmp(cmd, "rst")  == 0) { s_cfg->ethernet.spi_rst_gpio  = val; printf("RST GPIO: %d\r\n", val); }
                 else                                    { s_cfg->ethernet.spi_int_gpio  = val; printf("INT GPIO: %d\r\n", val); }
+            }
+            else if (strcasecmp(cmd, "spi-clock") == 0) {
+                if (s_cfg->ethernet.hw_type != ETH_HW_W5500) { printf("Fejl: kun for W5500\r\n"); continue; }
+                if (ac < 2) { printf("Brug: spi-clock <1-36>\r\n"); continue; }
+                int mhz = atoi(av[1]);
+                if (mhz < 1 || mhz > 36) { printf("Fejl: 1-36 MHz\r\n"); continue; }
+                s_cfg->ethernet.spi_clock_mhz = (uint8_t)mhz;
+                printf("SPI clock: %d MHz\r\n", mhz);
+            }
+            else if (strcasecmp(cmd, "poll-ms") == 0) {
+                if (s_cfg->ethernet.hw_type != ETH_HW_W5500) { printf("Fejl: kun for W5500\r\n"); continue; }
+                if (ac < 2) { printf("Brug: poll-ms <1-100>\r\n"); continue; }
+                int ms = atoi(av[1]);
+                if (ms < 1 || ms > 100) { printf("Fejl: 1-100 ms\r\n"); continue; }
+                s_cfg->ethernet.spi_poll_ms = (uint8_t)ms;
+                printf("W5500 poll interval: %d ms  (aktiv ved int=-1)\r\n", ms);
             }
             else if (strcasecmp(cmd, "ip")       == 0) {
                 if (ac < 2) { printf("Brug: ip dhcp  eller  ip <ip> <gw> <mask>\r\n"); continue; }
