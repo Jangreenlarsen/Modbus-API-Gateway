@@ -76,11 +76,12 @@ static esp_err_t init_w5500(const eth_config_t *cfg, esp_netif_t *eth_netif)
     }
 
     spi_bus_config_t buscfg = {
-        .mosi_io_num   = cfg->spi_mosi_gpio,
-        .miso_io_num   = cfg->spi_miso_gpio,
-        .sclk_io_num   = cfg->spi_sclk_gpio,
-        .quadwp_io_num = -1,
-        .quadhd_io_num = -1,
+        .mosi_io_num     = cfg->spi_mosi_gpio,
+        .miso_io_num     = cfg->spi_miso_gpio,
+        .sclk_io_num     = cfg->spi_sclk_gpio,
+        .quadwp_io_num   = -1,
+        .quadhd_io_num   = -1,
+        .max_transfer_sz = 4096,  // W5500 max frame: 1518+2 = 1520 bytes
     };
     esp_err_t ret = spi_bus_initialize(SPI2_HOST, &buscfg, SPI_DMA_CH_AUTO);
     if (ret != ESP_OK) {
@@ -105,11 +106,17 @@ static esp_err_t init_w5500(const eth_config_t *cfg, esp_netif_t *eth_netif)
     };
 
     eth_w5500_config_t w5500_cfg = ETH_W5500_DEFAULT_CONFIG(SPI2_HOST, &devcfg);
-    w5500_cfg.int_gpio_num = cfg->spi_int_gpio;
+    w5500_cfg.int_gpio_num  = cfg->spi_int_gpio;
+    w5500_cfg.poll_period_ms = cfg->spi_poll_ms;
 
     if (cfg->spi_int_gpio < 0)
-        ESP_LOGW(TAG, "W5500: INT pin ikke konfigureret — kører i polling-mode (høj latency). "
-                      "Tilslut INT pin og sæt 'int <gpio>' for interrupt-drevet tilstand.");
+        ESP_LOGW(TAG, "W5500: polling-mode %dms — sæt 'int <gpio>' og tilslut pull-up "
+                      "til 3.3V for interrupt-drevet tilstand (lavest latency)",
+                 cfg->spi_poll_ms);
+    else
+        ESP_LOGI(TAG, "W5500: interrupt-mode GPIO%d — VIGTIGT: GPIO%d har ingen intern "
+                      "pull-up, ekstern 4.7kohm til 3.3V er PÅKRÆVET for korrekt funktion",
+                 cfg->spi_int_gpio, cfg->spi_int_gpio);
 
     eth_mac_config_t mac_cfg = ETH_MAC_DEFAULT_CONFIG();
     eth_phy_config_t phy_cfg = ETH_PHY_DEFAULT_CONFIG();

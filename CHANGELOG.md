@@ -4,6 +4,22 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.2.1 build 0054] — 2026-05-30 — fix: W5500 interrupt edge-problem + lwIP stack + poll-ms CLI
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — `spi_poll_ms` (uint8_t) i `eth_config_t`; `CONFIG_STRUCT_VERSION` 7→8
+- `firmware/main/core/config.c` — default `spi_poll_ms=10`; sanitize 1–100ms
+- `firmware/main/core/ethernet.c` — `max_transfer_sz=4096` (eksplicit); `poll_period_ms` fra config; advarsel om pull-up krav ved INT-mode
+- `firmware/main/core/serial_cli.c` — `poll-ms <1-100>` kommando; show ethernet + show config viser poll-ms; `?`-hjælp opdateret; note om manglende intern pull-up på GPIO 34–39
+- `sdkconfig.defaults` — `CONFIG_LWIP_TCPIP_TASK_STACK_SIZE=4096`; `CONFIG_LWIP_TCPIP_RECVMBOX_SIZE=64`
+- `firmware/main/core/version.h` — build 0054
+- `version.json` — build 0054
+
+**Root cause:** W5500 ESP-IDF driver bruger edge-triggered interrupt (falling edge). Når W5500 har 2+ frames i RX-bufferen behandles kun første frame, men INT-linjen holdes LOW — ingen ny faldende flanke → ISR fyrer ikke igen → frames 2..N sidder fast.
+**Workaround:** polling-mode med 5ms interval: `int -1`, `poll-ms 5`, save, reboot → konsistent ~2.5ms latency.
+
+---
+
 ## [0.2.1 build 0053] — 2026-05-30 — fix: W5500 hardware-pins som system-default
 
 **Filer ændret:**

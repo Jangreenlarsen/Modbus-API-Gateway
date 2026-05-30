@@ -41,6 +41,7 @@ void config_set_defaults(gateway_config_t *cfg)
     cfg->ethernet.spi_rst_gpio  = 33;
     cfg->ethernet.spi_int_gpio  = 34;
     cfg->ethernet.spi_clock_mhz = 10;
+    cfg->ethernet.spi_poll_ms   = 10;
     strncpy(cfg->ethernet.ip,      "dhcp",          sizeof(cfg->ethernet.ip));
     strncpy(cfg->ethernet.gw,      "192.168.1.1",   sizeof(cfg->ethernet.gw));
     strncpy(cfg->ethernet.netmask, "255.255.255.0", sizeof(cfg->ethernet.netmask));
@@ -51,6 +52,8 @@ void config_sanitize(gateway_config_t *cfg)
     if (cfg->api.port == 0) cfg->api.port = 80;
     if (cfg->ethernet.spi_clock_mhz < 1 || cfg->ethernet.spi_clock_mhz > 36)
         cfg->ethernet.spi_clock_mhz = 10;
+    if (cfg->ethernet.spi_poll_ms < 1 || cfg->ethernet.spi_poll_ms > 100)
+        cfg->ethernet.spi_poll_ms = 10;
 
     if (cfg->interface_count > GATEWAY_MAX_IFACES)
         cfg->interface_count = 0;
