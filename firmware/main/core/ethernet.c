@@ -105,18 +105,21 @@ static esp_err_t init_w5500(const eth_config_t *cfg, esp_netif_t *eth_netif)
         .cs_ena_posttrans = 5,
     };
 
+    // ESP-IDF kræver enten interrupt ELLER polling — ikke begge.
+    // INT pin >= 0  →  brug interrupt, sæt poll_period_ms = 0
+    // INT pin <  0  →  brug polling,    sæt int_gpio_num   = -1
     eth_w5500_config_t w5500_cfg = ETH_W5500_DEFAULT_CONFIG(SPI2_HOST, &devcfg);
-    w5500_cfg.int_gpio_num  = cfg->spi_int_gpio;
-    w5500_cfg.poll_period_ms = cfg->spi_poll_ms;
-
-    if (cfg->spi_int_gpio < 0)
-        ESP_LOGW(TAG, "W5500: polling-mode %dms — sæt 'int <gpio>' og tilslut pull-up "
-                      "til 3.3V for interrupt-drevet tilstand (lavest latency)",
+    if (cfg->spi_int_gpio >= 0) {
+        w5500_cfg.int_gpio_num   = cfg->spi_int_gpio;
+        w5500_cfg.poll_period_ms = 0;
+        ESP_LOGI(TAG, "W5500: interrupt-mode GPIO%d (kræver ekstern pull-up til 3.3V)",
+                 cfg->spi_int_gpio);
+    } else {
+        w5500_cfg.int_gpio_num   = -1;
+        w5500_cfg.poll_period_ms = cfg->spi_poll_ms;
+        ESP_LOGW(TAG, "W5500: polling-mode %dms (sæt 'int <gpio>' for lavere latency)",
                  cfg->spi_poll_ms);
-    else
-        ESP_LOGI(TAG, "W5500: interrupt-mode GPIO%d — VIGTIGT: GPIO%d har ingen intern "
-                      "pull-up, ekstern 4.7kohm til 3.3V er PÅKRÆVET for korrekt funktion",
-                 cfg->spi_int_gpio, cfg->spi_int_gpio);
+    }
 
     eth_mac_config_t mac_cfg = ETH_MAC_DEFAULT_CONFIG();
     eth_phy_config_t phy_cfg = ETH_PHY_DEFAULT_CONFIG();

@@ -4,6 +4,17 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.2.1 build 0055] — 2026-05-30 — fix: W5500 init crash — interrupt og polling er mutuelt eksklusive
+
+**Filer ændret:**
+- `firmware/main/core/ethernet.c` — adskil interrupt-mode og polling-mode: enten `int_gpio_num >= 0` med `poll_period_ms=0`, eller `int_gpio_num=-1` med `poll_period_ms=cfg->spi_poll_ms`. ESP-IDF returnerer `invalid configuration argument combination` hvis begge sættes
+- `firmware/main/core/version.h` — build 0055
+- `version.json` — build 0055
+
+**Root cause:** b0054 satte både `int_gpio_num=34` og `poll_period_ms=10` → `esp_eth_mac_new_w5500()` afviste konfigurationen ved boot → ingen Ethernet.
+
+---
+
 ## [0.2.1 build 0054] — 2026-05-30 — fix: W5500 interrupt edge-problem + lwIP stack + poll-ms CLI
 
 **Filer ændret:**
