@@ -2,6 +2,23 @@
 
 ---
 
+## v0.1.0 build 0047 — 2026-05-30 — Web management side: http://ip/mgmt
+
+Åbn `http://<gateway-ip>/mgmt` i en browser for at se:
+
+**Status**  
+System (version, uptime, heap), netværk (Ethernet + WiFi), Modbus interfaces overblik.
+
+**OTA Opdatering**  
+Tjek GitHub for ny firmware → installer med ét klik + progress bar.
+
+**RS485 Config**  
+Konfigurér baudrate, paritet, stop bits, timeout og aktiver/deaktiver pr. interface direkte fra browseren — gemmes i NVS.
+
+Siden er embedded i firmware (ingen SPIFFS nødvendig) og er altid tilgængelig så længe API-serveren kører.
+
+---
+
 ## v0.1.0 build 0046 — 2026-05-30 — W5500 SPI Ethernet driver
 
 W5500 Ethernet virker nu. `ethernet.c` er omskrevet til at bruge konfigureret hardware-type:

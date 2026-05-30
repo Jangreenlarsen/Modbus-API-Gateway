@@ -20,6 +20,7 @@ idf_component_register(
         "api/routes/system.c"
         "api/routes/ota.c"
         "api/routes/wifi.c"
+        "api/routes/mgmt.c"
         "api/ws_handler.c"
         "ota/ota_manager.c"
         "core/wifi_manager.c"
@@ -31,6 +32,8 @@ idf_component_register(
         "service"
         "api"
         "ota"
+    EMBED_TXTFILES
+        "mgmt_page.html"
     REQUIRES
         esp_http_server
         esp_eth

@@ -4,6 +4,26 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0047] — 2026-05-30 — feat: /mgmt web management side
+
+**Filer ændret:**
+- `firmware/main/mgmt_page.html` — selvstændig management HTML (embedded i firmware)
+- `firmware/main/api/routes/mgmt.c` + `mgmt.h` — `GET /mgmt` route
+- `firmware/main/api/server.c` — route_get_mgmt registreret; `#include "routes/mgmt.h"`
+- `firmware/main/api/routes/system.c` — `build`-felt tilføjet til GET /api/v1/system response
+- `firmware/main/CMakeLists.txt` — `EMBED_TXTFILES "mgmt_page.html"` + `mgmt.c` i SRCS
+- `firmware/main/core/version.h` — build 0047
+- `version.json` — build 0047
+
+**Ny endpoint:** `GET /mgmt` — leverer embedded HTML management side med:
+- **Status**: system (version, build, uptime, heap, IP), netværk (WiFi tilstand/SSID/IP/RSSI), Modbus interfaces overblik
+- **OTA**: tjek GitHub, viser installeret vs tilgængelig version, install-knap med progress bar
+- **RS485 Config**: per-interface kort med baudrate/paritet/stop bits/timeout/enabled toggle og gem
+
+HTML er embedded i firmware (EMBED_TXTFILES) — ingen SPIFFS nødvendig for /mgmt.
+
+---
+
 ## [0.1.0 build 0046] — 2026-05-30 — feat: W5500 SPI Ethernet driver implementeret
 
 **Filer ændret:**

@@ -13,6 +13,7 @@ static esp_err_t get_system_handler(httpd_req_t *req)
     char ip[16]; ethernet_get_ip(ip, sizeof(ip));
     cJSON *root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "version",    GATEWAY_VERSION);
+    cJSON_AddStringToObject(root, "build",      GATEWAY_BUILD);
     cJSON_AddNumberToObject(root, "uptime_s",   esp_timer_get_time() / 1000000);
     cJSON_AddStringToObject(root, "ip",         ip);
     cJSON_AddNumberToObject(root, "free_heap",  esp_get_free_heap_size());
