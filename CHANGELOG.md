@@ -4,6 +4,18 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0048] — 2026-05-30 — fix: /mgmt build-fejl — HTML embedded som C-streng
+
+**Filer ændret:**
+- `firmware/main/api/routes/mgmt.c` — HTML embedded som `static const char mgmt_html[]` (C-streng)
+- `firmware/main/CMakeLists.txt` — `EMBED_TXTFILES` fjernet (PlatformIO kopierer ikke .html til build-dir)
+- `firmware/main/core/version.h` — build 0048
+- `version.json` — build 0048
+
+**Problem:** PlatformIO kopierer kun `.c`/`.h`-filer til build-direktoriet. `EMBED_TXTFILES "mgmt_page.html"` kunne ikke finde filen og fejlede med `Source not found`. **Fix:** HTML embedded direkte i `mgmt.c` som statisk C-streng — ingen ekstern fil nødvendig.
+
+---
+
 ## [0.1.0 build 0047] — 2026-05-30 — feat: /mgmt web management side
 
 **Filer ændret:**
