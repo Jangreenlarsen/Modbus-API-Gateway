@@ -21,6 +21,10 @@ void config_set_defaults(gateway_config_t *cfg)
     iface->rts_pin    = DEFAULT_RTS_PIN;
     iface->enabled    = 1;
 
+    cfg->api.enabled      = 1;
+    cfg->api.port         = 80;
+    cfg->api.auth_enabled = 0;
+
     cfg->ethernet.enabled      = 1;
     cfg->ethernet.hw_type      = ETH_HW_LAN8720;
     cfg->ethernet.phy_addr     = 0;
@@ -39,6 +43,8 @@ void config_set_defaults(gateway_config_t *cfg)
 
 void config_sanitize(gateway_config_t *cfg)
 {
+    if (cfg->api.port == 0) cfg->api.port = 80;
+
     if (cfg->interface_count > GATEWAY_MAX_IFACES)
         cfg->interface_count = 0;
     for (uint8_t i = 0; i < cfg->interface_count; i++) {

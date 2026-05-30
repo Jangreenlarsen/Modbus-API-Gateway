@@ -15,6 +15,21 @@
 static const char *TAG = "api_server";
 static httpd_handle_t s_server = NULL;
 
+static bool s_auth_enabled = false;
+static char s_api_key[65]  = {0};
+
+bool api_auth_ok(httpd_req_t *req)
+{
+    if (!s_auth_enabled || s_api_key[0] == '\0') return true;
+    char key[80] = {0};
+    if (httpd_req_get_hdr_value_str(req, "X-API-Key", key, sizeof(key)) == ESP_OK
+        && strcmp(key, s_api_key) == 0) return true;
+    httpd_resp_set_status(req, "401 Unauthorized");
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"error\":\"unauthorized\",\"hint\":\"X-API-Key header mangler eller forkert\"}");
+    return false;
+}
+
 // ── API index — svarer på /api og /api/v1 med liste over alle endpoints ───────
 
 static esp_err_t api_index_handler(httpd_req_t *req)
@@ -74,13 +89,25 @@ static const httpd_uri_t route_api_index = {
     .handler = api_index_handler,
 };
 
-esp_err_t api_server_start(void)
+esp_err_t api_server_start(const api_config_t *cfg)
 {
-    httpd_config_t cfg = HTTPD_DEFAULT_CONFIG();
-    cfg.max_uri_handlers = 32;
-    cfg.uri_match_fn     = httpd_uri_match_wildcard;
+    if (!cfg->enabled) {
+        ESP_LOGI(TAG, "API server deaktiveret — ikke startet");
+        return ESP_OK;
+    }
 
-    ESP_ERROR_CHECK(httpd_start(&s_server, &cfg));
+    s_auth_enabled = cfg->auth_enabled && cfg->api_key[0];
+    if (s_auth_enabled) {
+        strncpy(s_api_key, cfg->api_key, sizeof(s_api_key));
+        ESP_LOGI(TAG, "API auth aktiveret (X-API-Key)");
+    }
+
+    httpd_config_t hcfg = HTTPD_DEFAULT_CONFIG();
+    hcfg.max_uri_handlers = 32;
+    hcfg.uri_match_fn     = httpd_uri_match_wildcard;
+    hcfg.server_port      = cfg->port;
+
+    ESP_ERROR_CHECK(httpd_start(&s_server, &hcfg));
 
     // Modbus read routes
     httpd_register_uri_handler(s_server, &route_get_coils);
@@ -120,7 +147,8 @@ esp_err_t api_server_start(void)
     // API index — catch-all for /api* — registreres SIDST så specifikke routes matcher først
     httpd_register_uri_handler(s_server, &route_api_index);
 
-    ESP_LOGI(TAG, "REST API server started on port 80");
+    ESP_LOGI(TAG, "REST API server startet på port %d%s",
+             cfg->port, s_auth_enabled ? " (auth: X-API-Key)" : "");
     return ESP_OK;
 }
 

@@ -2,6 +2,25 @@
 
 ---
 
+## v0.1.0 build 0040 — 2026-05-30 — API server config i CLI
+
+Ny konfigurationssektion i `configure terminal`:
+
+```
+gw(config)# interface api
+gw(config-api)# port 8080        ← skift HTTP port fra 80
+gw(config-api)# auth on          ← kræv API nøgle
+gw(config-api)# key MinNøgle     ← sæt nøglen
+gw(config-api)# exit
+gw(config)# save
+```
+
+Klienter sender `X-API-Key: MinNøgle` header. Auth er slået fra som standard.
+
+**OBS:** Config-struct-version bumped (3→4) — NVS-config nulstilles ved første boot efter flash.
+
+---
+
 ## v0.1.0 build 0039 — 2026-05-30 — status viser WiFi IP
 
 `status`-kommandoen viser nu WiFi-tilstand og IP-adresse:

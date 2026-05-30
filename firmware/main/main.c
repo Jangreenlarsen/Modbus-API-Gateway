@@ -53,7 +53,7 @@ void app_main(void)
     }
 
     // 7. HTTP/WebSocket server start
-    esp_err_t api_err = api_server_start();
+    esp_err_t api_err = api_server_start(&cfg.api);
     if (api_err != ESP_OK) {
         ESP_LOGE(TAG, "API server fejl: %s", esp_err_to_name(api_err));
     }

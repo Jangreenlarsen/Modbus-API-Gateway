@@ -116,6 +116,16 @@ static void show_running_config(void)
     printf("End interface WIFI\r\n");
     printf("!\r\n");
 
+    // ── Interface API ─────────────────────────────────────────────────────────
+    printf("Interface API\r\n");
+    printf(" %s\r\n", s_cfg->api.enabled ? "Enable" : "Disable");
+    printf(" Port %d\r\n", s_cfg->api.port);
+    printf(" Auth %s\r\n", s_cfg->api.auth_enabled ? "enable" : "disable");
+    if (s_cfg->api.auth_enabled && s_cfg->api.api_key[0])
+        printf(" Key %s\r\n", s_cfg->api.api_key);
+    printf("End interface API\r\n");
+    printf("!\r\n");
+
     // ── Interface WIFI-AP ─────────────────────────────────────────────────────
     printf("Interface WIFI-AP\r\n");
     printf(" %s\r\n", s_cfg->wifi.ap_fallback ? "Enable" : "Disable");
@@ -550,9 +560,18 @@ static int cfg_tokenize(char *buf, char **argv)
     return argc;
 }
 
-typedef enum { CTX_TOP, CTX_ETH, CTX_WIFI, CTX_WIFI_AP, CTX_MODBUS } cfg_ctx_t;
+typedef enum { CTX_TOP, CTX_ETH, CTX_WIFI, CTX_WIFI_AP, CTX_MODBUS, CTX_API } cfg_ctx_t;
+
+static void cfg_help_api(void) {
+    printf("  enable / disable       -- aktiver/deaktiver REST API server\r\n");
+    printf("  port <num>             -- HTTP port  (standard: 80)\r\n");
+    printf("  auth on|off            -- API key autentificering\r\n");
+    printf("  key <streng>           -- API nøgle  (max 64 tegn)\r\n");
+    printf("  exit                   -- tilbage til config\r\n");
+}
 
 static void cfg_help_top(void) {
+    printf("  interface api          -- REST API server\r\n");
     printf("  interface eth0         -- Ethernet\r\n");
     printf("  interface wifi         -- WiFi STA klient\r\n");
     printf("  interface wifi-ap      -- WiFi AP hotspot fallback\r\n");
@@ -622,6 +641,7 @@ static int cmd_configure(int argc, char **argv)
             case CTX_WIFI:    snprintf(prompt, sizeof(prompt), "gw(config-wifi)# ");      break;
             case CTX_WIFI_AP: snprintf(prompt, sizeof(prompt), "gw(config-wifi-ap)# ");   break;
             case CTX_MODBUS:  snprintf(prompt, sizeof(prompt), "gw(config-modbus%d)# ", modbus_id); break;
+            case CTX_API:     snprintf(prompt, sizeof(prompt), "gw(config-api)# ");       break;
         }
 
         char *line = linenoise(prompt);
@@ -646,6 +666,7 @@ static int cmd_configure(int argc, char **argv)
                 case CTX_WIFI:    cfg_help_wifi();    break;
                 case CTX_WIFI_AP: cfg_help_wifi_ap(); break;
                 case CTX_MODBUS:  cfg_help_modbus();  break;
+                case CTX_API:     cfg_help_api();     break;
             }
             continue;
         }
@@ -663,7 +684,8 @@ static int cmd_configure(int argc, char **argv)
         if (ctx == CTX_TOP) {
             if (strcasecmp(cmd, "interface") == 0) {
                 if (ac < 2) { printf("Angiv interface navn  (?=hjælp)\r\n"); continue; }
-                if      (strcasecmp(av[1], "eth0")    == 0) { ctx = CTX_ETH; }
+                if      (strcasecmp(av[1], "api")     == 0) { ctx = CTX_API; }
+                else if (strcasecmp(av[1], "eth0")    == 0) { ctx = CTX_ETH; }
                 else if (strcasecmp(av[1], "wifi")    == 0) { ctx = CTX_WIFI; }
                 else if (strcasecmp(av[1], "wifi-ap") == 0) { ctx = CTX_WIFI_AP; }
                 else if (strncasecmp(av[1], "modbus", 6) == 0) {
@@ -826,6 +848,31 @@ static int cmd_configure(int argc, char **argv)
             else if (strcasecmp(cmd, "de")       == 0) {
                 if (ac < 2) { printf("Brug: de <gpio>\r\n"); continue; }
                 f->rts_pin = atoi(av[1]); printf("DE GPIO: %d\r\n", f->rts_pin);
+            }
+            else { printf("Ukendt: '%s'  (?=hjælp)\r\n", cmd); }
+            continue;
+        }
+
+        // ── CTX_API ───────────────────────────────────────────────────────────
+        if (ctx == CTX_API) {
+            if      (strcasecmp(cmd, "enable")  == 0) { s_cfg->api.enabled = 1; printf("API server: aktiveret\r\n"); }
+            else if (strcasecmp(cmd, "disable") == 0) { s_cfg->api.enabled = 0; printf("API server: deaktiveret\r\n"); }
+            else if (strcasecmp(cmd, "port")    == 0) {
+                if (ac < 2) { printf("Brug: port <num>\r\n"); continue; }
+                int p = atoi(av[1]);
+                if (p < 1 || p > 65535) { printf("Fejl: port skal være 1-65535\r\n"); continue; }
+                s_cfg->api.port = (uint16_t)p;
+                printf("API port: %d\r\n", p);
+            }
+            else if (strcasecmp(cmd, "auth")    == 0) {
+                if (ac < 2) { printf("Brug: auth on|off\r\n"); continue; }
+                s_cfg->api.auth_enabled = (strcasecmp(av[1], "on") == 0) ? 1 : 0;
+                printf("API auth: %s\r\n", s_cfg->api.auth_enabled ? "aktiveret" : "deaktiveret");
+            }
+            else if (strcasecmp(cmd, "key")     == 0) {
+                if (ac < 2) { printf("Brug: key <streng>\r\n"); continue; }
+                strncpy(s_cfg->api.api_key, av[1], sizeof(s_cfg->api.api_key));
+                printf("API nøgle sat (%d tegn)\r\n", (int)strlen(av[1]));
             }
             else { printf("Ukendt: '%s'  (?=hjælp)\r\n", cmd); }
             continue;

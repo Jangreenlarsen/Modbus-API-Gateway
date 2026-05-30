@@ -4,6 +4,33 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0040] — 2026-05-30 — feat: API server config + CLI interface api + auth
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — ny `api_config_t` struct; `CONFIG_STRUCT_VERSION` 3→4
+- `firmware/main/core/config.c` — defaults (enabled, port 80, auth off) + sanitize
+- `firmware/main/api/server.h` — opdateret signatur + `api_auth_ok()` declaration
+- `firmware/main/api/server.c` — bruger port fra config, enabled-check, auth helper
+- `firmware/main/main.c` — sender `&cfg.api` til `api_server_start()`
+- `firmware/main/core/serial_cli.c` — `CTX_API` + `cfg_help_api()` + show config + prompt
+- `firmware/main/core/version.h` — build 0040
+- `version.json` — build 0040
+
+**NB: CONFIG_STRUCT_VERSION bumped til 4** — eksisterende NVS-config slettes ved første boot. Rekonfigurér WiFi, Ethernet mv. efter flash.
+
+**Ny CLI-sektion:**
+```
+gw(config)# interface api
+gw(config-api)# enable
+gw(config-api)# port 80
+gw(config-api)# auth on
+gw(config-api)# key MinHemligeNøgle
+gw(config-api)# exit
+```
+Auth bruger `X-API-Key: <nøgle>` header. Deaktiveret som standard.
+
+---
+
 ## [0.1.0 build 0039] — 2026-05-30 — fix: status viser WiFi IP og tilstand
 
 **Filer ændret:**
