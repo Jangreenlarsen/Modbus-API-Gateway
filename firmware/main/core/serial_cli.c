@@ -198,21 +198,19 @@ static void show_running_config(void)
     printf(" %s\r\n", s_cfg->ethernet.enabled ? "Enable" : "Disable");
     switch (s_cfg->ethernet.hw_type) {
         case ETH_HW_LAN8720:
-            printf(" Type LAN8720\r\n");
-            printf(" PHY-addr %d\r\n",      s_cfg->ethernet.phy_addr);
-            printf(" MDC      GPIO %d\r\n", s_cfg->ethernet.mdc_gpio);
-            printf(" MDIO     GPIO %d\r\n", s_cfg->ethernet.mdio_gpio);
-            if (s_cfg->ethernet.phy_rst_gpio >= 0)
-                printf(" PHY-RST  GPIO %d\r\n", s_cfg->ethernet.phy_rst_gpio);
+            printf(" type lan8720\r\n");
+            printf(" phy-addr %d\r\n", s_cfg->ethernet.phy_addr);
+            printf(" mdc %d\r\n",      s_cfg->ethernet.mdc_gpio);
+            printf(" mdio %d\r\n",     s_cfg->ethernet.mdio_gpio);
+            printf(" phy-rst %d\r\n",  s_cfg->ethernet.phy_rst_gpio);
             break;
         case ETH_HW_W5500:
-            printf(" Type W5500\r\n");
-            printf(" SPI-CS   GPIO %d\r\n", s_cfg->ethernet.spi_cs_gpio);
-            printf(" SPI-MOSI GPIO %d\r\n", s_cfg->ethernet.spi_mosi_gpio);
-            printf(" SPI-MISO GPIO %d\r\n", s_cfg->ethernet.spi_miso_gpio);
-            printf(" SPI-SCLK GPIO %d\r\n", s_cfg->ethernet.spi_sclk_gpio);
-            if (s_cfg->ethernet.spi_int_gpio >= 0)
-                printf(" SPI-INT  GPIO %d\r\n", s_cfg->ethernet.spi_int_gpio);
+            printf(" type w5500\r\n");
+            printf(" cs %d\r\n",   s_cfg->ethernet.spi_cs_gpio);
+            printf(" mosi %d\r\n", s_cfg->ethernet.spi_mosi_gpio);
+            printf(" miso %d\r\n", s_cfg->ethernet.spi_miso_gpio);
+            printf(" sclk %d\r\n", s_cfg->ethernet.spi_sclk_gpio);
+            printf(" int %d\r\n",  s_cfg->ethernet.spi_int_gpio);
             break;
         default:
             printf(" Type none\r\n");

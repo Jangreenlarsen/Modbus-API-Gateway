@@ -4,6 +4,19 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0042] — 2026-05-30 — fix: show config Ethernet GPIO-linjer matcher CLI-kommandoer
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — `show_running_config()`: GPIO-linjer for LAN8720/W5500 ændret til CLI-format
+- `firmware/main/core/version.h` — build 0042
+- `version.json` — build 0042
+
+**Problem:** `show config` printede `SPI-CS   GPIO 23` og `MDC      GPIO 23`. CLI-kommandoerne er `cs 23` og `mdc 23`. Copy-paste fra show config gav `atoi("GPIO") = 0`.
+
+**Fix:** Output er nu identisk med CLI-kommandoerne — `cs`, `mosi`, `miso`, `sclk`, `int`, `mdc`, `mdio`, `phy-addr`, `phy-rst` uden "GPIO"-præfix og "SPI-"-præfix.
+
+---
+
 ## [0.1.0 build 0041] — 2026-05-30 — feat: show status/version/wifi kommandoer
 
 **Filer ændret:**
