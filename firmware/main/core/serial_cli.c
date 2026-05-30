@@ -51,7 +51,8 @@ static void eth_print_help(eth_hw_t hw_type)
             printf("  miso <gpio>           -- SPI MISO pin\r\n");
             printf("  sclk <gpio>           -- SPI SCLK pin\r\n");
             printf("  rst <gpio|-1>         -- hardware reset  (-1=ikke tilsluttet)\r\n");
-            printf("  int <gpio|-1>         -- SPI INT pin  (-1=pollet)\r\n");
+            printf("  int <gpio|-1>         -- SPI INT pin  (-1=pollet, høj latency!)\r\n");
+            printf("  spi-clock <1-36>      -- SPI clock i MHz  (default 10, max 36)\r\n");
             break;
         default:
             printf("  (sæt 'type lan8720' eller 'type w5500' for GPIO-parametre)\r\n");
@@ -170,9 +171,10 @@ static void show_eth_detail(void)
             else
                 printf("  RST       : GPIO %d\r\n", s_cfg->ethernet.spi_rst_gpio);
             if (s_cfg->ethernet.spi_int_gpio < 0)
-                printf("  INT       : pollet (ingen INT pin)\r\n");
+                printf("  INT       : pollet (ingen INT pin) -- ADVARSEL: høj latency!\r\n");
             else
-                printf("  INT       : GPIO %d\r\n", s_cfg->ethernet.spi_int_gpio);
+                printf("  INT       : GPIO %d (interrupt-drevet)\r\n", s_cfg->ethernet.spi_int_gpio);
+            printf("  SPI clock : %d MHz\r\n", s_cfg->ethernet.spi_clock_mhz);
             break;
         default:
             printf("  (ingen hardware valgt)\r\n");
@@ -272,12 +274,13 @@ static void show_running_config(void)
             break;
         case ETH_HW_W5500:
             printf(" type w5500\r\n");
-            printf(" cs %d\r\n",   s_cfg->ethernet.spi_cs_gpio);
-            printf(" mosi %d\r\n", s_cfg->ethernet.spi_mosi_gpio);
-            printf(" miso %d\r\n", s_cfg->ethernet.spi_miso_gpio);
-            printf(" sclk %d\r\n", s_cfg->ethernet.spi_sclk_gpio);
-            printf(" rst %d\r\n",  s_cfg->ethernet.spi_rst_gpio);
-            printf(" int %d\r\n",  s_cfg->ethernet.spi_int_gpio);
+            printf(" cs %d\r\n",         s_cfg->ethernet.spi_cs_gpio);
+            printf(" mosi %d\r\n",       s_cfg->ethernet.spi_mosi_gpio);
+            printf(" miso %d\r\n",       s_cfg->ethernet.spi_miso_gpio);
+            printf(" sclk %d\r\n",       s_cfg->ethernet.spi_sclk_gpio);
+            printf(" rst %d\r\n",        s_cfg->ethernet.spi_rst_gpio);
+            printf(" int %d\r\n",        s_cfg->ethernet.spi_int_gpio);
+            printf(" spi-clock %d\r\n",  s_cfg->ethernet.spi_clock_mhz);
             break;
         default:
             printf(" Type none\r\n");
@@ -405,7 +408,8 @@ static int cmd_eth(int argc, char **argv)
         else if   (strcasecmp(argv[1], "mosi")    == 0) { printf("  <gpio>  -- SPI MOSI pin  (W5500)\r\n"); }
         else if   (strcasecmp(argv[1], "miso")    == 0) { printf("  <gpio>  -- SPI MISO pin  (W5500)\r\n"); }
         else if   (strcasecmp(argv[1], "sclk")    == 0) { printf("  <gpio>  -- SPI SCLK pin  (W5500)\r\n"); }
-        else if   (strcasecmp(argv[1], "int")     == 0) { printf("  <gpio>  -- SPI INT pin  -1=pollet  (W5500)\r\n"); }
+        else if   (strcasecmp(argv[1], "int")      == 0) { printf("  <gpio>  -- SPI INT pin  -1=pollet  (W5500)\r\n"); }
+        else if   (strcasecmp(argv[1], "spi-clock")== 0) { printf("  <1-36>  -- SPI clock i MHz  (10=safe, 20=fast, max 36)  (W5500)\r\n"); }
         else { eth_print_help(s_cfg->ethernet.hw_type); }
         return 0;
     }
@@ -470,6 +474,14 @@ static int cmd_eth(int argc, char **argv)
         if (argc < 3) { printf("Fejl: angiv GPIO eller -1\r\n"); return 1; }
         s_cfg->ethernet.spi_int_gpio = atoi(argv[2]);
         printf("SPI INT GPIO: %d\r\n", s_cfg->ethernet.spi_int_gpio);
+        if (s_cfg->ethernet.spi_int_gpio < 0)
+            printf("Advarsel: polling-mode — høj netværkslatency. Tilslut INT pin for bedre ydeevne.\r\n");
+    } else if (strcasecmp(sub, "spi-clock") == 0) {
+        if (argc < 3) { printf("Fejl: angiv MHz (1-36)\r\n"); return 1; }
+        int mhz = atoi(argv[2]);
+        if (mhz < 1 || mhz > 36) { printf("Fejl: SPI clock skal være 1-36 MHz\r\n"); return 1; }
+        s_cfg->ethernet.spi_clock_mhz = (uint8_t)mhz;
+        printf("SPI clock: %d MHz\r\n", mhz);
     } else if (strcasecmp(sub, "dhcp") == 0) {
         strncpy(s_cfg->ethernet.ip,      "dhcp",    sizeof(s_cfg->ethernet.ip));
         strncpy(s_cfg->ethernet.gw,      "0.0.0.0", sizeof(s_cfg->ethernet.gw));

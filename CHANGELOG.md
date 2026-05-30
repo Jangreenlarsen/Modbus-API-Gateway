@@ -4,6 +4,21 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.2.1 build 0052] — 2026-05-30 — fix: W5500 SPI clock + polling-advarsel + httpd lru_purge
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — `spi_clock_mhz` (uint8_t) tilføjet til `eth_config_t`; `CONFIG_STRUCT_VERSION` 6→7
+- `firmware/main/core/config.c` — default `spi_clock_mhz=10`; sanitize 1–36 MHz
+- `firmware/main/core/ethernet.c` — SPI clock bruger `cfg->spi_clock_mhz` (var hardkodet 20 MHz); LOGW advarsel ved polling-mode (INT<0); forbedret init-log med MHz og INT-mode
+- `firmware/main/api/server.c` — `lru_purge_enable=true` i httpd config
+- `firmware/main/core/serial_cli.c` — `spi-clock <1-36>` kommando i ETH-kontekst; `int`-kommando viser advarsel ved -1; `show ethernet` viser SPI clock og polling-advarsel; `show config` viser `spi-clock`; inline `?`-hjælp opdateret
+- `firmware/main/core/version.h` — 0.2.1 build 0052
+- `version.json` — 0.2.1 build 0052
+
+**Root cause:** W5500 SPI kørt på 20 MHz (for højt til prototype-ledninger → stille bitfejl → TCP-fejl) og INT pin ikke tilsluttet → polling-mode med ~10ms pakkelatency. Ping-tider på 100–800ms bekræftede problemet.
+
+---
+
 ## [0.2.0 build 0051] — 2026-05-30 — feat: Modbus slave mode + dynamisk interface-tilføjelse/sletning
 
 **Filer ændret:**

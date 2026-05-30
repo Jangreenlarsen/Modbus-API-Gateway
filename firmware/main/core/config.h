@@ -60,6 +60,7 @@ typedef struct {
     int      spi_sclk_gpio;
     int      spi_rst_gpio;  // hardware reset, -1 = ikke tilsluttet
     int      spi_int_gpio;  // interrupt pin, -1 = pollet
+    uint8_t  spi_clock_mhz; // SPI clock i MHz (1-36, default 10)
 } eth_config_t;
 
 typedef struct {
@@ -84,7 +85,7 @@ typedef struct {
 
 // Bump CONFIG_STRUCT_VERSION ved ENHVER ændring af gateway_config_t eller sub-structs.
 // NVS-load afviser blob hvis version ikke matcher → defaults indlæses.
-#define CONFIG_STRUCT_VERSION  6
+#define CONFIG_STRUCT_VERSION  7
 
 typedef struct {
     uint32_t         version;          // skal matche CONFIG_STRUCT_VERSION

@@ -91,11 +91,14 @@ static esp_err_t init_w5500(const eth_config_t *cfg, esp_netif_t *eth_netif)
              cfg->spi_mosi_gpio, cfg->spi_miso_gpio,
              cfg->spi_sclk_gpio, cfg->spi_cs_gpio);
 
+    uint8_t clk_mhz = (cfg->spi_clock_mhz >= 1 && cfg->spi_clock_mhz <= 36)
+                      ? cfg->spi_clock_mhz : 10;
+
     spi_device_interface_config_t devcfg = {
         .command_bits     = 16,
         .address_bits     = 8,
         .mode             = 0,
-        .clock_speed_hz   = 20 * 1000 * 1000,
+        .clock_speed_hz   = clk_mhz * 1000 * 1000,
         .spics_io_num     = cfg->spi_cs_gpio,
         .queue_size       = 20,
         .cs_ena_posttrans = 5,
@@ -103,6 +106,10 @@ static esp_err_t init_w5500(const eth_config_t *cfg, esp_netif_t *eth_netif)
 
     eth_w5500_config_t w5500_cfg = ETH_W5500_DEFAULT_CONFIG(SPI2_HOST, &devcfg);
     w5500_cfg.int_gpio_num = cfg->spi_int_gpio;
+
+    if (cfg->spi_int_gpio < 0)
+        ESP_LOGW(TAG, "W5500: INT pin ikke konfigureret — kører i polling-mode (høj latency). "
+                      "Tilslut INT pin og sæt 'int <gpio>' for interrupt-drevet tilstand.");
 
     eth_mac_config_t mac_cfg = ETH_MAC_DEFAULT_CONFIG();
     eth_phy_config_t phy_cfg = ETH_PHY_DEFAULT_CONFIG();
@@ -135,8 +142,9 @@ static esp_err_t init_w5500(const eth_config_t *cfg, esp_netif_t *eth_netif)
 
     ESP_ERROR_CHECK(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle)));
     ESP_ERROR_CHECK(esp_eth_start(eth_handle));
-    ESP_LOGI(TAG, "W5500 SPI Ethernet initialiseret  INT=%d  poll=%s",
-             cfg->spi_int_gpio, (cfg->spi_int_gpio < 0) ? "ja" : "nej");
+    ESP_LOGI(TAG, "W5500 SPI Ethernet initialiseret  %dMHz  INT=%s",
+             clk_mhz, (cfg->spi_int_gpio >= 0)
+                      ? "interrupt-drevet" : "polling (ingen INT pin)");
     return ESP_OK;
 }
 
