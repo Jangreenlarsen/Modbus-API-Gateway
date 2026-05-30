@@ -4,4 +4,4 @@
 // Ændringer her recompilerer KUN de filer der inkluderer denne header
 // (main.c, serial_cli.c, system.c, ota_manager.c) — ikke alle 13 config.h-filer.
 #define GATEWAY_VERSION "0.2.1"
-#define GATEWAY_BUILD   "0056"
+#define GATEWAY_BUILD   "0057"

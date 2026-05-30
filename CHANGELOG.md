@@ -4,6 +4,15 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.2.1 build 0057] — 2026-05-30 — fix: mgmt-side JavaScript syntax error
+
+**Filer ændret:**
+- `firmware/main/api/routes/mgmt.c` — interfaces-API-kald hængte udenfor en funktion + ekstra `}` brød hele scriptet → `SyntaxError` ved load → ingen API-kald → siden "frosset" på initiale "Indlæser..."-tekster. Fix: interface-summary flyttet ud i `loadIfcSummary()`, kaldes fra `loadStatus()`
+- `firmware/main/core/version.h` — build 0057
+- `version.json` — build 0057
+
+---
+
 ## [0.2.1 build 0056] — 2026-05-30 — fix: W5500 ISR-miss workaround (port fra Modbus_server_slave_ESP32)
 
 **Filer ændret:**
