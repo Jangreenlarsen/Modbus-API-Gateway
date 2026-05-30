@@ -337,6 +337,9 @@ static void show_running_config(void)
 
         printf("Interface Modbus%d\r\n", f->id);
         printf(" %s\r\n", f->enabled ? "Enable" : "Disable");
+        printf(" Mode %s\r\n",        f->mode == IFACE_MODE_SLAVE ? "Slave" : "Master");
+        if (f->mode == IFACE_MODE_SLAVE)
+            printf(" Addr %d\r\n",   f->slave_addr);
         printf(" Type %s\r\n",       f->type == IFACE_TYPE_RS485 ? "RS485" : "RS232");
         printf(" UART %s UART%d\r\n", f->uart_mode == IFACE_UART_HW ? "HW" : "SW", f->uart_num);
         printf(" com %luB-%d%c%d\r\n", (unsigned long)f->baudrate,
@@ -713,6 +716,8 @@ static void cfg_help_top(void) {
     printf("  interface wifi         -- WiFi STA klient\r\n");
     printf("  interface wifi-ap      -- WiFi AP hotspot fallback\r\n");
     printf("  interface modbus<N>    -- Modbus interface N  (eks: modbus0)\r\n");
+    printf("                            N = antal interfaces → opretter nyt interface\r\n");
+    printf("  no interface modbus<N> -- slet Modbus interface N\r\n");
     printf("  show                   -- vis komplet konfiguration\r\n");
     printf("  save                   -- gem til NVS\r\n");
     printf("  exit / end             -- forlad konfigurationstilstand\r\n");
@@ -741,9 +746,11 @@ static void cfg_help_wifi_ap(void) {
 
 static void cfg_help_modbus(void) {
     printf("  enable / disable       -- aktiver/deaktiver interface\r\n");
+    printf("  mode master|slave      -- Modbus rolle (master sender, slave svarer)\r\n");
+    printf("  addr <1-247>           -- slave-adresse  (kun slave mode)\r\n");
     printf("  type rs485|rs232       -- interface-type\r\n");
     printf("  uart hw <num>          -- hardware UART  (eks: uart hw 1)\r\n");
-    printf("  uart sw                -- software UART  (GPIO bit-bang)\r\n");
+    printf("  uart sw                -- software UART  (GPIO bit-bang, max 9600 baud)\r\n");
     printf("  baudrate <baud>        -- baud-rate  (eks: 9600)\r\n");
     printf("  format <bits> <n|e|o> <stop>  -- eks: format 8 n 1\r\n");
     printf("  timeout <ms>           -- svar-timeout i ms\r\n");
@@ -827,10 +834,50 @@ static int cmd_configure(int argc, char **argv)
                 else if (strcasecmp(av[1], "wifi-ap") == 0) { ctx = CTX_WIFI_AP; }
                 else if (strncasecmp(av[1], "modbus", 6) == 0) {
                     int id = atoi(av[1] + 6);
-                    if (id < 0 || id >= s_cfg->interface_count)
-                        printf("Modbus%d findes ikke (0-%d)\r\n", id, s_cfg->interface_count - 1);
-                    else { modbus_id = id; ctx = CTX_MODBUS; }
+                    if (id >= 0 && id < s_cfg->interface_count) {
+                        modbus_id = id; ctx = CTX_MODBUS;
+                    } else if (id == s_cfg->interface_count && id < GATEWAY_MAX_IFACES) {
+                        // Opret nyt interface med defaults
+                        iface_config_t *nf = &s_cfg->interfaces[id];
+                        memset(nf, 0, sizeof(*nf));
+                        nf->id         = (uint8_t)id;
+                        nf->type       = IFACE_TYPE_RS485;
+                        nf->uart_mode  = IFACE_UART_SW;
+                        nf->mode       = IFACE_MODE_MASTER;
+                        nf->baudrate   = DEFAULT_BAUDRATE;
+                        nf->data_bits  = 8;
+                        nf->parity     = 0;
+                        nf->stop_bits  = 1;
+                        nf->timeout_ms = DEFAULT_TIMEOUT_MS;
+                        nf->tx_pin     = -1;
+                        nf->rx_pin     = -1;
+                        nf->rts_pin    = -1;
+                        nf->slave_addr = 1;
+                        nf->enabled    = 1;
+                        s_cfg->interface_count++;
+                        modbus_id = id; ctx = CTX_MODBUS;
+                        printf("Modbus%d oprettet (SW-UART master) — husk at sætte TX/RX GPIO pins\r\n", id);
+                    } else {
+                        printf("Modbus%d findes ikke (0-%d)  eller max %d interfaces nået\r\n",
+                               id, s_cfg->interface_count - 1, GATEWAY_MAX_IFACES);
+                    }
                 } else { printf("Ukendt interface '%s'  (?=hjælp)\r\n", av[1]); }
+            } else if (strcasecmp(cmd, "no") == 0) {
+                if (ac >= 3 && strcasecmp(av[1], "interface") == 0 && strncasecmp(av[2], "modbus", 6) == 0) {
+                    int id = atoi(av[2] + 6);
+                    if (id < 0 || id >= s_cfg->interface_count) {
+                        printf("Modbus%d findes ikke\r\n", id);
+                    } else if (s_cfg->interface_count <= 1) {
+                        printf("Fejl: mindst ét interface skal forblive\r\n");
+                    } else {
+                        for (int k = id; k < s_cfg->interface_count - 1; k++) {
+                            s_cfg->interfaces[k] = s_cfg->interfaces[k + 1];
+                            s_cfg->interfaces[k].id = (uint8_t)k;
+                        }
+                        s_cfg->interface_count--;
+                        printf("Modbus%d slettet\r\n", id);
+                    }
+                } else { printf("Brug: no interface modbus<N>\r\n"); }
             } else { printf("Ukendt: '%s'  (?=hjælp)\r\n", cmd); }
             continue;
         }
@@ -945,6 +992,26 @@ static int cmd_configure(int argc, char **argv)
             iface_config_t *f = &s_cfg->interfaces[modbus_id];
             if      (strcasecmp(cmd, "enable")   == 0) { f->enabled = 1; printf("Modbus%d: aktiveret\r\n", modbus_id); }
             else if (strcasecmp(cmd, "disable")  == 0) { f->enabled = 0; printf("Modbus%d: deaktiveret\r\n", modbus_id); }
+            else if (strcasecmp(cmd, "mode")     == 0) {
+                if (ac < 2) { printf("Brug: mode master|slave\r\n"); continue; }
+                if (strcasecmp(av[1], "slave") == 0) {
+                    if (f->uart_mode == IFACE_UART_SW) {
+                        printf("Fejl: slave mode understøttes ikke på SW-UART\r\n"); continue;
+                    }
+                    f->mode = IFACE_MODE_SLAVE;
+                    printf("Modbus%d: slave (adresse %d)\r\n", modbus_id, f->slave_addr);
+                } else {
+                    f->mode = IFACE_MODE_MASTER;
+                    printf("Modbus%d: master\r\n", modbus_id);
+                }
+            }
+            else if (strcasecmp(cmd, "addr")     == 0) {
+                if (ac < 2) { printf("Brug: addr <1-247>\r\n"); continue; }
+                int a = atoi(av[1]);
+                if (a < 1 || a > 247) { printf("Fejl: adresse skal være 1-247\r\n"); continue; }
+                f->slave_addr = (uint8_t)a;
+                printf("Slave-adresse: %d\r\n", f->slave_addr);
+            }
             else if (strcasecmp(cmd, "type")     == 0) {
                 if (ac < 2) { printf("Brug: type rs485|rs232\r\n"); continue; }
                 f->type = (strcasecmp(av[1], "rs232") == 0) ? IFACE_TYPE_RS232 : IFACE_TYPE_RS485;

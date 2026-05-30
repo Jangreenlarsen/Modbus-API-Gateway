@@ -4,6 +4,7 @@
 #include "driver/uart.h"
 #include "esp_modbus_common.h"
 #include "esp_modbus_master.h"
+#include "esp_modbus_slave.h"
 #include "freertos/queue.h"
 #include <string.h>
 
@@ -29,82 +30,122 @@ static void sw_rx_callback(uint8_t byte, void *ctx)
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 
+static esp_err_t init_hw_master(mb_interface_t *iface, const iface_config_t *cfg)
+{
+    if (cfg->uart_num < 0 || cfg->uart_num >= UART_NUM_MAX) {
+        ESP_LOGE(TAG, "Interface %d: uart_num=%d ugyldig (0..%d)",
+                 cfg->id, cfg->uart_num, UART_NUM_MAX - 1);
+        return ESP_ERR_INVALID_ARG;
+    }
+    mb_communication_info_t comm = {
+        .port     = cfg->uart_num,
+        .mode     = MB_MODE_RTU,
+        .baudrate = cfg->baudrate,
+        .parity   = cfg->parity,
+    };
+    esp_err_t err = mbc_master_init(MB_PORT_SERIAL_MASTER, &iface->mb_handle);
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Interface %d: mbc_master_init: %s", cfg->id, esp_err_to_name(err)); return err; }
+    err = mbc_master_setup((void*)&comm);
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Interface %d: mbc_master_setup: %s", cfg->id, esp_err_to_name(err)); mbc_master_destroy(); return err; }
+    uart_set_pin(cfg->uart_num, cfg->tx_pin, cfg->rx_pin,
+                 cfg->rts_pin >= 0 ? cfg->rts_pin : UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    err = mbc_master_start();
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Interface %d: mbc_master_start: %s", cfg->id, esp_err_to_name(err)); mbc_master_destroy(); return err; }
+    if (cfg->type == IFACE_TYPE_RS485)
+        uart_set_mode(cfg->uart_num, UART_MODE_RS485_HALF_DUPLEX);
+    ESP_LOGI(TAG, "HW-UART MASTER interface %d: %s UART%d @ %lu baud",
+             cfg->id, cfg->type == IFACE_TYPE_RS485 ? "RS485" : "RS232",
+             cfg->uart_num, cfg->baudrate);
+    return ESP_OK;
+}
+
+static esp_err_t init_hw_slave(mb_interface_t *iface, const iface_config_t *cfg)
+{
+    if (cfg->uart_num < 0 || cfg->uart_num >= UART_NUM_MAX) {
+        ESP_LOGE(TAG, "Interface %d: uart_num=%d ugyldig (0..%d)",
+                 cfg->id, cfg->uart_num, UART_NUM_MAX - 1);
+        return ESP_ERR_INVALID_ARG;
+    }
+    mb_communication_info_t comm = {
+        .port       = cfg->uart_num,
+        .mode       = MB_MODE_RTU,
+        .baudrate   = cfg->baudrate,
+        .parity     = cfg->parity,
+        .slave_addr = cfg->slave_addr,
+    };
+    esp_err_t err = mbc_slave_init(MB_PORT_SERIAL_SLAVE, &iface->mb_handle);
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Interface %d: mbc_slave_init: %s", cfg->id, esp_err_to_name(err)); return err; }
+    err = mbc_slave_setup((void*)&comm);
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Interface %d: mbc_slave_setup: %s", cfg->id, esp_err_to_name(err)); mbc_slave_destroy(); return err; }
+    uart_set_pin(cfg->uart_num, cfg->tx_pin, cfg->rx_pin,
+                 cfg->rts_pin >= 0 ? cfg->rts_pin : UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+
+    // Nulstil register-lager
+    memset(iface->slave_holding,  0, sizeof(iface->slave_holding));
+    memset(iface->slave_input,    0, sizeof(iface->slave_input));
+    memset(iface->slave_coils,    0, sizeof(iface->slave_coils));
+    memset(iface->slave_discrete, 0, sizeof(iface->slave_discrete));
+
+    // Registrér register-områder i esp-modbus slave
+    mb_register_area_descriptor_t areas[] = {
+        { .type = MB_PARAM_HOLDING,  .start_offset = 0, .address = iface->slave_holding,  .size = sizeof(iface->slave_holding) },
+        { .type = MB_PARAM_INPUT,    .start_offset = 0, .address = iface->slave_input,    .size = sizeof(iface->slave_input) },
+        { .type = MB_PARAM_COIL,     .start_offset = 0, .address = iface->slave_coils,    .size = sizeof(iface->slave_coils) },
+        { .type = MB_PARAM_DISCRETE, .start_offset = 0, .address = iface->slave_discrete, .size = sizeof(iface->slave_discrete) },
+    };
+    for (int i = 0; i < 4; i++) {
+        err = mbc_slave_set_descriptor(areas[i]);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Interface %d: mbc_slave_set_descriptor[%d]: %s", cfg->id, i, esp_err_to_name(err));
+            mbc_slave_destroy();
+            return err;
+        }
+    }
+    err = mbc_slave_start();
+    if (err != ESP_OK) { ESP_LOGE(TAG, "Interface %d: mbc_slave_start: %s", cfg->id, esp_err_to_name(err)); mbc_slave_destroy(); return err; }
+    if (cfg->type == IFACE_TYPE_RS485)
+        uart_set_mode(cfg->uart_num, UART_MODE_RS485_HALF_DUPLEX);
+    ESP_LOGI(TAG, "HW-UART SLAVE interface %d: %s UART%d addr=%d @ %lu baud",
+             cfg->id, cfg->type == IFACE_TYPE_RS485 ? "RS485" : "RS232",
+             cfg->uart_num, cfg->slave_addr, cfg->baudrate);
+    return ESP_OK;
+}
+
 esp_err_t mb_interface_init(mb_interface_t *iface, const iface_config_t *cfg)
 {
     memcpy(&iface->cfg, cfg, sizeof(iface_config_t));
     iface->mutex = xSemaphoreCreateMutex();
 
     if (cfg->uart_mode == IFACE_UART_HW) {
-        // ── Hardware UART via esp-modbus ──────────────────────────────────
-        if (cfg->uart_num < 0 || cfg->uart_num >= UART_NUM_MAX) {
-            ESP_LOGE(TAG, "Interface %d: uart_num=%d ugyldig (0..%d) — springer over",
-                     cfg->id, cfg->uart_num, UART_NUM_MAX - 1);
-            return ESP_ERR_INVALID_ARG;
-        }
-        mb_communication_info_t comm = {
-            .port     = cfg->uart_num,
-            .mode     = MB_MODE_RTU,
-            .baudrate = cfg->baudrate,
-            .parity   = cfg->parity,
-        };
-        esp_err_t err;
-        err = mbc_master_init(MB_PORT_SERIAL_MASTER, &iface->mb_handle);
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "Interface %d: mbc_master_init fejlede: %s", cfg->id, esp_err_to_name(err));
-            return err;
-        }
-        err = mbc_master_setup((void*)&comm);
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "Interface %d: mbc_master_setup fejlede: %s", cfg->id, esp_err_to_name(err));
-            mbc_master_destroy();
-            return err;
-        }
-        uart_set_pin(cfg->uart_num, cfg->tx_pin, cfg->rx_pin,
-                     cfg->rts_pin >= 0 ? cfg->rts_pin : UART_PIN_NO_CHANGE,
-                     UART_PIN_NO_CHANGE);
-        err = mbc_master_start();
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "Interface %d: mbc_master_start fejlede: %s", cfg->id, esp_err_to_name(err));
-            mbc_master_destroy();
-            return err;
-        }
-        // uart_set_mode kræver at UART-driveren er installeret (sker inde i mbc_master_start)
-        if (cfg->type == IFACE_TYPE_RS485)
-            uart_set_mode(cfg->uart_num, UART_MODE_RS485_HALF_DUPLEX);
-        ESP_LOGI(TAG, "HW-UART interface %d: %s UART%d @ %lu baud",
-                 cfg->id,
-                 cfg->type == IFACE_TYPE_RS485 ? "RS485" : "RS232",
-                 cfg->uart_num, cfg->baudrate);
-
-    } else {
-        // ── Software UART via GPIO bit-bang ───────────────────────────────
-        if (cfg->baudrate > SW_UART_MAX_BAUD) {
-            ESP_LOGE(TAG, "Interface %d: baudrate %lu > SW-UART max %d",
-                     cfg->id, cfg->baudrate, SW_UART_MAX_BAUD);
-            return ESP_ERR_INVALID_ARG;
-        }
-
-        // Opret RX queue — bytes ankommer fra ISR via sw_rx_callback
-        QueueHandle_t rx_q = xQueueCreate(256, sizeof(uint8_t));
-
-        sw_uart_config_t sw_cfg = {
-            .tx_pin          = cfg->tx_pin,
-            .rx_pin          = cfg->rx_pin,
-            .de_pin          = cfg->rts_pin >= 0 ? cfg->rts_pin : GPIO_NUM_NC,
-            .baudrate        = cfg->baudrate,
-            .rx_callback     = sw_rx_callback,
-            .rx_callback_ctx = rx_q,
-        };
-        ESP_ERROR_CHECK(sw_uart_init(&iface->sw_uart, &sw_cfg));
-
-        // Gem queue på sw_uart så mb_rtu_sw.c kan hente den via sw_uart_get_userdata()
-        sw_uart_set_userdata(iface->sw_uart, rx_q);
-
-        ESP_LOGI(TAG, "SW-UART interface %d: %s TX=GPIO%d RX=GPIO%d DE=GPIO%d @ %lu baud",
-                 cfg->id,
-                 cfg->type == IFACE_TYPE_RS485 ? "RS485" : "RS232",
-                 cfg->tx_pin, cfg->rx_pin, cfg->rts_pin, cfg->baudrate);
+        return (cfg->mode == IFACE_MODE_SLAVE)
+               ? init_hw_slave(iface, cfg)
+               : init_hw_master(iface, cfg);
     }
+
+    // ── Software UART — kun master understøttes ───────────────────────────
+    if (cfg->mode == IFACE_MODE_SLAVE) {
+        ESP_LOGE(TAG, "Interface %d: SW-UART slave mode understøttes ikke", cfg->id);
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    if (cfg->baudrate > SW_UART_MAX_BAUD) {
+        ESP_LOGE(TAG, "Interface %d: baudrate %lu > SW-UART max %d",
+                 cfg->id, cfg->baudrate, SW_UART_MAX_BAUD);
+        return ESP_ERR_INVALID_ARG;
+    }
+    QueueHandle_t rx_q = xQueueCreate(256, sizeof(uint8_t));
+    sw_uart_config_t sw_cfg = {
+        .tx_pin          = cfg->tx_pin,
+        .rx_pin          = cfg->rx_pin,
+        .de_pin          = cfg->rts_pin >= 0 ? cfg->rts_pin : GPIO_NUM_NC,
+        .baudrate        = cfg->baudrate,
+        .rx_callback     = sw_rx_callback,
+        .rx_callback_ctx = rx_q,
+    };
+    ESP_ERROR_CHECK(sw_uart_init(&iface->sw_uart, &sw_cfg));
+    sw_uart_set_userdata(iface->sw_uart, rx_q);
+    ESP_LOGI(TAG, "SW-UART MASTER interface %d: %s TX=GPIO%d RX=GPIO%d DE=GPIO%d @ %lu baud",
+             cfg->id, cfg->type == IFACE_TYPE_RS485 ? "RS485" : "RS232",
+             cfg->tx_pin, cfg->rx_pin, cfg->rts_pin, cfg->baudrate);
     return ESP_OK;
 }
 

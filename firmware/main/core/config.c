@@ -10,6 +10,8 @@ void config_set_defaults(gateway_config_t *cfg)
     iface_config_t *iface = &cfg->interfaces[0];
     iface->id         = 0;
     iface->type       = IFACE_TYPE_RS485;
+    iface->uart_mode  = IFACE_UART_HW;
+    iface->mode       = IFACE_MODE_MASTER;
     iface->uart_num   = 1;
     iface->baudrate   = DEFAULT_BAUDRATE;
     iface->data_bits  = 8;
@@ -19,6 +21,7 @@ void config_set_defaults(gateway_config_t *cfg)
     iface->tx_pin     = DEFAULT_TX_PIN;
     iface->rx_pin     = DEFAULT_RX_PIN;
     iface->rts_pin    = DEFAULT_RTS_PIN;
+    iface->slave_addr = 1;
     iface->enabled    = 1;
 
     cfg->api.enabled      = 1;
@@ -58,5 +61,9 @@ void config_sanitize(gateway_config_t *cfg)
             iface->baudrate = DEFAULT_BAUDRATE;
         if (iface->timeout_ms == 0)
             iface->timeout_ms = DEFAULT_TIMEOUT_MS;
+        if (iface->slave_addr < 1 || iface->slave_addr > 247)
+            iface->slave_addr = 1;
+        if (iface->mode != IFACE_MODE_MASTER && iface->mode != IFACE_MODE_SLAVE)
+            iface->mode = IFACE_MODE_MASTER;
     }
 }
