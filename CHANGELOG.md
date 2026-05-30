@@ -4,6 +4,23 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0044] — 2026-05-30 — feat: show ethernet kommando med live status og GPIO-detaljer
+
+**Filer ændret:**
+- `firmware/main/core/ethernet.h` — `ethernet_is_available()` tilføjet
+- `firmware/main/core/ethernet.c` — `ethernet_is_available()` implementeret
+- `firmware/main/core/serial_cli.c` — `show_eth_detail()` + `show ethernet` / `show eth` i `cmd_show()`
+- `firmware/main/core/version.h` — build 0044
+- `version.json` — build 0044
+
+**Ny kommando:** `show ethernet` (alias `show eth`) viser:
+- Live tilstand: forbundet / afventer IP / ikke tilgængeligt
+- IP, IP-mode (dhcp/statisk), gateway, netmask
+- Hardware-type: LAN8720 eller W5500
+- GPIO pins for valgt hardware (PHY addr/MDC/MDIO/PHY-RST for LAN8720; CS/MOSI/MISO/SCLK/RST/INT for W5500)
+
+---
+
 ## [0.1.0 build 0043] — 2026-05-30 — feat: W5500 RST GPIO pin i config, CLI og show config
 
 **Filer ændret:**
