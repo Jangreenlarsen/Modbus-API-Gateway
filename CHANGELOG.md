@@ -4,6 +4,17 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0050] — 2026-05-30 — fix: /mgmt netværk viser Ethernet + WiFi separat
+
+**Filer ændret:**
+- `firmware/main/api/routes/mgmt.c` — `loadStatus()` omskrevet: Ethernet og WiFi vises som separate rækker; Ethernet-IP fra `/api/v1/system`; WiFi-detaljer kun vist ved `connected`; "Deaktiveret" badge er neutral (ingen farve)
+- `firmware/main/core/version.h` — build 0050
+- `version.json` — build 0050
+
+**Problem:** Netværk-sektionen viste kun WiFi-tilstand. Ethernet-IP lå i System-sektionen. WiFi "Deaktiveret" var vildledende når Ethernet var oppe.
+
+---
+
 ## [0.1.0 build 0049] — 2026-05-30 — fix: OTA check crash — stack overflow i httpd task
 
 **Filer ændret:**
