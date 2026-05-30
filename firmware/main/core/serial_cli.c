@@ -116,6 +116,71 @@ static void show_wifi_detail(void)
     sep();
 }
 
+static void show_eth_detail(void)
+{
+    char ip[16];
+    ethernet_get_ip(ip, sizeof(ip));
+    bool avail = ethernet_is_available();
+    bool got_ip = (strcmp(ip, "0.0.0.0") != 0);
+
+    const char *hw_str = "none";
+    if      (s_cfg->ethernet.hw_type == ETH_HW_LAN8720) hw_str = "LAN8720 (RMII)";
+    else if (s_cfg->ethernet.hw_type == ETH_HW_W5500)   hw_str = "W5500 (SPI)";
+
+    const char *ip_mode = (s_cfg->ethernet.ip[0] == '\0' ||
+                           strcasecmp(s_cfg->ethernet.ip, "dhcp") == 0) ? "dhcp" : "statisk";
+
+    sep();
+    printf("Ethernet status\r\n");
+    if (!avail)
+        printf("  Tilstand  : ikke tilgængeligt (PHY init fejlede eller deaktiveret)\r\n");
+    else if (got_ip)
+        printf("  Tilstand  : forbundet\r\n");
+    else
+        printf("  Tilstand  : forbinder... (afventer IP)\r\n");
+
+    printf("  IP        : %s\r\n", got_ip ? ip : (avail ? "afventer..." : "N/A"));
+    printf("  IP-mode   : %s\r\n", ip_mode);
+    if (strcasecmp(ip_mode, "statisk") == 0) {
+        printf("  Gateway   : %s\r\n", s_cfg->ethernet.gw[0]      ? s_cfg->ethernet.gw      : "0.0.0.0");
+        printf("  Netmask   : %s\r\n", s_cfg->ethernet.netmask[0] ? s_cfg->ethernet.netmask : "255.255.255.0");
+    }
+    printf("  Hardware  : %s\r\n", hw_str);
+    printf("\r\n");
+
+    switch (s_cfg->ethernet.hw_type) {
+        case ETH_HW_LAN8720:
+            printf("LAN8720 RMII GPIO\r\n");
+            printf("  PHY addr  : %d\r\n", s_cfg->ethernet.phy_addr);
+            printf("  MDC       : GPIO %d\r\n", s_cfg->ethernet.mdc_gpio);
+            printf("  MDIO      : GPIO %d\r\n", s_cfg->ethernet.mdio_gpio);
+            if (s_cfg->ethernet.phy_rst_gpio < 0)
+                printf("  PHY RST   : ikke tilsluttet\r\n");
+            else
+                printf("  PHY RST   : GPIO %d\r\n", s_cfg->ethernet.phy_rst_gpio);
+            break;
+        case ETH_HW_W5500:
+            printf("W5500 SPI GPIO\r\n");
+            printf("  CS        : GPIO %d\r\n", s_cfg->ethernet.spi_cs_gpio);
+            printf("  MOSI      : GPIO %d\r\n", s_cfg->ethernet.spi_mosi_gpio);
+            printf("  MISO      : GPIO %d\r\n", s_cfg->ethernet.spi_miso_gpio);
+            printf("  SCLK      : GPIO %d\r\n", s_cfg->ethernet.spi_sclk_gpio);
+            if (s_cfg->ethernet.spi_rst_gpio < 0)
+                printf("  RST       : ikke tilsluttet\r\n");
+            else
+                printf("  RST       : GPIO %d\r\n", s_cfg->ethernet.spi_rst_gpio);
+            if (s_cfg->ethernet.spi_int_gpio < 0)
+                printf("  INT       : pollet (ingen INT pin)\r\n");
+            else
+                printf("  INT       : GPIO %d\r\n", s_cfg->ethernet.spi_int_gpio);
+            break;
+        default:
+            printf("  (ingen hardware valgt)\r\n");
+            break;
+    }
+    sep();
+}
+
 static void show_status(void)
 {
     char eth_ip[16];
@@ -289,17 +354,20 @@ static int cmd_show(int argc, char **argv)
     if (argc < 2) {
         sep();
         printf("Brug:\r\n");
-        printf("  show status   -- generel system-status\r\n");
-        printf("  show version  -- firmware-version og chip-info\r\n");
-        printf("  show wifi     -- detaljeret WiFi-status\r\n");
-        printf("  show config   -- komplet konfiguration (IOS-stil)\r\n");
+        printf("  show status    -- generel system-status\r\n");
+        printf("  show version   -- firmware-version og chip-info\r\n");
+        printf("  show ethernet  -- detaljeret Ethernet-status og GPIO\r\n");
+        printf("  show wifi      -- detaljeret WiFi-status\r\n");
+        printf("  show config    -- komplet konfiguration (IOS-stil)\r\n");
         sep();
         return 0;
     }
-    if      (strcasecmp(argv[1], "status")  == 0) show_status();
-    else if (strcasecmp(argv[1], "version") == 0) show_version();
-    else if (strcasecmp(argv[1], "wifi")    == 0) show_wifi_detail();
-    else if (strcasecmp(argv[1], "config")  == 0) show_running_config();
+    if      (strcasecmp(argv[1], "status")   == 0) show_status();
+    else if (strcasecmp(argv[1], "version")  == 0) show_version();
+    else if (strcasecmp(argv[1], "ethernet") == 0) show_eth_detail();
+    else if (strcasecmp(argv[1], "eth")      == 0) show_eth_detail();
+    else if (strcasecmp(argv[1], "wifi")     == 0) show_wifi_detail();
+    else if (strcasecmp(argv[1], "config")   == 0) show_running_config();
     else {
         printf("Ukendt: 'show %s'  (show ? for hjælp)\r\n", argv[1]);
         return 1;

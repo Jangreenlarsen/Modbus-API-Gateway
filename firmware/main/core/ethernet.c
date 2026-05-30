@@ -74,3 +74,8 @@ void ethernet_get_ip(char *buf, size_t len)
 {
     strncpy(buf, s_ip, len);
 }
+
+bool ethernet_is_available(void)
+{
+    return s_eth_available;
+}

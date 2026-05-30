@@ -2,6 +2,31 @@
 
 ---
 
+## v0.1.0 build 0044 — 2026-05-30 — show ethernet
+
+Ny kommando `show ethernet` (alias `show eth`) viser detaljeret Ethernet-status:
+
+```
+gw> show ethernet
+--------------------------------
+Ethernet status
+  Tilstand  : forbundet
+  IP        : 192.168.1.100
+  IP-mode   : dhcp
+  Hardware  : LAN8720 (RMII)
+
+LAN8720 RMII GPIO
+  PHY addr  : 0
+  MDC       : GPIO 23
+  MDIO      : GPIO 18
+  PHY RST   : ikke tilsluttet
+--------------------------------
+```
+
+Viser PHY addr / MDC / MDIO / PHY-RST for LAN8720, eller CS / MOSI / MISO / SCLK / RST / INT for W5500.
+
+---
+
 ## v0.1.0 build 0043 — 2026-05-30 — W5500 RST GPIO pin
 
 W5500 hardware-reset pin kan nu konfigureres:
