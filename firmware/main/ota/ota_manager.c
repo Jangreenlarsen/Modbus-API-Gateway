@@ -81,11 +81,13 @@ esp_err_t ota_check(ota_info_t *info)
     memset(info, 0, sizeof(*info));
     strncpy(info->current_version, GATEWAY_VERSION, sizeof(info->current_version));
 
-    char buf[HTTP_BUF_SIZE];
-    esp_err_t err = http_get(OTA_GITHUB_API_LATEST, buf, sizeof(buf));
-    if (err != ESP_OK) { s_status.state = OTA_STATE_ERROR; return err; }
+    char *buf = malloc(HTTP_BUF_SIZE);
+    if (!buf) { s_status.state = OTA_STATE_ERROR; return ESP_ERR_NO_MEM; }
+    esp_err_t err = http_get(OTA_GITHUB_API_LATEST, buf, HTTP_BUF_SIZE);
+    if (err != ESP_OK) { free(buf); s_status.state = OTA_STATE_ERROR; return err; }
 
     cJSON *json = cJSON_Parse(buf);
+    free(buf);
     if (!json) { s_status.state = OTA_STATE_ERROR; return ESP_FAIL; }
 
     // tag_name er typisk "v1.2.3" — strip 'v' prefix

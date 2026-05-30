@@ -32,8 +32,6 @@ idf_component_register(
         "service"
         "api"
         "ota"
-    EMBED_TXTFILES
-        "mgmt_page.html"
     REQUIRES
         esp_http_server
         esp_eth

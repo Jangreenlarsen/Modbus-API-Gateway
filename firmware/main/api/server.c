@@ -107,6 +107,7 @@ esp_err_t api_server_start(const api_config_t *cfg)
     hcfg.max_uri_handlers = 32;
     hcfg.uri_match_fn     = httpd_uri_match_wildcard;
     hcfg.server_port      = cfg->port;
+    hcfg.stack_size       = 16384;   // TLS mod GitHub kræver ~8-12KB
 
     ESP_ERROR_CHECK(httpd_start(&s_server, &hcfg));
 
