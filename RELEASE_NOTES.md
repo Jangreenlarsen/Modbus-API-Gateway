@@ -2,6 +2,60 @@
 
 ---
 
+## v0.1.0 build 0041 — 2026-05-30 — show status / version / wifi
+
+Tre nye `show`-kommandoer:
+
+```
+gw> show status
+--------------------------------
+System
+  Version   : v0.1.0 b0041
+  Uptime    : 0d 00h 12m 34s
+  Heap      : 234 KB fri
+
+Netværk
+  Ethernet  : ikke tilgængeligt
+  WiFi      : forbundet  192.168.10.45  (MitSSID  -62 dBm)
+
+API server
+  Status    : kører  port 80
+  Auth      : deaktiveret
+
+Modbus
+  Modbus0   : aktiv   RS485  9600B-8N1  UART1
+--------------------------------
+
+gw> show version
+--------------------------------
+Modbus API Gateway
+  Version   : v0.1.0
+  Build     : 0041
+  ESP-IDF   : v5.5.0
+  Chip      : ESP32  rev3  2 cores
+  Flash     : ekstern SPI
+  WiFi+BT   : WiFi
+--------------------------------
+
+gw> show wifi
+--------------------------------
+WiFi status
+  Tilstand  : forbundet
+  Mode      : klient (STA)
+  MAC (STA) : AA:BB:CC:DD:EE:FF
+  SSID      : MitNetværk
+  IP        : 192.168.10.45
+  RSSI      : -62 dBm
+  Kanal     : 11
+  Auth      : WPA2-PSK
+  BSSID     : 00:FE:C8:73:7E:50
+--------------------------------
+```
+
+`status` og `wifi status` er stadig gyldige som aliaser.
+
+---
+
 ## v0.1.0 build 0040 — 2026-05-30 — API server config i CLI
 
 Ny konfigurationssektion i `configure terminal`:

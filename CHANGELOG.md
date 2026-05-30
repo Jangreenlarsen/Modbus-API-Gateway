@@ -4,6 +4,23 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.1.0 build 0041] — 2026-05-30 — feat: show status/version/wifi kommandoer
+
+**Filer ændret:**
+- `firmware/main/core/serial_cli.c` — `show_status()`, `show_version()`, `show_wifi_detail()` + omskrevet `cmd_show()` + `cmd_status()`
+- `firmware/main/core/version.h` — build 0041
+- `version.json` — build 0041
+
+**Nye CLI-kommandoer:**
+- `show status` — system (version, uptime d/h/m/s, heap), netværk (Eth+WiFi+RSSI), API-server, Modbus-interfaces
+- `show version` — firmware v/build, ESP-IDF version, chip-model/revision/cores, flash-type
+- `show wifi` — detaljeret WiFi (tilstand, mode, MAC, SSID, IP, RSSI, kanal, auth, BSSID)
+- `show config` — uændret (IOS-stil konfiguration)
+- `status` — alias for `show status`
+- `wifi status` — alias for `show wifi`
+
+---
+
 ## [0.1.0 build 0040] — 2026-05-30 — feat: API server config + CLI interface api + auth
 
 **Filer ændret:**
