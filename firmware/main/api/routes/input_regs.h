@@ -1,3 +1,4 @@
 #pragma once
 #include "esp_http_server.h"
-extern const httpd_uri_t route_get_input_regs;
+
+esp_err_t api_fc04_read_input_regs(httpd_req_t *req, int iface, int slave);

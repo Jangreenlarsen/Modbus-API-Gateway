@@ -2,6 +2,10 @@
 #include "config.h"
 #include "config_store.h"
 #include "cJSON.h"
+#include "coils.h"
+#include "discrete.h"
+#include "holding_regs.h"
+#include "input_regs.h"
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
@@ -93,6 +97,7 @@ static esp_err_t get_interfaces_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+__attribute__((unused))
 static esp_err_t get_interface_handler(httpd_req_t *req)
 {
     httpd_resp_set_type(req, "application/json");
@@ -273,11 +278,110 @@ static esp_err_t delete_interface_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-// VIGTIGT: ESP-IDF's httpd_uri_match_wildcard behandler kun * AT SLUTNINGEN
-// af URI'en som wildcard. Midt-stjerner (fx /interfaces/*/config) matcher
-// IKKE — derfor bruger vi trailing wildcard og parser URI'en i handleren.
+// ── Master GET/PUT dispatchers ──────────────────────────────────────────────
+// ESP-IDF's httpd_uri_match_wildcard behandler kun * AT SLUTNINGEN af
+// URI-mønsteret. Vi kan ikke registrere midt-wildcard ruter — så ALLE
+// /api/v1/interfaces/* GET og PUT routes går gennem disse dispatchers, der
+// parser URI'en og kalder den rette handler-funktion.
+
+// Returner peger til segment efter "/slaves/<N>/" — eller NULL hvis ikke FC-URI.
+// Sætter *slave_out til parsed slave-adresse.
+static const char *find_fc_op(const char *uri, int *slave_out)
+{
+    const char *p = strstr(uri, "/slaves/");
+    if (!p) return NULL;
+    p += 8;
+    *slave_out = atoi(p);
+    p = strchr(p, '/');
+    if (!p) return NULL;
+    return p + 1;
+}
+
+static esp_err_t master_get_dispatcher(httpd_req_t *req)
+{
+    char key[32] = {0};
+    parse_iface_key(req->uri, key, sizeof(key));
+    gateway_config_t cfg; config_store_load(&cfg);
+    int iface = resolve_iface(&cfg, key);
+    if (iface < 0) {
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_set_status(req, "404 Not Found");
+        httpd_resp_sendstr(req, "{\"error\":\"interface not found\"}");
+        return ESP_OK;
+    }
+
+    int slave = 0;
+    const char *op = find_fc_op(req->uri, &slave);
+    if (!op) {
+        // Config GET: /api/v1/interfaces/{key} (eller /{key}/config bagudkompat)
+        if (!is_config_request(req->uri)) {
+            httpd_resp_set_type(req, "application/json");
+            httpd_resp_set_status(req, "404 Not Found");
+            httpd_resp_sendstr(req, "{\"error\":\"unknown route\"}");
+            return ESP_OK;
+        }
+        httpd_resp_set_type(req, "application/json");
+        char *s = cJSON_PrintUnformatted(iface_to_json(&cfg.interfaces[iface]));
+        httpd_resp_sendstr(req, s); free(s);
+        return ESP_OK;
+    }
+
+    if (strncmp(op, "coils",            5)  == 0 && (op[5]  == '\0' || op[5]  == '?')) return api_fc01_read_coils(req, iface, slave);
+    if (strncmp(op, "discrete-inputs",  15) == 0 && (op[15] == '\0' || op[15] == '?')) return api_fc02_read_discrete_inputs(req, iface, slave);
+    if (strncmp(op, "holding-registers",17) == 0 && (op[17] == '\0' || op[17] == '?')) return api_fc03_read_holding_regs(req, iface, slave);
+    if (strncmp(op, "input-registers",  15) == 0 && (op[15] == '\0' || op[15] == '?')) return api_fc04_read_input_regs(req, iface, slave);
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_status(req, "404 Not Found");
+    httpd_resp_sendstr(req, "{\"error\":\"unknown FC operation\"}");
+    return ESP_OK;
+}
+
+static esp_err_t master_put_dispatcher(httpd_req_t *req)
+{
+    char key[32] = {0};
+    parse_iface_key(req->uri, key, sizeof(key));
+    gateway_config_t cfg; config_store_load(&cfg);
+    int iface = resolve_iface(&cfg, key);
+    if (iface < 0) {
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_set_status(req, "404 Not Found");
+        httpd_resp_sendstr(req, "{\"error\":\"interface not found\"}");
+        return ESP_OK;
+    }
+
+    int slave = 0;
+    const char *op = find_fc_op(req->uri, &slave);
+    if (!op) {
+        // Config PUT (fx /interfaces/0 eller /interfaces/0/config)
+        return put_interface_handler(req);
+    }
+
+    // FC05: coils/{addr}      FC0F: coils
+    if (strncmp(op, "coils", 5) == 0) {
+        if (op[5] == '/') {
+            int addr = atoi(op + 6);
+            return api_fc05_write_coil(req, iface, slave, addr);
+        }
+        if (op[5] == '\0' || op[5] == '?') return api_fc0f_write_coils(req, iface, slave);
+    }
+    // FC06: holding-registers/{addr}      FC10: holding-registers
+    if (strncmp(op, "holding-registers", 17) == 0) {
+        if (op[17] == '/') {
+            int addr = atoi(op + 18);
+            return api_fc06_write_holding_reg(req, iface, slave, addr);
+        }
+        if (op[17] == '\0' || op[17] == '?') return api_fc10_write_holding_regs(req, iface, slave);
+    }
+
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_set_status(req, "404 Not Found");
+    httpd_resp_sendstr(req, "{\"error\":\"unknown FC write operation\"}");
+    return ESP_OK;
+}
+
 const httpd_uri_t route_get_interfaces       = { .uri="/api/v1/interfaces",   .method=HTTP_GET,    .handler=get_interfaces_handler };
-const httpd_uri_t route_get_interface        = { .uri="/api/v1/interfaces/*", .method=HTTP_GET,    .handler=get_interface_handler };
-const httpd_uri_t route_put_interface_config = { .uri="/api/v1/interfaces/*", .method=HTTP_PUT,    .handler=put_interface_handler };
+const httpd_uri_t route_get_interface        = { .uri="/api/v1/interfaces/*", .method=HTTP_GET,    .handler=master_get_dispatcher };
+const httpd_uri_t route_put_interface_config = { .uri="/api/v1/interfaces/*", .method=HTTP_PUT,    .handler=master_put_dispatcher };
 const httpd_uri_t route_post_interface       = { .uri="/api/v1/interfaces",   .method=HTTP_POST,   .handler=post_interface_handler };
 const httpd_uri_t route_delete_interface     = { .uri="/api/v1/interfaces/*", .method=HTTP_DELETE, .handler=delete_interface_handler };

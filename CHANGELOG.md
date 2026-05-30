@@ -4,6 +4,24 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.3.0 build 0060] — 2026-05-30 — fix: FC01-FC10 REST routes via master dispatcher
+
+**Filer ændret:**
+- `firmware/main/api/routes/coils.c` + `.h` — handlers konverteret til kaldbar funktion-signatur `api_fc01_read_coils(req, iface, slave)`, `api_fc05_write_coil(req, iface, slave, addr)`, `api_fc0f_write_coils(req, iface, slave)`. Fjernet `static` og route-definitioner.
+- `firmware/main/api/routes/discrete.c` + `.h` — `api_fc02_read_discrete_inputs(req, iface, slave)`
+- `firmware/main/api/routes/holding_regs.c` + `.h` — `api_fc03_*`, `api_fc06_*`, `api_fc10_*`
+- `firmware/main/api/routes/input_regs.c` + `.h` — `api_fc04_read_input_regs`
+- `firmware/main/api/routes/interfaces.c` — `master_get_dispatcher` og `master_put_dispatcher` parser URI: hvis URI indeholder `/slaves/N/op[/addr]` → kald den rette FC-funktion; ellers → config GET/PUT. `find_fc_op()` helper. Begge dispatchers håndterer navn-alias for `key`.
+- `firmware/main/api/server.c` — kun master-routes registreres nu; individual FC-routes og deres includes fjernet
+- `firmware/main/core/version.h` — build 0060
+- `version.json` — build 0060
+
+**Effekt:**
+- FC01 (Read Coils), FC02 (Read Discrete), FC03 (Read Holding), FC04 (Read Input), FC05 (Write Coil), FC06 (Write Register), FC0F (Write Coils), FC10 (Write Registers) virker alle via REST nu
+- Navn-alias virker for ALLE Modbus-operationer: `GET /api/v1/interfaces/floor1/slaves/3/holding-registers?start=0&count=10`
+
+---
+
 ## [0.3.0 build 0059] — 2026-05-30 — fix: PUT 405-fejl + feat: navn-alias + GPIO pins i GUI
 
 **Root cause for 405-fejl:** ESP-IDF `httpd_uri_match_wildcard` behandler kun `*` ved slutningen af URI-mønstre som wildcard. `/api/v1/interfaces/*/config` matchede aldrig nogen request → PUT save returnerede 405 Method Not Allowed.
