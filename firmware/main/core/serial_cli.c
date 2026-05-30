@@ -50,6 +50,7 @@ static void eth_print_help(eth_hw_t hw_type)
             printf("  mosi <gpio>           -- SPI MOSI pin\r\n");
             printf("  miso <gpio>           -- SPI MISO pin\r\n");
             printf("  sclk <gpio>           -- SPI SCLK pin\r\n");
+            printf("  rst <gpio|-1>         -- hardware reset  (-1=ikke tilsluttet)\r\n");
             printf("  int <gpio|-1>         -- SPI INT pin  (-1=pollet)\r\n");
             break;
         default:
@@ -210,6 +211,7 @@ static void show_running_config(void)
             printf(" mosi %d\r\n", s_cfg->ethernet.spi_mosi_gpio);
             printf(" miso %d\r\n", s_cfg->ethernet.spi_miso_gpio);
             printf(" sclk %d\r\n", s_cfg->ethernet.spi_sclk_gpio);
+            printf(" rst %d\r\n",  s_cfg->ethernet.spi_rst_gpio);
             printf(" int %d\r\n",  s_cfg->ethernet.spi_int_gpio);
             break;
         default:
@@ -793,17 +795,19 @@ static int cmd_configure(int argc, char **argv)
                      strcasecmp(cmd, "mosi") == 0 ||
                      strcasecmp(cmd, "miso") == 0 ||
                      strcasecmp(cmd, "sclk") == 0 ||
+                     strcasecmp(cmd, "rst")  == 0 ||
                      strcasecmp(cmd, "int")  == 0) {
                 if (s_cfg->ethernet.hw_type != ETH_HW_W5500) {
                     printf("Fejl: '%s' er kun for W5500  (brug 'type w5500' først)\r\n", cmd); continue;
                 }
-                if (ac < 2) { printf("Brug: %s <gpio>\r\n", cmd); continue; }
+                if (ac < 2) { printf("Brug: %s <gpio|-1>\r\n", cmd); continue; }
                 int val = atoi(av[1]);
-                if      (strcasecmp(cmd, "cs")   == 0) { s_cfg->ethernet.spi_cs_gpio   = val; printf("SPI CS GPIO: %d\r\n", val); }
-                else if (strcasecmp(cmd, "mosi") == 0) { s_cfg->ethernet.spi_mosi_gpio = val; printf("SPI MOSI GPIO: %d\r\n", val); }
-                else if (strcasecmp(cmd, "miso") == 0) { s_cfg->ethernet.spi_miso_gpio = val; printf("SPI MISO GPIO: %d\r\n", val); }
-                else if (strcasecmp(cmd, "sclk") == 0) { s_cfg->ethernet.spi_sclk_gpio = val; printf("SPI SCLK GPIO: %d\r\n", val); }
-                else                                    { s_cfg->ethernet.spi_int_gpio  = val; printf("SPI INT GPIO: %d\r\n", val); }
+                if      (strcasecmp(cmd, "cs")   == 0) { s_cfg->ethernet.spi_cs_gpio   = val; printf("CS GPIO: %d\r\n", val); }
+                else if (strcasecmp(cmd, "mosi") == 0) { s_cfg->ethernet.spi_mosi_gpio = val; printf("MOSI GPIO: %d\r\n", val); }
+                else if (strcasecmp(cmd, "miso") == 0) { s_cfg->ethernet.spi_miso_gpio = val; printf("MISO GPIO: %d\r\n", val); }
+                else if (strcasecmp(cmd, "sclk") == 0) { s_cfg->ethernet.spi_sclk_gpio = val; printf("SCLK GPIO: %d\r\n", val); }
+                else if (strcasecmp(cmd, "rst")  == 0) { s_cfg->ethernet.spi_rst_gpio  = val; printf("RST GPIO: %d\r\n", val); }
+                else                                    { s_cfg->ethernet.spi_int_gpio  = val; printf("INT GPIO: %d\r\n", val); }
             }
             else if (strcasecmp(cmd, "ip")       == 0) {
                 if (ac < 2) { printf("Brug: ip dhcp  eller  ip <ip> <gw> <mask>\r\n"); continue; }

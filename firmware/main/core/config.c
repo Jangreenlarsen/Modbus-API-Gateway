@@ -35,6 +35,7 @@ void config_set_defaults(gateway_config_t *cfg)
     cfg->ethernet.spi_mosi_gpio = -1;
     cfg->ethernet.spi_miso_gpio = -1;
     cfg->ethernet.spi_sclk_gpio = -1;
+    cfg->ethernet.spi_rst_gpio  = -1;
     cfg->ethernet.spi_int_gpio  = -1;
     strncpy(cfg->ethernet.ip,      "dhcp",          sizeof(cfg->ethernet.ip));
     strncpy(cfg->ethernet.gw,      "192.168.1.1",   sizeof(cfg->ethernet.gw));
