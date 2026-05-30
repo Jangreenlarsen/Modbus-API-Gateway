@@ -4,6 +4,18 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.3.0 build 0058] — 2026-05-30 — feat: master/slave + add/delete interface i web GUI
+
+**Filer ændret:**
+- `firmware/main/api/routes/interfaces.c` — `iface_to_json` udvidet med `mode`, `slave_addr`, `uart_mode`, `tx_pin`, `rx_pin`, `rts_pin`; PUT-handler accepterer `mode`, `slave_addr`, `type`, GPIO-pins; ny POST `/api/v1/interfaces` (opretter SW-UART master, defaults) og DELETE `/api/v1/interfaces/{id}` (sletter + renummererer)
+- `firmware/main/api/routes/interfaces.h` — nye route-symboler eksporteret
+- `firmware/main/api/server.c` — nye routes registreret; api_index opdateret
+- `firmware/main/api/routes/mgmt.c` — RS485 Config-tab: Rolle-selector (Master/Slave) med dynamisk Slave-adr felt; Tilføj/Slet-knapper; interface-counter (N/8); save sender mode + slave_addr; toast minder om "reboot for at aktivere"
+- `firmware/main/core/version.h` — 0.3.0 build 0058
+- `version.json` — 0.3.0 build 0058
+
+---
+
 ## [0.2.1 build 0057] — 2026-05-30 — fix: mgmt-side JavaScript syntax error
 
 **Filer ændret:**

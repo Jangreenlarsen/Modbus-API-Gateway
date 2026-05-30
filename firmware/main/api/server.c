@@ -62,8 +62,10 @@ static esp_err_t api_index_handler(httpd_req_t *req)
     EP("POST", "/api/v1/system/ota/frontend",                                 "Start frontend OTA-opdatering");
     EP("GET",  "/api/v1/system/ota/status",                                   "OTA-opdateringsstatus");
     EP("GET",  "/api/v1/interfaces",                                          "List alle Modbus-interfaces");
+    EP("POST", "/api/v1/interfaces",                                          "Opret nyt Modbus-interface (SW-UART master, defaults)");
     EP("GET",  "/api/v1/interfaces/:id",                                      "Hent interface-konfiguration");
-    EP("PUT",  "/api/v1/interfaces/:id/config",                               "Opdatér interface-konfiguration");
+    EP("PUT",  "/api/v1/interfaces/:id/config",                               "Opdatér interface-konfiguration (mode, slave_addr, baudrate, ...)");
+    EP("DELETE","/api/v1/interfaces/:id",                                     "Slet Modbus-interface og renummerér");
     EP("GET",  "/api/v1/interfaces/:id/slaves/:sid/coils?start=N&count=N",    "FC01: læs coils (1-bit R/W)");
     EP("GET",  "/api/v1/interfaces/:id/slaves/:sid/discrete-inputs?start=N&count=N", "FC02: læs discrete inputs (1-bit R)");
     EP("GET",  "/api/v1/interfaces/:id/slaves/:sid/holding-registers?start=N&count=N", "FC03: læs holding registers (16-bit R/W)");
@@ -128,6 +130,8 @@ esp_err_t api_server_start(const api_config_t *cfg)
     httpd_register_uri_handler(s_server, &route_get_interfaces);
     httpd_register_uri_handler(s_server, &route_get_interface);
     httpd_register_uri_handler(s_server, &route_put_interface_config);
+    httpd_register_uri_handler(s_server, &route_post_interface);
+    httpd_register_uri_handler(s_server, &route_delete_interface);
 
     // System routes
     httpd_register_uri_handler(s_server, &route_get_system);
