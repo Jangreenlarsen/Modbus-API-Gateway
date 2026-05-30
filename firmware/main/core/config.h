@@ -67,9 +67,16 @@ typedef struct {
     char    ap_password[65];// AP kodeord — min 8 tegn, eller "" for åben
 } wifi_config_gw_t;
 
+typedef struct {
+    uint8_t  enabled;
+    uint16_t port;           // HTTP port — standard 80
+    uint8_t  auth_enabled;   // API key autentificering
+    char     api_key[65];    // API nøgle — max 64 tegn
+} api_config_t;
+
 // Bump CONFIG_STRUCT_VERSION ved ENHVER ændring af gateway_config_t eller sub-structs.
 // NVS-load afviser blob hvis version ikke matcher → defaults indlæses.
-#define CONFIG_STRUCT_VERSION  3
+#define CONFIG_STRUCT_VERSION  4
 
 typedef struct {
     uint32_t         version;          // skal matche CONFIG_STRUCT_VERSION
@@ -77,6 +84,7 @@ typedef struct {
     iface_config_t   interfaces[GATEWAY_MAX_IFACES];
     eth_config_t     ethernet;
     wifi_config_gw_t wifi;
+    api_config_t     api;
 } gateway_config_t;
 
 // Default-konfiguration
