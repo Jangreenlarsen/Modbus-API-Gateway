@@ -30,6 +30,9 @@ void config_set_defaults(gateway_config_t *cfg)
     cfg->api.port         = 80;
     cfg->api.auth_enabled = 0;
 
+    cfg->cache.enabled = 1;
+    cfg->cache.ttl_ms  = 1000;
+
     cfg->ethernet.enabled       = 1;
     cfg->ethernet.hw_type       = ETH_HW_W5500;
     cfg->ethernet.phy_addr      = 0;
@@ -52,6 +55,7 @@ void config_set_defaults(gateway_config_t *cfg)
 void config_sanitize(gateway_config_t *cfg)
 {
     if (cfg->api.port == 0) cfg->api.port = 80;
+    if (cfg->cache.enabled > 1) cfg->cache.enabled = 1;
     if (cfg->ethernet.spi_clock_mhz < 1 || cfg->ethernet.spi_clock_mhz > 36)
         cfg->ethernet.spi_clock_mhz = 10;
     if (cfg->ethernet.spi_poll_ms < 1 || cfg->ethernet.spi_poll_ms > 100)
