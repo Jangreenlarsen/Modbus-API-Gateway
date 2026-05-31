@@ -4,6 +4,14 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.4 build 0074] — 2026-05-31 — feat: OTA-side med trin-indikatorer og auto-reconnect
+
+**Filer ændret:**
+- `firmware/main/api/routes/mgmt.c` — OTA-fanen redesignet: trin-indikatorer (Download → Flash → Genstart → Online), live progress, auto-reconnect polling efter reboot, viser ny version efter opdatering. `waitForReconnect()` poller `/api/v1/system` hvert 2. sekund til enheden er online igen.
+- `version.json`, `version.h` — bump til b0074
+
+---
+
 ## [0.4.3 build 0072] — 2026-05-31 — test: OTA verificeringsrelease
 
 **Filer ændret:**

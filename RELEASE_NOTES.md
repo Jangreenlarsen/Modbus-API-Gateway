@@ -2,6 +2,20 @@
 
 ---
 
+## v0.4.4 build 0074 — 2026-05-31 — OTA-side med live fremskridt og auto-reconnect
+
+### Hvad er nyt
+- **OTA trin-indikatorer**: Fire synlige trin — Download → Flash → Genstart → Online — viser præcis hvor i processen firmware-opdateringen er
+- **Live progress**: Procent-bjælke opdateres under download og flash
+- **Auto-reconnect**: Siden venter automatisk på at enheden kommer online efter reboot — ingen manuel genindlæsning nødvendig
+- **Ny version vises**: Når enheden er online igen, vises den nye version direkte på OTA-siden og header opdateres
+
+### Tidligere oplevelse vs. nu
+Tidligere: siden frøs i "Venter"-tilstand og kom aldrig tilbage — man måtte genindlæse manuelt og gætte om OTA lykkedes.
+Nu: hele forløbet er synligt og siden vender selv tilbage med bekræftelse.
+
+---
+
 ## v0.4.1 build 0067 — 2026-05-31 — Release: GPIO presets, board variant, OTA, cache fase 2
 
 ### Highlights
