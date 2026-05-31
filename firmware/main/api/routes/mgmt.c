@@ -210,7 +210,7 @@ static const char mgmt_html[] =
 "    _ota=o;\n"
 "    $('t-ota').innerHTML=\n"
 "      row('Installeret',o.current_version)+\n"
-"      row('Tilg&aelig;ngelig',o.latest_version||'&mdash;')+\n"
+"      row('Tilg&aelig;ngelig',o.firmware_available?(o.latest_version||'&mdash;'):'&mdash;')+\n"
 "      row('Status',o.firmware_available?badge('Opdatering tilg&aelig;ngelig','warn'):badge('Firmware opdateret','ok'));\n"
 "    if(o.firmware_available)$('btn-flash').style.display='';\n"
 "  }).catch(function(){\n"

@@ -2,6 +2,12 @@
 
 ---
 
+## v0.4.0.2 build 0065 — 2026-05-31 — OTA-side: korrekt version-visning
+
+OTA-siden viste gammel GitHub release-version som "Tilgængelig" selv når installeret firmware er nyere. "Tilgængelig" viser nu "—" når ingen opdatering er tilgængelig. GitHub release v0.4.0.1-b0064 oprettet.
+
+---
+
 ## v0.4.0 build 0063 — 2026-05-31 — Cache fase 2: async refresh-task + historisk metrics
 
 Den synkron cache fra v0.4.0 b0061 fungerer som read-through — første læsning rammer bus, efterfølgende læsninger inden for TTL serveres fra cache. **Men** når TTL udløber skal næste klient stadig vente på bus-svar.

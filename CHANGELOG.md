@@ -4,6 +4,14 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.0.2 build 0065] — 2026-05-31 — debug: OTA-side viser korrekt version
+
+**Filer ændret:**
+- `firmware/main/api/routes/mgmt.c` — "Tilgængelig" viser "—" når ingen opdatering tilgængelig (undgår forvirring ved ældre GitHub-release)
+- `version.json`, `version.h` — bump til 0.4.0.2 b0065
+
+---
+
 ## [0.4.0 build 0063] — 2026-05-31 — feat: cache fase 2 — async refresh-task + historisk metrics
 
 **Filer ændret:**
