@@ -4,6 +4,15 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.5 build 0076] — 2026-05-31 — fix: PATCH-bump for at bootstrappe OTA forbi version-sammenligning bug
+
+**Filer ændret:**
+- `version.json`, `version.h` — bump til 0.4.5 b0076
+
+**Årsag**: Enheder der kører ≤b0074 kan ikke detektere b0075 via OTA (buggy version_newer ignorerer build-nummer). En PATCH-bump fra 0.4.4 → 0.4.5 detekteres korrekt selv med gammel kode.
+
+---
+
 ## [0.4.4 build 0075] — 2026-05-31 — fix: OTA version-sammenligning ignorerede build-nummer
 
 **Filer ændret:**

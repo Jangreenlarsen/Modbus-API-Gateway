@@ -2,6 +2,14 @@
 
 ---
 
+## v0.4.5 build 0076 — 2026-05-31 — Bootstrap-release: OTA version-check fix når frem
+
+Enheder på ≤0.4.4-b0074 kan ikke detektere b0075 via OTA fordi den gamle `version_newer()` ignorerer `-bNNNN` suffix. Denne release bumper PATCH (0.4.4 → 0.4.5) så selv den gamle kode detekterer opdateringen.
+
+Efter OTA til 0.4.5-b0076 fungerer build-nummer-sammenligning korrekt fremadrettet.
+
+---
+
 ## v0.4.4 build 0075 — 2026-05-31 — fix: OTA version-check ignorerede build-nummer
 
 OTA-tjekket viste altid "Firmware opdateret" selvom en nyere build fandtes på GitHub.
