@@ -18,7 +18,7 @@ const ota_status_t *ota_get_status(void) { return &s_status; }
 
 // ── HTTP response buffer ────────────────────────────────────────────────────
 
-#define HTTP_BUF_SIZE 4096
+#define HTTP_BUF_SIZE 16384
 
 typedef struct { char *buf; int len; int cap; } http_buf_t;
 
@@ -64,13 +64,14 @@ static esp_err_t http_get(const char *url, char *out_buf, int buf_size)
 // Returnerer true hvis remote > local (simpel string-sammenligning er ok for MAJOR.MINOR.PATCH)
 static bool version_newer(const char *local, const char *remote)
 {
-    // Sammenlign som versionstupel
-    int lM=0,lm=0,lp=0, rM=0,rm=0,rp=0;
-    sscanf(local,  "%d.%d.%d", &lM, &lm, &lp);
-    sscanf(remote, "%d.%d.%d", &rM, &rm, &rp);
+    // Understøtter både MAJOR.MINOR.PATCH og MAJOR.MINOR.PATCH.D (debug-format)
+    int lM=0,lm=0,lp=0,ld=0, rM=0,rm=0,rp=0,rd=0;
+    sscanf(local,  "%d.%d.%d.%d", &lM, &lm, &lp, &ld);
+    sscanf(remote, "%d.%d.%d.%d", &rM, &rm, &rp, &rd);
     if (rM != lM) return rM > lM;
     if (rm != lm) return rm > lm;
-    return rp > lp;
+    if (rp != lp) return rp > lp;
+    return rd > ld;
 }
 
 // ── GitHub releases API ─────────────────────────────────────────────────────
@@ -80,6 +81,7 @@ esp_err_t ota_check(ota_info_t *info)
     s_status.state = OTA_STATE_CHECKING;
     memset(info, 0, sizeof(*info));
     strncpy(info->current_version, GATEWAY_VERSION, sizeof(info->current_version));
+    strncpy(info->current_build,   GATEWAY_BUILD,   sizeof(info->current_build));
 
     char *buf = malloc(HTTP_BUF_SIZE);
     if (!buf) { s_status.state = OTA_STATE_ERROR; return ESP_ERR_NO_MEM; }
@@ -88,7 +90,11 @@ esp_err_t ota_check(ota_info_t *info)
 
     cJSON *json = cJSON_Parse(buf);
     free(buf);
-    if (!json) { s_status.state = OTA_STATE_ERROR; return ESP_FAIL; }
+    if (!json) {
+        ESP_LOGE(TAG, "JSON parse fejlede — svar for stort? (buf=%d bytes)", HTTP_BUF_SIZE);
+        s_status.state = OTA_STATE_ERROR;
+        return ESP_FAIL;
+    }
 
     // tag_name er typisk "v1.2.3" — strip 'v' prefix
     const char *tag = cJSON_GetStringValue(cJSON_GetObjectItem(json, "tag_name"));
@@ -145,8 +151,10 @@ esp_err_t ota_update_firmware(const char *url, ota_status_t *status)
     esp_http_client_config_t http_cfg = {
         .url               = url,
         .crt_bundle_attach = esp_crt_bundle_attach,
-        .timeout_ms        = 30000,
+        .timeout_ms        = 60000,
         .keep_alive_enable = true,
+        .buffer_size       = 4096,   // GitHub redirect-headers er ~2-3KB
+        .buffer_size_tx    = 1024,
     };
     esp_https_ota_config_t ota_cfg = {
         .http_config = &http_cfg,

@@ -4,6 +4,72 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.4 build 0074] — 2026-05-31 — feat: OTA-side med trin-indikatorer og auto-reconnect
+
+**Filer ændret:**
+- `firmware/main/api/routes/mgmt.c` — OTA-fanen redesignet: trin-indikatorer (Download → Flash → Genstart → Online), live progress, auto-reconnect polling efter reboot, viser ny version efter opdatering. `waitForReconnect()` poller `/api/v1/system` hvert 2. sekund til enheden er online igen.
+- `version.json`, `version.h` — bump til b0074
+
+---
+
+## [0.4.3 build 0072] — 2026-05-31 — test: OTA verificeringsrelease
+
+**Filer ændret:**
+- `version.json`, `version.h` — bump til 0.4.3 b0072 for OTA-test
+
+---
+
+## [0.4.2 build 0071] — 2026-05-31 — fix: partition-tabel tilføjer otadata + ota_1 (OTA virker nu)
+
+**Filer ændret:**
+- `firmware/partitions.csv` — tilføjet `otadata` (0x10000) og `ota_1` (0x1A0000), fjernet `factory`, `ota_0` rykket til 0x20000. NVS forbliver på 0x9000 (data bevaret)
+- `version.json`, `version.h` — bump til b0071
+
+**VIGTIGT**: Kræver USB-flash én gang for at skrive ny partition-tabel. Herefter virker OTA.
+
+---
+
+## [0.4.2 build 0070] — 2026-05-31 — feat: OTA viser build-nummer + OTA test release
+
+**Filer ændret:**
+- `firmware/main/api/routes/ota.c` — `build` felt tilføjet til OTA check JSON response
+- `firmware/main/ota/ota_manager.h/.c` — `current_build` felt i `ota_info_t`
+- `firmware/main/api/routes/mgmt.c` — OTA "Installeret" viser nu "vX.X.X bNNNN"
+- `version.json`, `version.h` — bump til 0.4.2 b0070
+
+---
+
+## [0.4.1 build 0069] — 2026-05-31 — fix: OTA firmware-download HTTP buffer for lille (512B → 4KB)
+
+**Filer ændret:**
+- `firmware/main/ota/ota_manager.c` — `esp_https_ota` HTTP buffer 512B → 4096B (GitHub redirect-headers ~2-3KB), timeout 30s → 60s
+- `firmware/main/core/version.h`, `version.json` — bump til b0069
+
+---
+
+## [0.4.1 build 0068] — 2026-05-31 — fix: OTA GitHub buffer for lille (4KB → 16KB)
+
+**Filer ændret:**
+- `firmware/main/ota/ota_manager.c` — `HTTP_BUF_SIZE` 4096 → 16384 (GitHub API-svar > 4KB ved release med assets), log ved JSON parse-fejl
+- `firmware/main/core/version.h`, `version.json` — bump til b0068
+
+---
+
+## [0.4.1 build 0067] — 2026-05-31 — release: v0.4.1 — GPIO presets, board variant, OTA fix, cache fase 2
+
+**Filer ændret:**
+- `firmware/main/ota/ota_manager.c` — `version_newer()` understøtter nu MAJOR.MINOR.PATCH.D (4 komponenter)
+- `firmware/main/core/version.h`, `version.json` — bump til 0.4.1 b0067 (afslutter debug-serie 0.4.0.x)
+
+**Indeholder alt fra debug-serien 0.4.0.1–0.4.0.3:**
+- GPIO preset-tabel (30-pin + 38-pin board variant)
+- Cache fase 2: async refresh-task + historisk metrics SVG sparkline
+- OTA-siden viser "—" ved ingen opdatering
+- W5500 ISR-miss workaround
+- Interface navn-alias i REST API
+
+---
+
 ## [0.4.0.3 build 0066] — 2026-05-31 — debug: GPIO preset + board variant (30/38-pin)
 
 **Filer ændret:**

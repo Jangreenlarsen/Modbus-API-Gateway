@@ -2,6 +2,34 @@
 
 ---
 
+## v0.4.4 build 0074 — 2026-05-31 — OTA-side med live fremskridt og auto-reconnect
+
+### Hvad er nyt
+- **OTA trin-indikatorer**: Fire synlige trin — Download → Flash → Genstart → Online — viser præcis hvor i processen firmware-opdateringen er
+- **Live progress**: Procent-bjælke opdateres under download og flash
+- **Auto-reconnect**: Siden venter automatisk på at enheden kommer online efter reboot — ingen manuel genindlæsning nødvendig
+- **Ny version vises**: Når enheden er online igen, vises den nye version direkte på OTA-siden og header opdateres
+
+### Tidligere oplevelse vs. nu
+Tidligere: siden frøs i "Venter"-tilstand og kom aldrig tilbage — man måtte genindlæse manuelt og gætte om OTA lykkedes.
+Nu: hele forløbet er synligt og siden vender selv tilbage med bekræftelse.
+
+---
+
+## v0.4.1 build 0067 — 2026-05-31 — Release: GPIO presets, board variant, OTA, cache fase 2
+
+### Highlights
+- **GPIO presets**: RS485 Config vælger automatisk korrekte GPIO-pins ved type-skift
+- **Board variant**: Vælg 30-pin eller 38-pin ESP32 — gemmes i NVS
+- **OTA version-fix**: Understøtter nu 4-komponent versioner (MAJOR.MINOR.PATCH.D)
+- **Cache fase 2**: Async refresh-task holder hot data varmt + historisk metrics med SVG sparkline
+- **W5500 latency-fix**: ISR-miss workaround eliminerer 700-1300ms pings
+
+### OTA fra v0.4.0.x
+Den installerede v0.4.0.x firmware genkender v0.4.1 som nyere og tilbyder OTA-opdatering via GitHub.
+
+---
+
 ## v0.4.0.3 build 0066 — 2026-05-31 — GPIO presets + ESP32 board variant
 
 RS485 Config-siden kender nu ESP32-boardet og foreslår korrekte GPIO-pins automatisk:
