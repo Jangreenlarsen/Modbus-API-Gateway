@@ -12,6 +12,7 @@ idf_component_register(
         "storage/register_cache.c"
         "service/gateway_service.c"
         "api/server.c"
+        "api/api_log.c"
         "api/routes/coils.c"
         "api/routes/discrete.c"
         "api/routes/holding_regs.c"

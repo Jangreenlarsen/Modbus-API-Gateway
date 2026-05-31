@@ -1,4 +1,5 @@
 #include "server.h"
+#include "api_log.h"
 #include "routes/interfaces.h"
 #include "routes/cache.h"
 #include "routes/system.h"
@@ -9,9 +10,36 @@
 #include "version.h"
 #include "cJSON.h"
 #include "esp_log.h"
+#include <assert.h>
 
 static const char *TAG = "api_server";
 static httpd_handle_t s_server = NULL;
+
+// ── Logging wrapper ──────────────────────────────────────────────────────────
+// Alle routes registreres via reg() som logger hvert kald i api_log.
+
+#define MAX_LOGGED_ROUTES 32
+typedef struct { esp_err_t (*orig)(httpd_req_t *req); } orig_ctx_t;
+static orig_ctx_t s_orig_ctxs[MAX_LOGGED_ROUTES];
+static int        s_nlogged = 0;
+
+static esp_err_t log_wrapper(httpd_req_t *req)
+{
+    api_log_append(req);
+    orig_ctx_t *ctx = (orig_ctx_t *)req->user_ctx;
+    return ctx->orig(req);
+}
+
+static void reg(httpd_handle_t srv, const httpd_uri_t *r)
+{
+    assert(s_nlogged < MAX_LOGGED_ROUTES);
+    s_orig_ctxs[s_nlogged].orig = r->handler;
+    httpd_uri_t wr = *r;
+    wr.handler  = log_wrapper;
+    wr.user_ctx = &s_orig_ctxs[s_nlogged];
+    httpd_register_uri_handler(srv, &wr);
+    s_nlogged++;
+}
 
 static bool s_auth_enabled = false;
 static char s_api_key[65]  = {0};
@@ -117,48 +145,52 @@ esp_err_t api_server_start(const api_config_t *cfg)
     hcfg.stack_size        = 16384;
     hcfg.lru_purge_enable  = true;   // frigiv ældste socket automatisk ved pres
 
+    api_log_init();
+    s_nlogged = 0;
     ESP_ERROR_CHECK(httpd_start(&s_server, &hcfg));
 
-    // Interface routes (master dispatchers håndterer både config og FC01-FC10)
-    httpd_register_uri_handler(s_server, &route_get_interfaces);
-    httpd_register_uri_handler(s_server, &route_get_interface);        // GET  /interfaces/* → master GET
-    httpd_register_uri_handler(s_server, &route_put_interface_config); // PUT  /interfaces/* → master PUT
-    httpd_register_uri_handler(s_server, &route_post_interface);
-    httpd_register_uri_handler(s_server, &route_delete_interface);
+    // Interface routes
+    reg(s_server, &route_get_interfaces);
+    reg(s_server, &route_get_interface);
+    reg(s_server, &route_put_interface_config);
+    reg(s_server, &route_post_interface);
+    reg(s_server, &route_delete_interface);
 
     // System routes
-    httpd_register_uri_handler(s_server, &route_get_system);
-    httpd_register_uri_handler(s_server, &route_post_reboot);
-    httpd_register_uri_handler(s_server, &route_get_system_hardware);
-    httpd_register_uri_handler(s_server, &route_put_system_hardware);
+    reg(s_server, &route_get_system);
+    reg(s_server, &route_post_reboot);
+    reg(s_server, &route_get_system_hardware);
+    reg(s_server, &route_put_system_hardware);
+    reg(s_server, &route_get_system_log);
+    reg(s_server, &route_post_system_log_clear);
 
     // OTA routes
-    httpd_register_uri_handler(s_server, &route_get_ota_check);
-    httpd_register_uri_handler(s_server, &route_post_ota_firmware);
-    httpd_register_uri_handler(s_server, &route_post_ota_frontend);
-    httpd_register_uri_handler(s_server, &route_get_ota_status);
+    reg(s_server, &route_get_ota_check);
+    reg(s_server, &route_post_ota_firmware);
+    reg(s_server, &route_post_ota_frontend);
+    reg(s_server, &route_get_ota_status);
 
     // Cache routes
-    httpd_register_uri_handler(s_server, &route_get_cache_stats);
-    httpd_register_uri_handler(s_server, &route_get_cache_entries);
-    httpd_register_uri_handler(s_server, &route_get_cache_history);
-    httpd_register_uri_handler(s_server, &route_post_cache_clear);
-    httpd_register_uri_handler(s_server, &route_post_cache_reset_stats);
-    httpd_register_uri_handler(s_server, &route_put_cache_config);
+    reg(s_server, &route_get_cache_stats);
+    reg(s_server, &route_get_cache_entries);
+    reg(s_server, &route_get_cache_history);
+    reg(s_server, &route_post_cache_clear);
+    reg(s_server, &route_post_cache_reset_stats);
+    reg(s_server, &route_put_cache_config);
 
     // WiFi routes
-    httpd_register_uri_handler(s_server, &route_get_wifi_status);
-    httpd_register_uri_handler(s_server, &route_put_wifi_config);
-    httpd_register_uri_handler(s_server, &route_get_wifi_scan);
+    reg(s_server, &route_get_wifi_status);
+    reg(s_server, &route_put_wifi_config);
+    reg(s_server, &route_get_wifi_scan);
 
     // Management page
-    httpd_register_uri_handler(s_server, &route_get_mgmt);
+    reg(s_server, &route_get_mgmt);
 
-    // WebSocket
+    // WebSocket — ikke wrappes (specielt upgrade-flow)
     httpd_register_uri_handler(s_server, &route_ws);
 
-    // API index — catch-all for /api* — registreres SIDST så specifikke routes matcher først
-    httpd_register_uri_handler(s_server, &route_api_index);
+    // API index — catch-all for /api* — registreres SIDST
+    reg(s_server, &route_api_index);
 
     ESP_LOGI(TAG, "REST API server startet på port %d%s",
              cfg->port, s_auth_enabled ? " (auth: X-API-Key)" : "");

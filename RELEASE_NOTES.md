@@ -2,6 +2,20 @@
 
 ---
 
+## v0.4.5 build 0078 — 2026-05-31 — feat: live API log
+
+Ny "API Log" tab i management-siden viser alle indgående HTTP-kald i realtid:
+
+- **Live opdatering** hvert 1,5 sekund via `?since=N` polling — kun nye entries sendes
+- **Metode-badges**: GET (blå), POST (grøn), PUT (gul), DELETE (rød)
+- **Auto-scroll** til nyeste entry, stopper hvis du scroller op
+- **Pause-knap** fryser visningen uden at stoppe logningen
+- **Ryd-knap** nulstiller loggen på enheden
+
+Implementeret via en `log_wrapper` i `server.c` der intercepter alle routes automatisk — ingen kode-ændringer i de individuelle handlers.
+
+---
+
 ## v0.4.5 build 0077 — 2026-05-31 — fix: OTA Installer-knap virker nu
 
 To bugs forhindrede OTA-installation fra at starte:

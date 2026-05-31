@@ -4,6 +4,18 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.5 build 0078] — 2026-05-31 — feat: live API log tab i management-siden
+
+**Filer ændret:**
+- `firmware/main/api/api_log.h/.c` — ring buffer (100 entries, RAM, seq-numre). Ignorerer egne log-endpoint kald.
+- `firmware/main/api/server.c` — `reg()` wrapper der intercepter alle HTTP-requests via `user_ctx`. Ingen per-handler ændringer nødvendige.
+- `firmware/main/api/routes/system.h/.c` — `GET /api/v1/system/log?since=N` + `POST /api/v1/system/log/clear`
+- `firmware/main/api/routes/mgmt.c` — ny "API Log" tab: live tabel, auto-scroll, pause-knap, ryd-knap, metode-badge farver
+- `firmware/main/CMakeLists.txt` — tilføjet `api/api_log.c`
+- `version.json`, `version.h` — bump til b0078
+
+---
+
 ## [0.4.5 build 0077] — 2026-05-31 — fix: OTA Installer-knap reagerer ikke (2 bugs)
 
 **Filer ændret:**
