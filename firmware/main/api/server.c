@@ -1,9 +1,6 @@
 #include "server.h"
-#include "routes/coils.h"
-#include "routes/discrete.h"
-#include "routes/holding_regs.h"
-#include "routes/input_regs.h"
 #include "routes/interfaces.h"
+#include "routes/cache.h"
 #include "routes/system.h"
 #include "routes/ota.h"
 #include "routes/wifi.h"
@@ -62,16 +59,23 @@ static esp_err_t api_index_handler(httpd_req_t *req)
     EP("POST", "/api/v1/system/ota/frontend",                                 "Start frontend OTA-opdatering");
     EP("GET",  "/api/v1/system/ota/status",                                   "OTA-opdateringsstatus");
     EP("GET",  "/api/v1/interfaces",                                          "List alle Modbus-interfaces");
-    EP("GET",  "/api/v1/interfaces/:id",                                      "Hent interface-konfiguration");
-    EP("PUT",  "/api/v1/interfaces/:id/config",                               "Opdatér interface-konfiguration");
-    EP("GET",  "/api/v1/interfaces/:id/slaves/:sid/coils?start=N&count=N",    "FC01: læs coils (1-bit R/W)");
-    EP("GET",  "/api/v1/interfaces/:id/slaves/:sid/discrete-inputs?start=N&count=N", "FC02: læs discrete inputs (1-bit R)");
-    EP("GET",  "/api/v1/interfaces/:id/slaves/:sid/holding-registers?start=N&count=N", "FC03: læs holding registers (16-bit R/W)");
-    EP("GET",  "/api/v1/interfaces/:id/slaves/:sid/input-registers?start=N&count=N", "FC04: læs input registers (16-bit R)");
-    EP("PUT",  "/api/v1/interfaces/:id/slaves/:sid/coils/:addr",              "FC05: skriv enkelt coil  {\"value\":true}");
-    EP("PUT",  "/api/v1/interfaces/:id/slaves/:sid/coils?start=N",            "FC0F: skriv flere coils  {\"values\":[true,false]}");
-    EP("PUT",  "/api/v1/interfaces/:id/slaves/:sid/holding-registers/:addr",  "FC06: skriv enkelt register  {\"value\":1234}");
-    EP("PUT",  "/api/v1/interfaces/:id/slaves/:sid/holding-registers?start=N","FC10: skriv flere registers  {\"values\":[1234,5678]}");
+    EP("POST", "/api/v1/interfaces",                                          "Opret nyt Modbus-interface (SW-UART master, defaults)");
+    EP("GET",  "/api/v1/interfaces/:key",                                     "Hent interface-config — :key er id (0,1,..) ELLER navn-alias");
+    EP("PUT",  "/api/v1/interfaces/:key",                                     "Opdatér interface (name, mode, slave_addr, baudrate, type, tx_pin, rx_pin, rts_pin, ...)");
+    EP("DELETE","/api/v1/interfaces/:key",                                    "Slet Modbus-interface og renummerér");
+    EP("GET",  "/api/v1/interfaces/:key/slaves/:sid/coils?start=N&count=N",    "FC01: læs coils  (:key = id eller navn)");
+    EP("GET",  "/api/v1/interfaces/:key/slaves/:sid/discrete-inputs?start=N&count=N", "FC02: læs discrete inputs");
+    EP("GET",  "/api/v1/interfaces/:key/slaves/:sid/holding-registers?start=N&count=N", "FC03: læs holding registers");
+    EP("GET",  "/api/v1/interfaces/:key/slaves/:sid/input-registers?start=N&count=N", "FC04: læs input registers");
+    EP("PUT",  "/api/v1/interfaces/:key/slaves/:sid/coils/:addr",              "FC05: skriv enkelt coil  {\"value\":true}");
+    EP("PUT",  "/api/v1/interfaces/:key/slaves/:sid/coils?start=N",            "FC0F: skriv flere coils  {\"values\":[true,false]}");
+    EP("PUT",  "/api/v1/interfaces/:key/slaves/:sid/holding-registers/:addr",  "FC06: skriv enkelt register  {\"value\":1234}");
+    EP("PUT",  "/api/v1/interfaces/:key/slaves/:sid/holding-registers?start=N","FC10: skriv flere registers  {\"values\":[1234,5678]}");
+    EP("GET",  "/api/v1/cache/stats",                                         "Cache statistik: hits, misses, hit_rate, entries, TTL");
+    EP("GET",  "/api/v1/cache/entries",                                       "Alle cache-entries med iface/slave/fc/addr/value/age");
+    EP("PUT",  "/api/v1/cache/config",                                        "Sæt cache enabled+ttl_ms  {\"enabled\":true,\"ttl_ms\":1000}");
+    EP("POST", "/api/v1/cache/clear",                                         "Tøm cache (ikke stats)");
+    EP("POST", "/api/v1/cache/reset-stats",                                   "Nulstil hit/miss-tællere");
     EP("GET",  "/ws",                                                         "WebSocket real-time push");
 
     #undef EP
@@ -112,22 +116,12 @@ esp_err_t api_server_start(const api_config_t *cfg)
 
     ESP_ERROR_CHECK(httpd_start(&s_server, &hcfg));
 
-    // Modbus read routes
-    httpd_register_uri_handler(s_server, &route_get_coils);
-    httpd_register_uri_handler(s_server, &route_get_discrete_inputs);
-    httpd_register_uri_handler(s_server, &route_get_holding_regs);
-    httpd_register_uri_handler(s_server, &route_get_input_regs);
-
-    // Modbus write routes
-    httpd_register_uri_handler(s_server, &route_put_coil_single);
-    httpd_register_uri_handler(s_server, &route_put_coil_multi);
-    httpd_register_uri_handler(s_server, &route_put_holding_reg_single);
-    httpd_register_uri_handler(s_server, &route_put_holding_reg_multi);
-
-    // Interface config routes
+    // Interface routes (master dispatchers håndterer både config og FC01-FC10)
     httpd_register_uri_handler(s_server, &route_get_interfaces);
-    httpd_register_uri_handler(s_server, &route_get_interface);
-    httpd_register_uri_handler(s_server, &route_put_interface_config);
+    httpd_register_uri_handler(s_server, &route_get_interface);        // GET  /interfaces/* → master GET
+    httpd_register_uri_handler(s_server, &route_put_interface_config); // PUT  /interfaces/* → master PUT
+    httpd_register_uri_handler(s_server, &route_post_interface);
+    httpd_register_uri_handler(s_server, &route_delete_interface);
 
     // System routes
     httpd_register_uri_handler(s_server, &route_get_system);
@@ -138,6 +132,13 @@ esp_err_t api_server_start(const api_config_t *cfg)
     httpd_register_uri_handler(s_server, &route_post_ota_firmware);
     httpd_register_uri_handler(s_server, &route_post_ota_frontend);
     httpd_register_uri_handler(s_server, &route_get_ota_status);
+
+    // Cache routes
+    httpd_register_uri_handler(s_server, &route_get_cache_stats);
+    httpd_register_uri_handler(s_server, &route_get_cache_entries);
+    httpd_register_uri_handler(s_server, &route_post_cache_clear);
+    httpd_register_uri_handler(s_server, &route_post_cache_reset_stats);
+    httpd_register_uri_handler(s_server, &route_put_cache_config);
 
     // WiFi routes
     httpd_register_uri_handler(s_server, &route_get_wifi_status);

@@ -48,40 +48,57 @@ Base URL: `http://{esp32-ip}/api/v1`
 
 | HTTP Method | Endpoint | Modbus FC | Beskrivelse |
 |-------------|----------|-----------|-------------|
-| `GET` | `/interfaces/{iface}/slaves/{addr}/coils?start={n}&count={n}` | FC01 | Læs coils (1-bit R/W) |
-| `GET` | `/interfaces/{iface}/slaves/{addr}/discrete-inputs?start={n}&count={n}` | FC02 | Læs discrete inputs (1-bit RO) |
-| `GET` | `/interfaces/{iface}/slaves/{addr}/holding-registers?start={n}&count={n}` | FC03 | Læs holding registers (16-bit R/W) |
-| `GET` | `/interfaces/{iface}/slaves/{addr}/input-registers?start={n}&count={n}` | FC04 | Læs input registers (16-bit RO) |
+| `GET` | `/interfaces/{key}/slaves/{sid}/coils?start={n}&count={n}` | FC01 | Læs coils (1-bit R/W) |
+| `GET` | `/interfaces/{key}/slaves/{sid}/discrete-inputs?start={n}&count={n}` | FC02 | Læs discrete inputs (1-bit RO) |
+| `GET` | `/interfaces/{key}/slaves/{sid}/holding-registers?start={n}&count={n}` | FC03 | Læs holding registers (16-bit R/W) |
+| `GET` | `/interfaces/{key}/slaves/{sid}/input-registers?start={n}&count={n}` | FC04 | Læs input registers (16-bit RO) |
 
 ### Write operationer
 
 | HTTP Method | Endpoint | Modbus FC | Beskrivelse |
 |-------------|----------|-----------|-------------|
-| `PUT` | `/interfaces/{iface}/slaves/{addr}/coils/{reg}` | FC05 | Skriv enkelt coil |
-| `PUT` | `/interfaces/{iface}/slaves/{addr}/holding-registers/{reg}` | FC06 | Skriv enkelt holding register |
-| `PUT` | `/interfaces/{iface}/slaves/{addr}/coils?start={n}` | FC0F (15) | Skriv multiple coils |
-| `PUT` | `/interfaces/{iface}/slaves/{addr}/holding-registers?start={n}` | FC10 (16) | Skriv multiple holding registers |
+| `PUT` | `/interfaces/{key}/slaves/{sid}/coils/{addr}` | FC05 | Skriv enkelt coil |
+| `PUT` | `/interfaces/{key}/slaves/{sid}/holding-registers/{addr}` | FC06 | Skriv enkelt holding register |
+| `PUT` | `/interfaces/{key}/slaves/{sid}/coils?start={n}` | FC0F (15) | Skriv multiple coils |
+| `PUT` | `/interfaces/{key}/slaves/{sid}/holding-registers?start={n}` | FC10 (16) | Skriv multiple holding registers |
+
+### Interface-administration
+
+| HTTP Method | Endpoint | Beskrivelse |
+|-------------|----------|-------------|
+| `GET` | `/interfaces` | Liste over konfigurerede interfaces |
+| `POST` | `/interfaces` | Opret nyt interface (SW-UART master defaults — body `{}`) |
+| `GET` | `/interfaces/{key}` | Hent interface-konfiguration |
+| `PUT` | `/interfaces/{key}` | Opdater interface-konfiguration (også bagudkompatibel: `/{key}/config`) |
+| `DELETE` | `/interfaces/{key}` | Slet interface og renummerér resterende |
 
 ### System
 
 | HTTP Method | Endpoint | Beskrivelse |
 |-------------|----------|-------------|
-| `GET` | `/interfaces` | Liste over konfigurerede interfaces |
-| `GET` | `/interfaces/{iface}` | Interface-status (baudrate, parity, tilsluttede slaves) |
-| `PUT` | `/interfaces/{iface}/config` | Opdater interface-konfiguration |
 | `GET` | `/system` | Firmware-version, uptime, Ethernet-IP, heap |
 | `POST` | `/system/reboot` | Genstart ESP32 |
+| `GET` | `/system/wifi` | WiFi status |
+| `PUT` | `/system/wifi` | Konfigurér WiFi |
+| `GET` | `/system/wifi/scan` | Scan WiFi-netværk |
+| `GET` | `/system/ota/check` | Tjek for opdatering på GitHub |
+| `POST` | `/system/ota/firmware` | Start firmware OTA |
+| `POST` | `/system/ota/frontend` | Start frontend OTA |
+| `GET` | `/system/ota/status` | OTA-progress |
 | `WS` | `/ws` | WebSocket: real-time push ved register-ændringer (polling-cache) |
 
 ### URL-parametre
 
 | Parameter | Type | Eksempel | Beskrivelse |
 |-----------|------|---------|-------------|
-| `{iface}` | int 0..N | `0` | Interface-index (UART-port) |
-| `{addr}` | int 1..247 | `3` | Modbus slave-adresse |
-| `{reg}` | int | `100` | Register/coil-adresse (0-baseret) |
+| `{key}` | int eller string | `0` eller `floor1` | Interface-index ELLER navn-alias (case-insensitive) |
+| `{sid}` | int 1..247 | `3` | Modbus slave-adresse |
+| `{addr}` | int | `100` | Register/coil-adresse (0-baseret) |
 | `start` | int | `0` | Start-adresse for range-læsning |
 | `count` | int | `10` | Antal registers/coils |
+
+### Implementeringsnote — master dispatcher
+ESP-IDF's `httpd_uri_match_wildcard` accepterer kun `*` ved slutningen af et URI-mønster. Derfor er ALLE `/api/v1/interfaces/*` GET og PUT routes registreret på samme trailing-wildcard og dispatches af `master_get_dispatcher` / `master_put_dispatcher` i [interfaces.c](firmware/main/api/routes/interfaces.c) baseret på URI-suffix (`/slaves/N/<op>[/addr]`).
 
 ---
 
@@ -150,20 +167,36 @@ PUT /api/v1/interfaces/0/slaves/3/holding-registers/100
 ```json
 {
   "id":          0,
+  "name":        "floor1",
   "type":        "RS485",
+  "uart_mode":   "hw",
   "uart":        1,
+  "mode":        "master",
+  "slave_addr":  1,
   "baudrate":    9600,
   "data_bits":   8,
-  "parity":      "none",
+  "parity":      0,
   "stop_bits":   1,
   "timeout_ms":  500,
   "tx_pin":      17,
   "rx_pin":      16,
-  "rts_pin":     4
+  "rts_pin":     4,
+  "enabled":     true
 }
 ```
 
-RS232-interface er identisk men `"type": "RS232"` og ingen `rts_pin` (full-duplex).
+| Felt | Værdier | Beskrivelse |
+|------|---------|-------------|
+| `name` | string ≤ 23 tegn | Brugervenligt alias — kan bruges i URL i stedet for `id` |
+| `type` | `"RS485"` \| `"RS232"` | Elektrisk niveau |
+| `uart_mode` | `"hw"` \| `"sw"` | HW UART (UART1/UART2, ≤ 115200 baud) eller SW bit-bang (≤ 9600 baud) |
+| `mode` | `"master"` \| `"slave"` | Modbus-rolle — master sender forespørgsler, slave svarer på dem |
+| `slave_addr` | 1–247 | Slave-adresse — kun relevant ved `mode=slave` |
+| `parity` | 0 \| 1 \| 2 | 0=Ingen, 1=Ulige, 2=Lige |
+| `tx_pin`, `rx_pin` | GPIO 0–39 eller -1 | UART pins (-1 = ikke konfigureret) |
+| `rts_pin` | GPIO 0–39 eller -1 | DE/RE pin på RS485 transceiver (full-duplex RS232 bruger ikke denne) |
+
+SW-UART slave-mode understøttes ikke (kræver custom bit-bang svar-implementering).
 
 ---
 

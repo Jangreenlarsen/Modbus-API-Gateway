@@ -1,3 +1,5 @@
 #pragma once
 #include "esp_http_server.h"
-extern const httpd_uri_t route_get_discrete_inputs;
+
+// FC02 — kaldes fra master GET dispatcher
+esp_err_t api_fc02_read_discrete_inputs(httpd_req_t *req, int iface, int slave);

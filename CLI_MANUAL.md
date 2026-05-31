@@ -133,26 +133,39 @@ gw> reboot
 
 W5500 er en ekstern Ethernet-controller tilsluttet via SPI.
 
-| Parameter  | Kommando              | Beskrivelse                        |
-|------------|-----------------------|------------------------------------|
-| CS pin     | `eth cs <gpio>`       | SPI Chip Select (aktiv lav)        |
-| MOSI pin   | `eth mosi <gpio>`     | SPI Master Out                     |
-| MISO pin   | `eth miso <gpio>`     | SPI Master In                      |
-| SCLK pin   | `eth sclk <gpio>`     | SPI Clock                          |
-| INT pin    | `eth int <gpio>`      | Interrupt (-1 = pollet tilstand)   |
+| Parameter      | Kommando                | Default | Beskrivelse                                      |
+|----------------|-------------------------|---------|--------------------------------------------------|
+| CS pin         | `eth cs <gpio>`         | 23      | SPI Chip Select (aktiv lav)                      |
+| MOSI pin       | `eth mosi <gpio>`       | 13      | SPI Master Out                                   |
+| MISO pin       | `eth miso <gpio>`       | 12      | SPI Master In                                    |
+| SCLK pin       | `eth sclk <gpio>`       | 14      | SPI Clock                                        |
+| RST pin        | `eth rst <gpio\|-1>`    | 33      | Hardware reset (-1 = ikke tilsluttet)            |
+| INT pin        | `eth int <gpio\|-1>`    | 34      | Interrupt-pin (-1 = polling-mode, høj latency!)  |
+| SPI clock      | `eth spi-clock <1-36>`  | 10      | SPI clock i MHz (10=safe, 20=fast, max 36)       |
+| Poll interval  | `eth poll-ms <1-100>`   | 10      | Polling interval når `int=-1` (lavere = mindre latency) |
 
-**Eksempel — W5500 på SPI2:**
+> **VIGTIGT om INT-pin:** GPIO 34-39 har INGEN intern pull-up på ESP32 — brug ekstern 4.7-10 kΩ modstand til 3.3V. Uden korrekt pull-up får du sporadisk pakke-tab.
+
+**Eksempel — W5500 standardopsætning (default):**
 ```
 gw> eth type w5500
-gw> eth cs 5
-gw> eth mosi 23
-gw> eth miso 19
-gw> eth sclk 18
-gw> eth int 26
+gw> eth cs 23
+gw> eth mosi 13
+gw> eth miso 12
+gw> eth sclk 14
+gw> eth rst 33
+gw> eth int 34
+gw> eth spi-clock 10
 gw> eth dhcp
 gw> eth enable
 gw> save
 gw> reboot
+```
+
+**Konservativ konfiguration (lange dupont-ledninger):**
+```
+gw> eth spi-clock 5
+gw> save
 ```
 
 ---
@@ -297,36 +310,96 @@ gw> reboot
 
 ---
 
-## Modbus interfaces (`show config`)
+## Modbus interfaces (`interface modbus<N>`)
 
-Modbus-interfaces konfigureres endnu ikke fuldt via CLI — brug REST API:
+Modbus-interfaces konfigureres nu fuldt via CLI under `configure terminal`-mode.
+
+### Gå ind i et interface
 
 ```
-PUT /api/v1/interfaces/0/config
-{
-  "baudrate": 9600,
-  "data_bits": 8,
-  "parity": 0,
-  "stop_bits": 1,
-  "timeout_ms": 500,
-  "enabled": true
-}
+gw> configure terminal
+gw(config)# interface modbus0          -- konfigurér eksisterende interface
+gw(config)# interface modbus1          -- N == antal interfaces → opretter nyt (SW-UART master)
+gw(config)# no interface modbus1       -- slet interface (renummererer resten)
 ```
 
-`show config` viser den gemte konfiguration:
+Op til 8 interfaces total (2 HW UART + 6 SW UART).
+
+### Kommandoer i `gw(config-modbusN)#`
+
+| Kommando | Beskrivelse |
+|----------|-------------|
+| `enable` / `disable` | Aktivér/deaktivér interface |
+| `name <navn>` | Brugervenligt navn (max 23 tegn). Kan bruges som alias i REST API URLs |
+| `mode master\|slave` | Modbus-rolle (slave kun på HW-UART) |
+| `addr <1-247>` | Slave-adresse (kun ved `mode slave`) |
+| `type rs485\|rs232` | Elektrisk niveau |
+| `uart hw <num>` / `uart sw` | HW UART (1 eller 2) eller SW bit-bang |
+| `baudrate <baud>` | 1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200 (SW: ≤ 9600) |
+| `format <bits> <n\|e\|o> <stop>` | Fx `format 8 n 1` (8N1) |
+| `timeout <ms>` | Modbus master request timeout |
+| `tx <gpio>` | TX GPIO pin |
+| `rx <gpio>` | RX GPIO pin |
+| `de <gpio>` | DE/RE GPIO pin (RS485 transceiver) |
+
+### Eksempel — komplet RS485 master opsætning
+
+```
+gw> configure terminal
+gw(config)# interface modbus0
+gw(config-modbus0)# name floor1
+gw(config-modbus0)# mode master
+gw(config-modbus0)# type rs485
+gw(config-modbus0)# uart hw 1
+gw(config-modbus0)# baudrate 19200
+gw(config-modbus0)# format 8 n 1
+gw(config-modbus0)# timeout 500
+gw(config-modbus0)# tx 17
+gw(config-modbus0)# rx 16
+gw(config-modbus0)# de 4
+gw(config-modbus0)# enable
+gw(config-modbus0)# exit
+gw(config)# exit
+gw> save
+gw> reboot
+```
+
+### Eksempel — slave på UART2
+
+```
+gw(config)# interface modbus1
+gw(config-modbus1)# name plc-slave
+gw(config-modbus1)# mode slave
+gw(config-modbus1)# addr 5
+gw(config-modbus1)# uart hw 2
+gw(config-modbus1)# baudrate 9600
+gw(config-modbus1)# tx 22
+gw(config-modbus1)# rx 21
+gw(config-modbus1)# de 25
+gw(config-modbus1)# enable
+```
+
+### `show config` output
 
 ```
 Interface Modbus0
  Enable
+ Name floor1
+ Mode Master
  Type RS485
  UART HW UART1
- com 9600B-8N1
+ com 19200B-8N1
  Timeout 500ms
  Tx GPIO 17
  Rx GPIO 16
  DE GPIO 4
 End interface Modbus0
+!
 ```
+
+### Web GUI alternativ
+
+Den nemmeste vej er ofte via `http://<ip>/mgmt` → RS485 Config-fanen, som understøtter alle samme felter inkl. interface-tilføj/slet og GPIO-pins.
 
 ---
 
@@ -358,11 +431,24 @@ Returnerer JSON med liste over alle 21 endpoints.
 
 **Vigtige endpoints:**
 
-| Endpoint                     | Metode | Beskrivelse                  |
-|------------------------------|--------|------------------------------|
-| `/api/v1/system`             | GET    | System info                  |
-| `/api/v1/system/wifi`        | GET    | WiFi status                  |
-| `/api/v1/system/wifi`        | PUT    | Konfigurér WiFi              |
-| `/api/v1/system/wifi/scan`   | GET    | Scan WiFi-netværk            |
-| `/api/v1/interfaces`         | GET    | List Modbus-interfaces       |
-| `/api/v1/interfaces/0/slaves/1/holding-registers?start=0&count=10` | GET | Læs 10 holding registers |
+| Endpoint | Metode | Beskrivelse |
+|----------|--------|-------------|
+| `/api/v1/system` | GET | System info |
+| `/api/v1/system/reboot` | POST | Genstart |
+| `/api/v1/system/wifi` | GET / PUT | WiFi status og konfiguration |
+| `/api/v1/system/wifi/scan` | GET | Scan WiFi-netværk |
+| `/api/v1/system/ota/check` | GET | Tjek for opdatering på GitHub |
+| `/api/v1/system/ota/firmware` | POST | Start firmware-OTA |
+| `/api/v1/interfaces` | GET | List alle Modbus-interfaces |
+| `/api/v1/interfaces` | POST | Opret nyt interface |
+| `/api/v1/interfaces/{key}` | GET / PUT / DELETE | Konfiguration — `{key}` = ID eller navn-alias |
+| `/api/v1/interfaces/{key}/slaves/{sid}/coils?start=0&count=8` | GET | FC01 — læs coils |
+| `/api/v1/interfaces/{key}/slaves/{sid}/discrete-inputs?start=0&count=8` | GET | FC02 — læs discrete inputs |
+| `/api/v1/interfaces/{key}/slaves/{sid}/holding-registers?start=0&count=10` | GET | FC03 — læs holding registers |
+| `/api/v1/interfaces/{key}/slaves/{sid}/input-registers?start=0&count=10` | GET | FC04 — læs input registers |
+| `/api/v1/interfaces/{key}/slaves/{sid}/coils/{addr}` | PUT | FC05 — skriv enkelt coil |
+| `/api/v1/interfaces/{key}/slaves/{sid}/holding-registers/{addr}` | PUT | FC06 — skriv enkelt register |
+| `/api/v1/interfaces/{key}/slaves/{sid}/coils?start=N` | PUT | FC0F — skriv flere coils |
+| `/api/v1/interfaces/{key}/slaves/{sid}/holding-registers?start=N` | PUT | FC10 — skriv flere registers |
+
+> `{key}` accepterer både numerisk ID (`0`, `1`, ...) og navn-alias (`floor1`, `pumpestation`, ...) — case-insensitive.

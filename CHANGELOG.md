@@ -4,6 +4,75 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.0 build 0061] — 2026-05-30 — feat: Modbus register cache + stats/metrics side
+
+**Inspireret af** `Modbus_server_slave_ESP32`'s async cache. Denne version er synchronous (ingen baggrundstask, ingen priority queue) — fase 2 kan tilføje det.
+
+**Filer ændret:**
+- `firmware/main/storage/register_cache.c` + `.h` — fuldt implementeret (var stub før). 256 entries × 16 bytes = 4KB. Linear search find_entry, LRU eviction, TTL-baseret freshness, mutex-beskyttet. Per-entry: iface/slave/fc/addr/value/status/hits/last_update_ms. Stats: hits, misses, errors, evictions, entries_used, ttl_ms, enabled.
+- `firmware/main/modbus/modbus_manager.c` — alle read/write-wrappers tjekker cache først. Reads: hvis ALLE adresser i en multi-register operation er fresh → returnér uden bus-trafik. Misses → kald esp-modbus, gem resultat. Writes: opdatér cache med succesfuldt skrevet værdi, invalidér ved fejl.
+- `firmware/main/api/routes/cache.c` + `.h` — REST endpoints: `GET /cache/stats`, `GET /cache/entries`, `PUT /cache/config`, `POST /cache/clear`, `POST /cache/reset-stats`
+- `firmware/main/api/routes/mgmt.c` — ny **Cache** tab: stats-tabel, entries-tabel med iface/slave/FC/addr/value/status/hits/age, TTL-input, enable-toggle, Tøm/Reset knapper
+- `firmware/main/api/server.c` — cache routes registreret; api_index opdateret
+- `firmware/main/core/serial_cli.c` — `cache` top-level kommando: `cache show|enable|disable|ttl|clear|reset-stats|entries`; `show cache` alias
+- `firmware/main/main.c` — `register_cache_init()` kaldes før `modbus_manager_init()`
+- `firmware/main/CMakeLists.txt` — `api/routes/cache.c` tilføjet
+- `firmware/main/core/version.h` — 0.4.0 build 0061
+- `version.json` — 0.4.0 build 0061
+- `FEATURES.md`, `RELEASE_NOTES.md` — cache-features dokumenteret
+
+**Default TTL: 1000ms.** Cache kan deaktiveres helt via CLI eller REST hvis behov for altid-fresh reads.
+
+---
+
+## [0.3.0 build 0060] — 2026-05-30 — fix: FC01-FC10 REST routes via master dispatcher
+
+**Filer ændret:**
+- `firmware/main/api/routes/coils.c` + `.h` — handlers konverteret til kaldbar funktion-signatur `api_fc01_read_coils(req, iface, slave)`, `api_fc05_write_coil(req, iface, slave, addr)`, `api_fc0f_write_coils(req, iface, slave)`. Fjernet `static` og route-definitioner.
+- `firmware/main/api/routes/discrete.c` + `.h` — `api_fc02_read_discrete_inputs(req, iface, slave)`
+- `firmware/main/api/routes/holding_regs.c` + `.h` — `api_fc03_*`, `api_fc06_*`, `api_fc10_*`
+- `firmware/main/api/routes/input_regs.c` + `.h` — `api_fc04_read_input_regs`
+- `firmware/main/api/routes/interfaces.c` — `master_get_dispatcher` og `master_put_dispatcher` parser URI: hvis URI indeholder `/slaves/N/op[/addr]` → kald den rette FC-funktion; ellers → config GET/PUT. `find_fc_op()` helper. Begge dispatchers håndterer navn-alias for `key`.
+- `firmware/main/api/server.c` — kun master-routes registreres nu; individual FC-routes og deres includes fjernet
+- `firmware/main/core/version.h` — build 0060
+- `version.json` — build 0060
+
+**Effekt:**
+- FC01 (Read Coils), FC02 (Read Discrete), FC03 (Read Holding), FC04 (Read Input), FC05 (Write Coil), FC06 (Write Register), FC0F (Write Coils), FC10 (Write Registers) virker alle via REST nu
+- Navn-alias virker for ALLE Modbus-operationer: `GET /api/v1/interfaces/floor1/slaves/3/holding-registers?start=0&count=10`
+
+---
+
+## [0.3.0 build 0059] — 2026-05-30 — fix: PUT 405-fejl + feat: navn-alias + GPIO pins i GUI
+
+**Root cause for 405-fejl:** ESP-IDF `httpd_uri_match_wildcard` behandler kun `*` ved slutningen af URI-mønstre som wildcard. `/api/v1/interfaces/*/config` matchede aldrig nogen request → PUT save returnerede 405 Method Not Allowed.
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — `name[24]` felt i `iface_config_t`; `CONFIG_STRUCT_VERSION` 8→9
+- `firmware/main/core/config.c` — default-navne `modbus0`, `modbus1`, ...; sanitize sikrer null-termination
+- `firmware/main/api/routes/interfaces.c` — trailing wildcard `/api/v1/interfaces/*` for GET/PUT/DELETE; `resolve_iface()` accepterer både numerisk ID og navn-alias; `is_config_request()` undgår at fange FC-routes; PUT håndterer både `/{key}` og `/{key}/config`; udvidet med `name`, `type`, `uart_mode`, `tx_pin`, `rx_pin`, `rts_pin` felter; bedre body-recv (loop indtil content_len bytes); memory leak fix i iface_to_json response
+- `firmware/main/api/server.c` — api_index opdateret med `:key` notation
+- `firmware/main/api/routes/mgmt.c` — Navn (API alias) felt, RS485/RS232 Type-selector, TX/RX/DE GPIO felter pr. interface; status-tab viser navn; saveIfc sender alle nye felter til PUT `/interfaces/{id}`
+- `firmware/main/core/serial_cli.c` — `name <navn>` kommando i CTX_MODBUS; show config viser `Name`; show status viser navn ved siden af ID
+- `firmware/main/core/version.h` — 0.3.0 build 0059
+- `version.json` — 0.3.0 build 0059
+
+**Kendt issue:** FC01-FC10 routes (`/api/v1/interfaces/N/slaves/M/...`) har samme middle-wildcard problem og matcher aldrig. Notereret i BUGS.md som åben — kræver master dispatcher-handler.
+
+---
+
+## [0.3.0 build 0058] — 2026-05-30 — feat: master/slave + add/delete interface i web GUI
+
+**Filer ændret:**
+- `firmware/main/api/routes/interfaces.c` — `iface_to_json` udvidet med `mode`, `slave_addr`, `uart_mode`, `tx_pin`, `rx_pin`, `rts_pin`; PUT-handler accepterer `mode`, `slave_addr`, `type`, GPIO-pins; ny POST `/api/v1/interfaces` (opretter SW-UART master, defaults) og DELETE `/api/v1/interfaces/{id}` (sletter + renummererer)
+- `firmware/main/api/routes/interfaces.h` — nye route-symboler eksporteret
+- `firmware/main/api/server.c` — nye routes registreret; api_index opdateret
+- `firmware/main/api/routes/mgmt.c` — RS485 Config-tab: Rolle-selector (Master/Slave) med dynamisk Slave-adr felt; Tilføj/Slet-knapper; interface-counter (N/8); save sender mode + slave_addr; toast minder om "reboot for at aktivere"
+- `firmware/main/core/version.h` — 0.3.0 build 0058
+- `version.json` — 0.3.0 build 0058
+
+---
+
 ## [0.2.1 build 0057] — 2026-05-30 — fix: mgmt-side JavaScript syntax error
 
 **Filer ændret:**

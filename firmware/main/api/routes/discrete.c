@@ -3,12 +3,10 @@
 #include "cJSON.h"
 #include <stdlib.h>
 
-// GET /api/v1/interfaces/{iface}/slaves/{slave}/discrete-inputs?start=N&count=N  (FC02)
-static esp_err_t get_discrete_inputs_handler(httpd_req_t *req)
+// FC02 — Read Discrete Inputs
+// GET /api/v1/interfaces/{key}/slaves/{slave}/discrete-inputs?start=N&count=N
+esp_err_t api_fc02_read_discrete_inputs(httpd_req_t *req, int iface, int slave)
 {
-    int iface = 0, slave = 0;
-    sscanf(req->uri, "/api/v1/interfaces/%d/slaves/%d/discrete-inputs", &iface, &slave);
-
     char query[64] = {0}; char param[16];
     httpd_req_get_url_query_str(req, query, sizeof(query));
     uint16_t start = 0, count = 1;
@@ -32,15 +30,9 @@ static esp_err_t get_discrete_inputs_handler(httpd_req_t *req)
             cJSON_AddItemToArray(arr, cJSON_CreateBool((bits[i/8] >> (i%8)) & 1));
     } else {
         cJSON_AddStringToObject(root, "error", esp_err_to_name(result.esp_err));
-        httpd_resp_set_status(req, "504 Gateway Timeout");
+        httpd_resp_set_status(req, result.esp_err == ESP_ERR_TIMEOUT ? "504 Gateway Timeout" : "400 Bad Request");
     }
     char *s = cJSON_PrintUnformatted(root); cJSON_Delete(root);
     httpd_resp_sendstr(req, s); free(s);
     return ESP_OK;
 }
-
-const httpd_uri_t route_get_discrete_inputs = {
-    .uri     = "/api/v1/interfaces/*/slaves/*/discrete-inputs",
-    .method  = HTTP_GET,
-    .handler = get_discrete_inputs_handler,
-};
