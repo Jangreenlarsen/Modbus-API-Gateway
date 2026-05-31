@@ -4,6 +4,13 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.3 build 0072] — 2026-05-31 — test: OTA verificeringsrelease
+
+**Filer ændret:**
+- `version.json`, `version.h` — bump til 0.4.3 b0072 for OTA-test
+
+---
+
 ## [0.4.2 build 0071] — 2026-05-31 — fix: partition-tabel tilføjer otadata + ota_1 (OTA virker nu)
 
 **Filer ændret:**
