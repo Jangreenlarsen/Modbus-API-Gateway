@@ -9,7 +9,6 @@
 // Vi har brug for at kunne sætte refresh_enabled på gateway_config_t.
 // Pointeren sættes ved server-init.
 static gateway_config_t *s_cache_cfg = NULL;
-void cache_routes_set_cfg(gateway_config_t *cfg);
 void cache_routes_set_cfg(gateway_config_t *cfg) { s_cache_cfg = cfg; }
 
 static const char *fc_name(uint8_t fc)
