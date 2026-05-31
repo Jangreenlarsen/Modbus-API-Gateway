@@ -61,17 +61,22 @@ static esp_err_t http_get(const char *url, char *out_buf, int buf_size)
 
 // ── Version-sammenligning ───────────────────────────────────────────────────
 
-// Returnerer true hvis remote > local (simpel string-sammenligning er ok for MAJOR.MINOR.PATCH)
+// Returnerer true hvis remote > local.
+// Understøtter MAJOR.MINOR.PATCH, MAJOR.MINOR.PATCH.D og VERSION-bBUILD suffix.
 static bool version_newer(const char *local, const char *remote)
 {
-    // Understøtter både MAJOR.MINOR.PATCH og MAJOR.MINOR.PATCH.D (debug-format)
-    int lM=0,lm=0,lp=0,ld=0, rM=0,rm=0,rp=0,rd=0;
+    int lM=0,lm=0,lp=0,ld=0,lb=0, rM=0,rm=0,rp=0,rd=0,rb=0;
     sscanf(local,  "%d.%d.%d.%d", &lM, &lm, &lp, &ld);
     sscanf(remote, "%d.%d.%d.%d", &rM, &rm, &rp, &rd);
+    const char *lbs = strstr(local,  "-b");
+    const char *rbs = strstr(remote, "-b");
+    if (lbs) sscanf(lbs, "-b%d", &lb);
+    if (rbs) sscanf(rbs, "-b%d", &rb);
     if (rM != lM) return rM > lM;
     if (rm != lm) return rm > lm;
     if (rp != lp) return rp > lp;
-    return rd > ld;
+    if (rd != ld) return rd > ld;
+    return rb > lb;
 }
 
 // ── GitHub releases API ─────────────────────────────────────────────────────
@@ -96,13 +101,16 @@ esp_err_t ota_check(ota_info_t *info)
         return ESP_FAIL;
     }
 
-    // tag_name er typisk "v1.2.3" — strip 'v' prefix
+    // tag_name er typisk "v0.4.4-b0074" — strip 'v' prefix
     const char *tag = cJSON_GetStringValue(cJSON_GetObjectItem(json, "tag_name"));
     if (tag) {
         const char *ver = (tag[0] == 'v') ? tag + 1 : tag;
         strncpy(info->latest_version, ver, sizeof(info->latest_version));
-        info->firmware_available = version_newer(info->current_version, ver);
-        info->frontend_available = version_newer(info->current_version, ver);
+        // Sammenlign med "VERSION-bBUILD" så build-nummer indgår i sammenligningen
+        char local_full[48];
+        snprintf(local_full, sizeof(local_full), "%s-b%s", GATEWAY_VERSION, GATEWAY_BUILD);
+        info->firmware_available = version_newer(local_full, ver);
+        info->frontend_available = version_newer(local_full, ver);
     }
 
     // Release notes

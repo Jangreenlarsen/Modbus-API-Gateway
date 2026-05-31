@@ -2,6 +2,20 @@
 
 ---
 
+## v0.4.4 build 0075 — 2026-05-31 — fix: OTA version-check ignorerede build-nummer
+
+OTA-tjekket viste altid "Firmware opdateret" selvom en nyere build fandtes på GitHub.
+
+**Årsag**: GitHub release-tags bruger format `v0.4.4-b0074`. `sscanf` stoppede ved `-` og ignorerede build-nummeret — begge sider parsede til `0.4.4.0` → ingen forskel.
+
+**Fix**: `version_newer()` parser nu `-bNNNN` suffix. Lokalt sammenlignes med `VERSION-bBUILD` så build-numre tæller med.
+
+**Forventet adfærd nu**:
+- v0.4.4-b0074 → v0.4.4-b0075: "Opdatering tilgængelig" ✓
+- v0.4.4-b0075 → v0.4.4-b0075: "Firmware opdateret" ✓
+
+---
+
 ## v0.4.4 build 0074 — 2026-05-31 — OTA-side med live fremskridt og auto-reconnect
 
 ### Hvad er nyt
