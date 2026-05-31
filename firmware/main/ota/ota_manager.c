@@ -150,8 +150,10 @@ esp_err_t ota_update_firmware(const char *url, ota_status_t *status)
     esp_http_client_config_t http_cfg = {
         .url               = url,
         .crt_bundle_attach = esp_crt_bundle_attach,
-        .timeout_ms        = 30000,
+        .timeout_ms        = 60000,
         .keep_alive_enable = true,
+        .buffer_size       = 4096,   // GitHub redirect-headers er ~2-3KB
+        .buffer_size_tx    = 1024,
     };
     esp_https_ota_config_t ota_cfg = {
         .http_config = &http_cfg,

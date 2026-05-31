@@ -4,6 +4,14 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.1 build 0069] — 2026-05-31 — fix: OTA firmware-download HTTP buffer for lille (512B → 4KB)
+
+**Filer ændret:**
+- `firmware/main/ota/ota_manager.c` — `esp_https_ota` HTTP buffer 512B → 4096B (GitHub redirect-headers ~2-3KB), timeout 30s → 60s
+- `firmware/main/core/version.h`, `version.json` — bump til b0069
+
+---
+
 ## [0.4.1 build 0068] — 2026-05-31 — fix: OTA GitHub buffer for lille (4KB → 16KB)
 
 **Filer ændret:**
