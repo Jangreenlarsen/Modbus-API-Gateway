@@ -49,8 +49,10 @@ static esp_err_t api_index_handler(httpd_req_t *req)
         cJSON_AddItemToArray(ep, e); \
     } while(0)
 
-    EP("GET",  "/api/v1/system",                                              "System info: version, uptime, IP, heap");
+    EP("GET",  "/api/v1/system",                                              "System info: version, uptime, IP, heap, board_variant");
     EP("POST", "/api/v1/system/reboot",                                       "Genstart gateway");
+    EP("GET",  "/api/v1/system/hardware",                                     "Board variant + GPIO presets for alle interfaces");
+    EP("PUT",  "/api/v1/system/hardware",                                     "Gem board variant  {\"board_variant\":\"30pin\"|\"38pin\"}");
     EP("GET",  "/api/v1/system/wifi",                                         "WiFi status");
     EP("PUT",  "/api/v1/system/wifi",                                         "Konfigurér WiFi (enabled, ssid, password, ip, ap_fallback)");
     EP("GET",  "/api/v1/system/wifi/scan",                                    "Scan efter tilgængelige WiFi-netværk");
@@ -127,6 +129,8 @@ esp_err_t api_server_start(const api_config_t *cfg)
     // System routes
     httpd_register_uri_handler(s_server, &route_get_system);
     httpd_register_uri_handler(s_server, &route_post_reboot);
+    httpd_register_uri_handler(s_server, &route_get_system_hardware);
+    httpd_register_uri_handler(s_server, &route_put_system_hardware);
 
     // OTA routes
     httpd_register_uri_handler(s_server, &route_get_ota_check);

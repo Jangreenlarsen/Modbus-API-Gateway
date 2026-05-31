@@ -4,6 +4,18 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.0.3 build 0066] — 2026-05-31 — debug: GPIO preset + board variant (30/38-pin)
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — `board_variant_t` enum, `board_variant` felt i `gateway_config_t`, `config_get_gpio_preset()` decl, `CONFIG_STRUCT_VERSION` → 12
+- `firmware/main/core/config.c` — GPIO preset tabeller (30-pin + 38-pin), `config_get_gpio_preset()`, defaults bruger preset
+- `firmware/main/api/routes/system.h/.c` — `GET/PUT /api/v1/system/hardware` (board variant + preset-tabel), `board_variant` i GET /system response
+- `firmware/main/api/server.c` — registrér nye hardware routes
+- `firmware/main/api/routes/mgmt.c` — board variant selector, JS preset-tabel, `applyPreset()`, `toggleType()` → auto-preset, GPIO output-validering, "GPIO Preset"-knap, board vist på status-siden
+- `version.json`, `version.h` — bump til 0.4.0.3 b0066
+
+---
+
 ## [0.4.0.2 build 0065] — 2026-05-31 — debug: OTA-side viser korrekt version
 
 **Filer ændret:**

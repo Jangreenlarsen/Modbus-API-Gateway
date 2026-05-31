@@ -2,11 +2,55 @@
 #include <string.h>
 #include <stdio.h>
 
+// GPIO-preset tabeller: {tx, rx, de}
+// Undgår W5500 standard-pins (12,13,14,23,33,34) og UART0 (1,3).
+// GPIO 34-39 er input-only — kun brugbare som RX (ikke TX eller DE).
+// 30-pin board: GPIO 37+38 er ikke eksponeret.
+// 38-pin board: GPIO 37+38 er tilgængelige.
+
+static const int s_presets_30[GATEWAY_MAX_IFACES][3] = {
+    //  tx   rx   de
+    {   17,  16,   4 },   // iface 0  — UART2 HW
+    {   25,  26,  27 },   // iface 1
+    {   21,  22,  19 },   // iface 2
+    {   32,  35,  15 },   // iface 3  (35=input-only → RX OK)
+    {    5,  36,  18 },   // iface 4  (36=input-only → RX OK)
+    {    2,  39,   0 },   // iface 5  (39=input-only → RX OK; DE=0 boot-pin, brug med forsigtighed)
+    {   15,  34,   4 },   // iface 6  (34=input-only → RX OK; DE=4 deles med iface0 — skift ved konflikt)
+    {   18,  38,  19 },   // iface 7  (38 kun eksponeret på visse 30-pin boards; alternativt brug 39)
+};
+
+static const int s_presets_38[GATEWAY_MAX_IFACES][3] = {
+    //  tx   rx   de
+    {   17,  16,   4 },   // iface 0  — UART2 HW
+    {   25,  26,  27 },   // iface 1
+    {   21,  22,  19 },   // iface 2
+    {   32,  35,  15 },   // iface 3
+    {    5,  36,  18 },   // iface 4
+    {    2,  37,   0 },   // iface 5  (37 eksponeret på 38-pin)
+    {   15,  38,   4 },   // iface 6  (38 eksponeret på 38-pin)
+    {   18,  39,  19 },   // iface 7
+};
+
+void config_get_gpio_preset(int iface_id, iface_type_t type, board_variant_t board,
+                             int *tx, int *rx, int *de)
+{
+    if (iface_id < 0 || iface_id >= GATEWAY_MAX_IFACES) {
+        *tx = 17; *rx = 16; *de = (type == IFACE_TYPE_RS485) ? 4 : -1;
+        return;
+    }
+    const int (*tbl)[3] = (board == BOARD_ESP32_38PIN) ? s_presets_38 : s_presets_30;
+    *tx = tbl[iface_id][0];
+    *rx = tbl[iface_id][1];
+    *de = (type == IFACE_TYPE_RS485) ? tbl[iface_id][2] : -1;
+}
+
 void config_set_defaults(gateway_config_t *cfg)
 {
     memset(cfg, 0, sizeof(*cfg));
     cfg->version        = CONFIG_STRUCT_VERSION;
     cfg->interface_count = 1;
+    cfg->board_variant  = BOARD_ESP32_30PIN;
 
     iface_config_t *iface = &cfg->interfaces[0];
     iface->id         = 0;
@@ -20,9 +64,8 @@ void config_set_defaults(gateway_config_t *cfg)
     iface->parity     = 0;
     iface->stop_bits  = 1;
     iface->timeout_ms = DEFAULT_TIMEOUT_MS;
-    iface->tx_pin     = DEFAULT_TX_PIN;
-    iface->rx_pin     = DEFAULT_RX_PIN;
-    iface->rts_pin    = DEFAULT_RTS_PIN;
+    config_get_gpio_preset(0, IFACE_TYPE_RS485, BOARD_ESP32_30PIN,
+                           &iface->tx_pin, &iface->rx_pin, &iface->rts_pin);
     iface->slave_addr = 1;
     iface->enabled    = 1;
 
@@ -58,6 +101,8 @@ void config_set_defaults(gateway_config_t *cfg)
 
 void config_sanitize(gateway_config_t *cfg)
 {
+    if (cfg->board_variant != BOARD_ESP32_30PIN && cfg->board_variant != BOARD_ESP32_38PIN)
+        cfg->board_variant = BOARD_ESP32_30PIN;
     if (cfg->api.port == 0) cfg->api.port = 80;
     if (cfg->cache.enabled > 1) cfg->cache.enabled = 1;
     if (cfg->cache.refresh_enabled > 1) cfg->cache.refresh_enabled = 1;
