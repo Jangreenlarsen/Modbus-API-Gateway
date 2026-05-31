@@ -71,8 +71,9 @@ static esp_err_t api_index_handler(httpd_req_t *req)
     EP("PUT",  "/api/v1/interfaces/:key/slaves/:sid/coils?start=N",            "FC0F: skriv flere coils  {\"values\":[true,false]}");
     EP("PUT",  "/api/v1/interfaces/:key/slaves/:sid/holding-registers/:addr",  "FC06: skriv enkelt register  {\"value\":1234}");
     EP("PUT",  "/api/v1/interfaces/:key/slaves/:sid/holding-registers?start=N","FC10: skriv flere registers  {\"values\":[1234,5678]}");
-    EP("GET",  "/api/v1/cache/stats",                                         "Cache statistik: hits, misses, hit_rate, entries, TTL");
+    EP("GET",  "/api/v1/cache/stats",                                         "Cache statistik: hits, misses, hit_rate, entries, TTL, refresh-tællere");
     EP("GET",  "/api/v1/cache/entries",                                       "Alle cache-entries med iface/slave/fc/addr/value/age");
+    EP("GET",  "/api/v1/cache/history",                                       "Tidsseriedata (60 samples) for hits/miss/err/used/refresh");
     EP("PUT",  "/api/v1/cache/config",                                        "Sæt cache enabled+ttl_ms  {\"enabled\":true,\"ttl_ms\":1000}");
     EP("POST", "/api/v1/cache/clear",                                         "Tøm cache (ikke stats)");
     EP("POST", "/api/v1/cache/reset-stats",                                   "Nulstil hit/miss-tællere");
@@ -136,6 +137,7 @@ esp_err_t api_server_start(const api_config_t *cfg)
     // Cache routes
     httpd_register_uri_handler(s_server, &route_get_cache_stats);
     httpd_register_uri_handler(s_server, &route_get_cache_entries);
+    httpd_register_uri_handler(s_server, &route_get_cache_history);
     httpd_register_uri_handler(s_server, &route_post_cache_clear);
     httpd_register_uri_handler(s_server, &route_post_cache_reset_stats);
     httpd_register_uri_handler(s_server, &route_put_cache_config);

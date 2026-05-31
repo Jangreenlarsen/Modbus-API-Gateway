@@ -30,8 +30,12 @@ void config_set_defaults(gateway_config_t *cfg)
     cfg->api.port         = 80;
     cfg->api.auth_enabled = 0;
 
-    cfg->cache.enabled = 1;
-    cfg->cache.ttl_ms  = 1000;
+    cfg->cache.enabled                = 1;
+    cfg->cache.ttl_ms                 = 1000;
+    cfg->cache.refresh_enabled        = 1;
+    cfg->cache.refresh_interval_ms    = 200;
+    cfg->cache.refresh_threshold_pct  = 75;
+    cfg->cache.history_interval_ms    = 10000;
 
     cfg->ethernet.enabled       = 1;
     cfg->ethernet.hw_type       = ETH_HW_W5500;
@@ -56,6 +60,13 @@ void config_sanitize(gateway_config_t *cfg)
 {
     if (cfg->api.port == 0) cfg->api.port = 80;
     if (cfg->cache.enabled > 1) cfg->cache.enabled = 1;
+    if (cfg->cache.refresh_enabled > 1) cfg->cache.refresh_enabled = 1;
+    if (cfg->cache.refresh_interval_ms < 50)    cfg->cache.refresh_interval_ms = 200;
+    if (cfg->cache.refresh_interval_ms > 60000) cfg->cache.refresh_interval_ms = 200;
+    if (cfg->cache.refresh_threshold_pct < 10)  cfg->cache.refresh_threshold_pct = 75;
+    if (cfg->cache.refresh_threshold_pct > 99)  cfg->cache.refresh_threshold_pct = 75;
+    if (cfg->cache.history_interval_ms < 1000)  cfg->cache.history_interval_ms = 10000;
+    if (cfg->cache.history_interval_ms > 600000) cfg->cache.history_interval_ms = 10000;
     if (cfg->ethernet.spi_clock_mhz < 1 || cfg->ethernet.spi_clock_mhz > 36)
         cfg->ethernet.spi_clock_mhz = 10;
     if (cfg->ethernet.spi_poll_ms < 1 || cfg->ethernet.spi_poll_ms > 100)

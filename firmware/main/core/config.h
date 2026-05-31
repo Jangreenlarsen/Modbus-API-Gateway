@@ -86,13 +86,17 @@ typedef struct {
 } api_config_t;
 
 typedef struct {
-    uint8_t  enabled;        // 1 = cache aktiv (read-through), 0 = bypass
-    uint32_t ttl_ms;         // freshness window i ms (0 = aldrig udløb)
+    uint8_t  enabled;            // 1 = cache aktiv (read-through), 0 = bypass
+    uint32_t ttl_ms;             // freshness window i ms (0 = aldrig udløb)
+    uint8_t  refresh_enabled;    // 1 = baggrundstask refresher stale entries
+    uint16_t refresh_interval_ms; // hvor ofte refresh-task scanner (default 200)
+    uint8_t  refresh_threshold_pct; // refresh når age > TTL × pct/100 (default 75)
+    uint16_t history_interval_ms; // hvor ofte history-sample tages (default 10000)
 } cache_config_t;
 
 // Bump CONFIG_STRUCT_VERSION ved ENHVER ændring af gateway_config_t eller sub-structs.
 // NVS-load afviser blob hvis version ikke matcher → defaults indlæses.
-#define CONFIG_STRUCT_VERSION  10
+#define CONFIG_STRUCT_VERSION  11
 
 typedef struct {
     uint32_t         version;          // skal matche CONFIG_STRUCT_VERSION

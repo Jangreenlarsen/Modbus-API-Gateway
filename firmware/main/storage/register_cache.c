@@ -13,6 +13,11 @@ static cache_stats_t s_stats;
 static SemaphoreHandle_t s_mutex;
 static gateway_config_t *s_cfg = NULL;
 
+// Ringbuffer for historik
+static cache_history_sample_t s_history[CACHE_HISTORY_SAMPLES];
+static uint8_t s_history_head = 0;    // næste skrive-position
+static uint8_t s_history_count = 0;   // antal gyldige samples
+
 #define LOCK()   xSemaphoreTake(s_mutex, portMAX_DELAY)
 #define UNLOCK() xSemaphoreGive(s_mutex)
 
@@ -223,3 +228,71 @@ void cache_set_ttl_ms(uint32_t ttl_ms)
 
 bool cache_is_enabled(void) { return s_stats.enabled != 0; }
 uint32_t cache_get_ttl_ms(void) { return s_stats.ttl_ms; }
+
+// ── History ─────────────────────────────────────────────────────────────────
+
+void cache_history_sample(void)
+{
+    LOCK();
+    cache_history_sample_t *s = &s_history[s_history_head];
+    s->timestamp_ms = now_ms();
+    s->hits         = s_stats.hits;
+    s->misses       = s_stats.misses;
+    s->errors       = s_stats.errors;
+    s->entries_used = (uint16_t)s_stats.entries_used;
+    s->refresh_done = (uint16_t)s_stats.refresh_done;
+    s_history_head = (s_history_head + 1) % CACHE_HISTORY_SAMPLES;
+    if (s_history_count < CACHE_HISTORY_SAMPLES) s_history_count++;
+    UNLOCK();
+}
+
+int cache_history_get(cache_history_sample_t *out, int max)
+{
+    LOCK();
+    int n = s_history_count;
+    if (n > max) n = max;
+    // Kopier nyeste→ældste rækkefølge
+    for (int i = 0; i < n; i++) {
+        int idx = (s_history_head + CACHE_HISTORY_SAMPLES - 1 - i) % CACHE_HISTORY_SAMPLES;
+        out[i] = s_history[idx];
+    }
+    UNLOCK();
+    return n;
+}
+
+// ── Stale-entry lookup til baggrunds-refresh ───────────────────────────────
+
+int cache_get_stale_entries(cache_entry_t *out, int max, uint32_t min_age_ms)
+{
+    LOCK();
+    uint32_t now = now_ms();
+    int n = 0;
+    // Naiv: skan og kopier kvalificerende. Sortering pr. age efter.
+    for (int i = 0; i < CACHE_MAX_ENTRIES && n < max; i++) {
+        cache_entry_t *e = &s_entries[i];
+        if (e->status != CACHE_ENTRY_VALID) continue;
+        if ((now - e->last_update_ms) <= min_age_ms) continue;
+        out[n++] = *e;
+    }
+    UNLOCK();
+    // Sorter descending efter age (laveste last_update_ms = ældst = først)
+    // Lille n (max 16), simpel insertion sort:
+    for (int i = 1; i < n; i++) {
+        cache_entry_t key = out[i];
+        int j = i - 1;
+        while (j >= 0 && out[j].last_update_ms > key.last_update_ms) {
+            out[j + 1] = out[j];
+            j--;
+        }
+        out[j + 1] = key;
+    }
+    return n;
+}
+
+void cache_record_refresh(bool success)
+{
+    LOCK();
+    if (success) s_stats.refresh_done++;
+    else         s_stats.refresh_failed++;
+    UNLOCK();
+}

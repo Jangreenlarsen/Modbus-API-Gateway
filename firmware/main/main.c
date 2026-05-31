@@ -11,6 +11,7 @@
 #include "register_cache.h"
 #include "server.h"
 #include "serial_cli.h"
+#include "routes/cache.h"
 
 static const char *TAG = "main";
 
@@ -57,7 +58,8 @@ void app_main(void)
         ESP_LOGW(TAG, "Modbus init fejl (%s) — kører videre uden Modbus", esp_err_to_name(mb_err));
     }
 
-    // 7. HTTP/WebSocket server start
+    // 8. HTTP/WebSocket server start
+    cache_routes_set_cfg(&cfg);  // så PUT /cache/config kan opdatere refresh-felter
     esp_err_t api_err = api_server_start(&cfg.api);
     if (api_err != ESP_OK) {
         ESP_LOGE(TAG, "API server fejl: %s", esp_err_to_name(api_err));

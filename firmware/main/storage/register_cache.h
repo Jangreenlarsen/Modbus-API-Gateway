@@ -2,9 +2,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "esp_err.h"
-
-// Forward decl — undgår cirkulær include
-struct gateway_config_t;
+#include "config.h"
 
 // ── Modbus register cache — synchronous read-through ────────────────────────
 //
@@ -50,14 +48,30 @@ typedef struct {
     uint32_t evictions;
     uint32_t entries_used;
     uint32_t enabled;
-    uint32_t ttl_ms;         // 0 = never expire
-    uint32_t since_ms;       // millis() at last stats reset
+    uint32_t ttl_ms;             // 0 = never expire
+    uint32_t since_ms;           // millis() at last stats reset
+    uint32_t refresh_done;       // antal baggrunds-refreshes udført
+    uint32_t refresh_failed;     // antal baggrunds-refreshes der fejlede
 } cache_stats_t;
+
+// ── History — ringbuffer af cumulative-counter samples ─────────────────────
+// Klienten beregner delta = sample[N] - sample[N-1] for periode-rater.
+#define CACHE_HISTORY_SAMPLES 60      // 60 samples
+#define CACHE_HISTORY_DEFAULT_INTERVAL_MS 10000  // 10 s = 10 min historik total
+
+typedef struct {
+    uint32_t timestamp_ms;
+    uint32_t hits;
+    uint32_t misses;
+    uint32_t errors;
+    uint16_t entries_used;
+    uint16_t refresh_done;
+} cache_history_sample_t;          // 20 bytes × 60 = 1200 bytes
 
 // Init cache. Hvis cfg er ikke-NULL, læses enabled+ttl_ms fra cfg.cache og
 // register_cache holder en peger så cache_set_*() kan opdatere cfg → næste
 // 'save' persisterer ændringer i NVS.
-esp_err_t register_cache_init(struct gateway_config_t *cfg);
+esp_err_t register_cache_init(gateway_config_t *cfg);
 
 // Lookup: returner true ved HIT med fresh data → *out_value sat.
 // Fresh = entry status VALID OG (ttl_ms == 0 ELLER alder < ttl_ms).
@@ -91,3 +105,16 @@ void cache_set_enabled(bool enabled);
 void cache_set_ttl_ms(uint32_t ttl_ms);
 bool cache_is_enabled(void);
 uint32_t cache_get_ttl_ms(void);
+
+// History API — kaldes af baggrundstask hvert sample-interval.
+void cache_history_sample(void);
+// Returnerer antal samples kopieret (op til CACHE_HISTORY_SAMPLES), nyeste først.
+int  cache_history_get(cache_history_sample_t *out, int max);
+
+// Find entries der trænger til refresh.
+// Returnerer kun entries med status==VALID og age > min_age_ms.
+// Op til 'max' entries, sorteret efter age descending (mest stale først).
+int  cache_get_stale_entries(cache_entry_t *out, int max, uint32_t min_age_ms);
+
+// Stats-opdatering fra refresh-task.
+void cache_record_refresh(bool success);

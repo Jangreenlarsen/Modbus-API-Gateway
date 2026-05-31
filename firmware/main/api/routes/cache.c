@@ -1,9 +1,15 @@
 #include "cache.h"
 #include "register_cache.h"
+#include "config.h"
 #include "esp_timer.h"
 #include "cJSON.h"
 #include <stdlib.h>
 #include <string.h>
+
+// Vi har brug for at kunne sætte refresh_enabled på gateway_config_t.
+// Pointeren sættes ved server-init.
+static gateway_config_t *s_cache_cfg = NULL;
+void cache_routes_set_cfg(gateway_config_t *cfg) { s_cache_cfg = cfg; }
 
 static const char *fc_name(uint8_t fc)
 {
@@ -48,9 +54,47 @@ static esp_err_t get_cache_stats_handler(httpd_req_t *req)
     cJSON_AddNumberToObject(root, "utilization_pct", util);
     cJSON_AddNumberToObject(root, "since_ms",      st->since_ms);
     cJSON_AddNumberToObject(root, "now_ms",        now);
+    cJSON_AddNumberToObject(root, "refresh_done",  st->refresh_done);
+    cJSON_AddNumberToObject(root, "refresh_failed",st->refresh_failed);
+    if (s_cache_cfg) {
+        cJSON_AddBoolToObject(root,   "refresh_enabled",     s_cache_cfg->cache.refresh_enabled);
+        cJSON_AddNumberToObject(root, "refresh_interval_ms", s_cache_cfg->cache.refresh_interval_ms);
+        cJSON_AddNumberToObject(root, "refresh_threshold_pct", s_cache_cfg->cache.refresh_threshold_pct);
+        cJSON_AddNumberToObject(root, "history_interval_ms", s_cache_cfg->cache.history_interval_ms);
+    }
 
     httpd_resp_set_type(req, "application/json");
     char *s = cJSON_PrintUnformatted(root); cJSON_Delete(root);
+    httpd_resp_sendstr(req, s); free(s);
+    return ESP_OK;
+}
+
+// GET /api/v1/cache/history  →  array af samples, nyeste først (cumulative counters)
+static esp_err_t get_cache_history_handler(httpd_req_t *req)
+{
+    cache_history_sample_t *buf = malloc(sizeof(cache_history_sample_t) * CACHE_HISTORY_SAMPLES);
+    if (!buf) {
+        httpd_resp_set_status(req, "503 Service Unavailable");
+        httpd_resp_sendstr(req, "{\"error\":\"no memory\"}");
+        return ESP_OK;
+    }
+    int n = cache_history_get(buf, CACHE_HISTORY_SAMPLES);
+
+    cJSON *arr = cJSON_CreateArray();
+    for (int i = 0; i < n; i++) {
+        cJSON *s = cJSON_CreateObject();
+        cJSON_AddNumberToObject(s, "t",     buf[i].timestamp_ms);
+        cJSON_AddNumberToObject(s, "hits",  buf[i].hits);
+        cJSON_AddNumberToObject(s, "miss",  buf[i].misses);
+        cJSON_AddNumberToObject(s, "err",   buf[i].errors);
+        cJSON_AddNumberToObject(s, "used",  buf[i].entries_used);
+        cJSON_AddNumberToObject(s, "rfr",   buf[i].refresh_done);
+        cJSON_AddItemToArray(arr, s);
+    }
+    free(buf);
+
+    httpd_resp_set_type(req, "application/json");
+    char *s = cJSON_PrintUnformatted(arr); cJSON_Delete(arr);
     httpd_resp_sendstr(req, s); free(s);
     return ESP_OK;
 }
@@ -125,19 +169,29 @@ static esp_err_t put_cache_config_handler(httpd_req_t *req)
         cache_set_enabled(cJSON_IsTrue(v));
     if ((v = cJSON_GetObjectItem(json, "ttl_ms")) && cJSON_IsNumber(v) && v->valueint >= 0)
         cache_set_ttl_ms((uint32_t)v->valueint);
+    if (s_cache_cfg) {
+        if ((v = cJSON_GetObjectItem(json, "refresh_enabled")) && cJSON_IsBool(v))
+            s_cache_cfg->cache.refresh_enabled = cJSON_IsTrue(v) ? 1 : 0;
+        if ((v = cJSON_GetObjectItem(json, "refresh_interval_ms")) && cJSON_IsNumber(v) && v->valueint >= 50)
+            s_cache_cfg->cache.refresh_interval_ms = (uint16_t)v->valueint;
+        if ((v = cJSON_GetObjectItem(json, "refresh_threshold_pct")) && cJSON_IsNumber(v) && v->valueint >= 10 && v->valueint <= 99)
+            s_cache_cfg->cache.refresh_threshold_pct = (uint8_t)v->valueint;
+    }
     cJSON_Delete(json);
 
     httpd_resp_set_type(req, "application/json");
-    char buf[128];
-    snprintf(buf, sizeof(buf), "{\"enabled\":%s,\"ttl_ms\":%lu}",
+    char buf[192];
+    snprintf(buf, sizeof(buf), "{\"enabled\":%s,\"ttl_ms\":%lu,\"refresh_enabled\":%s}",
              cache_is_enabled() ? "true" : "false",
-             (unsigned long)cache_get_ttl_ms());
+             (unsigned long)cache_get_ttl_ms(),
+             (s_cache_cfg && s_cache_cfg->cache.refresh_enabled) ? "true" : "false");
     httpd_resp_sendstr(req, buf);
     return ESP_OK;
 }
 
 const httpd_uri_t route_get_cache_stats        = { .uri="/api/v1/cache/stats",        .method=HTTP_GET,  .handler=get_cache_stats_handler };
 const httpd_uri_t route_get_cache_entries      = { .uri="/api/v1/cache/entries",      .method=HTTP_GET,  .handler=get_cache_entries_handler };
+const httpd_uri_t route_get_cache_history      = { .uri="/api/v1/cache/history",      .method=HTTP_GET,  .handler=get_cache_history_handler };
 const httpd_uri_t route_post_cache_clear       = { .uri="/api/v1/cache/clear",        .method=HTTP_POST, .handler=post_cache_clear_handler };
 const httpd_uri_t route_post_cache_reset_stats = { .uri="/api/v1/cache/reset-stats",  .method=HTTP_POST, .handler=post_cache_reset_stats_handler };
 const httpd_uri_t route_put_cache_config       = { .uri="/api/v1/cache/config",       .method=HTTP_PUT,  .handler=put_cache_config_handler };

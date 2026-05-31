@@ -2,16 +2,28 @@
 #include "interface.h"
 #include "register_cache.h"
 #include "esp_log.h"
+#include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include <string.h>
 
 static const char *TAG = "modbus_mgr";
 
 static mb_interface_t s_interfaces[GATEWAY_MAX_IFACES];
 static uint8_t        s_iface_count = 0;
+static const gateway_config_t *s_cfg_ref = NULL;
+static TaskHandle_t   s_refresh_task = NULL;
+static TaskHandle_t   s_history_task = NULL;
+
+// Forward decls
+static void refresh_task(void *arg);
+static void history_task(void *arg);
+static mb_interface_t *get_iface(uint8_t iface);
 
 esp_err_t modbus_manager_init(const gateway_config_t *cfg)
 {
     s_iface_count = cfg->interface_count;
+    s_cfg_ref     = cfg;
     for (int i = 0; i < s_iface_count; i++) {
         esp_err_t err = mb_interface_init(&s_interfaces[i], &cfg->interfaces[i]);
         if (err != ESP_OK) {
@@ -23,6 +35,11 @@ esp_err_t modbus_manager_init(const gateway_config_t *cfg)
                  cfg->interfaces[i].type == IFACE_TYPE_RS485 ? "RS485" : "RS232",
                  cfg->interfaces[i].baudrate);
     }
+
+    // Start baggrundstasks (cache refresh + history snapshot)
+    xTaskCreate(refresh_task, "cache_refresh", 4096, NULL, 3, &s_refresh_task);
+    xTaskCreate(history_task, "cache_history", 2048, NULL, 2, &s_history_task);
+    ESP_LOGI(TAG, "Cache refresh-task og history-task startet");
     return ESP_OK;
 }
 
@@ -174,4 +191,69 @@ mb_result_t mb_write_registers(uint8_t iface, uint8_t slave, uint16_t start, uin
     else
         for (int i = 0; i < count; i++) cache_invalidate(iface, slave, CACHE_FC_HOLDING, start + i);
     return r;
+}
+
+// ── Cache refresh-task ────────────────────────────────────────────────────
+// Scanner cache for VALID entries hvor age > TTL × threshold_pct/100. Henter
+// dem fra bussen i baggrunden så hot data forbliver fresh — read-through-hits
+// ser stadig stort set 0ms latency selv ved kort TTL.
+static void refresh_one(const cache_entry_t *e)
+{
+    mb_interface_t *p = get_iface(e->iface);
+    if (!p) { cache_record_refresh(false); return; }
+    mb_result_t r = { .esp_err = ESP_FAIL };
+    uint16_t reg;
+    uint8_t  bits[1] = {0};
+    switch (e->fc) {
+        case CACHE_FC_COIL:
+            r = mb_interface_read_coils(p, e->slave, e->addr, 1, bits);
+            if (r.esp_err == ESP_OK) cache_store_coils(e->iface, e->slave, CACHE_FC_COIL, e->addr, 1, bits);
+            break;
+        case CACHE_FC_DISCRETE:
+            r = mb_interface_read_discrete_inputs(p, e->slave, e->addr, 1, bits);
+            if (r.esp_err == ESP_OK) cache_store_coils(e->iface, e->slave, CACHE_FC_DISCRETE, e->addr, 1, bits);
+            break;
+        case CACHE_FC_HOLDING:
+            r = mb_interface_read_holding_regs(p, e->slave, e->addr, 1, &reg);
+            if (r.esp_err == ESP_OK) cache_store(e->iface, e->slave, CACHE_FC_HOLDING, e->addr, reg);
+            break;
+        case CACHE_FC_INPUT:
+            r = mb_interface_read_input_regs(p, e->slave, e->addr, 1, &reg);
+            if (r.esp_err == ESP_OK) cache_store(e->iface, e->slave, CACHE_FC_INPUT, e->addr, reg);
+            break;
+    }
+    cache_record_refresh(r.esp_err == ESP_OK);
+}
+
+static void refresh_task(void *arg)
+{
+    cache_entry_t stale[8];   // op til 8 entries pr. cycle for ikke at stuffe bussen
+    while (1) {
+        uint16_t interval = s_cfg_ref ? s_cfg_ref->cache.refresh_interval_ms : 200;
+        vTaskDelay(pdMS_TO_TICKS(interval));
+
+        if (!cache_is_enabled()) continue;
+        if (!s_cfg_ref || !s_cfg_ref->cache.refresh_enabled) continue;
+        uint32_t ttl = cache_get_ttl_ms();
+        if (ttl == 0) continue;  // aldrig udløb → ingen grund til refresh
+
+        uint32_t threshold_age = (ttl * s_cfg_ref->cache.refresh_threshold_pct) / 100;
+        int n = cache_get_stale_entries(stale, 8, threshold_age);
+        for (int i = 0; i < n; i++) {
+            refresh_one(&stale[i]);
+            // Lille pause mellem refreshes for at give plads til klient-requests
+            vTaskDelay(pdMS_TO_TICKS(20));
+        }
+    }
+}
+
+// ── Cache history-snapshot task ───────────────────────────────────────────
+// Tager periodiske snapshots af cumulative-counters til ringbuffer.
+static void history_task(void *arg)
+{
+    while (1) {
+        uint16_t interval = s_cfg_ref ? s_cfg_ref->cache.history_interval_ms : 10000;
+        vTaskDelay(pdMS_TO_TICKS(interval));
+        cache_history_sample();
+    }
 }
