@@ -2,6 +2,18 @@
 
 ---
 
+## v0.4.5 build 0077 — 2026-05-31 — fix: OTA Installer-knap virker nu
+
+To bugs forhindrede OTA-installation fra at starte:
+
+1. **Asset-navn matchede aldrig**: Firmwaren ledte efter `firmware.bin` men releases uploadede filer som `modbus-gateway-v0.4.5-b0076.bin` — så `firmware_url` var altid tom og knappen reagerede ikke.
+
+2. **Progress-polling viste aldrig fremskridt**: OTA-tasken oprettede en lokal `status`-variabel og opdaterede den under flashing — men browseren pollede den globale `s_status` som aldrig blev rørt. Siden frøs i "Starter..." uanset hvad der foregik.
+
+Begge bugs er nu fixet. OTA skulle køre end-to-end.
+
+---
+
 ## v0.4.5 build 0076 — 2026-05-31 — Bootstrap-release: OTA version-check fix når frem
 
 Enheder på ≤0.4.4-b0074 kan ikke detektere b0075 via OTA fordi den gamle `version_newer()` ignorerer `-bNNNN` suffix. Denne release bumper PATCH (0.4.4 → 0.4.5) så selv den gamle kode detekterer opdateringen.

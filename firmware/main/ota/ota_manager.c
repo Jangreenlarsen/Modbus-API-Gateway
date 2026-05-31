@@ -117,18 +117,25 @@ esp_err_t ota_check(ota_info_t *info)
     const char *body = cJSON_GetStringValue(cJSON_GetObjectItem(json, "body"));
     if (body) strncpy(info->release_notes, body, sizeof(info->release_notes) - 1);
 
-    // Find asset-URLs
+    // Find asset-URLs — match på eksakt navn eller ethvert .bin der ikke er frontend
     cJSON *assets = cJSON_GetObjectItem(json, "assets");
     cJSON *asset;
     cJSON_ArrayForEach(asset, assets) {
         const char *name = cJSON_GetStringValue(cJSON_GetObjectItem(asset, "name"));
         const char *url  = cJSON_GetStringValue(cJSON_GetObjectItem(asset, "browser_download_url"));
         if (!name || !url) continue;
-        if (strcmp(name, OTA_FIRMWARE_ASSET) == 0)
-            strncpy(info->firmware_url, url, sizeof(info->firmware_url) - 1);
-        if (strcmp(name, OTA_FRONTEND_ASSET) == 0)
+        if (strcmp(name, OTA_FRONTEND_ASSET) == 0) {
             strncpy(info->frontend_url, url, sizeof(info->frontend_url) - 1);
+        } else {
+            // Firmware: eksakt match ELLER ethvert .bin asset (så længe det ikke er frontend)
+            size_t nl = strlen(name);
+            bool is_bin = nl > 4 && strcmp(name + nl - 4, ".bin") == 0;
+            bool exact  = strcmp(name, OTA_FIRMWARE_ASSET) == 0;
+            if (exact || (is_bin && !info->firmware_url[0]))
+                strncpy(info->firmware_url, url, sizeof(info->firmware_url) - 1);
+        }
     }
+    ESP_LOGI(TAG, "firmware_url: %.80s", info->firmware_url[0] ? info->firmware_url : "(none)");
 
     cJSON_Delete(json);
     s_status.state = OTA_STATE_IDLE;
@@ -150,82 +157,85 @@ static esp_err_t fw_ota_event_handler(esp_http_client_event_t *evt)
     return ESP_OK;
 }
 
-esp_err_t ota_update_firmware(const char *url, ota_status_t *status)
+esp_err_t ota_update_firmware(const char *url)
 {
     ESP_LOGI(TAG, "Starting firmware OTA from: %s", url);
-    status->state = OTA_STATE_DOWNLOADING;
-    status->progress_pct = 0;
+    memset(&s_status, 0, sizeof(s_status));
+    s_status.state        = OTA_STATE_DOWNLOADING;
+    s_status.progress_pct = 0;
 
     esp_http_client_config_t http_cfg = {
         .url               = url,
         .crt_bundle_attach = esp_crt_bundle_attach,
         .timeout_ms        = 60000,
         .keep_alive_enable = true,
-        .buffer_size       = 4096,   // GitHub redirect-headers er ~2-3KB
+        .buffer_size       = 4096,
         .buffer_size_tx    = 1024,
     };
-    esp_https_ota_config_t ota_cfg = {
-        .http_config = &http_cfg,
-    };
+    esp_https_ota_config_t ota_cfg = { .http_config = &http_cfg };
 
     esp_https_ota_handle_t ota_handle;
     esp_err_t err = esp_https_ota_begin(&ota_cfg, &ota_handle);
     if (err != ESP_OK) {
-        snprintf(status->error, sizeof(status->error), "OTA begin failed: %s", esp_err_to_name(err));
-        status->state = OTA_STATE_ERROR;
+        snprintf(s_status.error, sizeof(s_status.error), "OTA begin: %s", esp_err_to_name(err));
+        s_status.state = OTA_STATE_ERROR;
+        ESP_LOGE(TAG, "%s", s_status.error);
         return err;
     }
 
-    status->state = OTA_STATE_FLASHING;
+    s_status.state = OTA_STATE_FLASHING;
     int image_size = esp_https_ota_get_image_size(ota_handle);
+    ESP_LOGI(TAG, "Image size: %d bytes", image_size);
 
     while (1) {
         err = esp_https_ota_perform(ota_handle);
         if (err != ESP_ERR_HTTPS_OTA_IN_PROGRESS) break;
         if (image_size > 0) {
             int written = esp_https_ota_get_image_len_read(ota_handle);
-            status->progress_pct = (written * 100) / image_size;
+            s_status.progress_pct = (written * 100) / image_size;
         }
     }
 
     if (err != ESP_OK) {
-        snprintf(status->error, sizeof(status->error), "OTA perform failed: %s", esp_err_to_name(err));
+        snprintf(s_status.error, sizeof(s_status.error), "OTA perform: %s", esp_err_to_name(err));
         esp_https_ota_abort(ota_handle);
-        status->state = OTA_STATE_ERROR;
+        s_status.state = OTA_STATE_ERROR;
+        ESP_LOGE(TAG, "%s", s_status.error);
         return err;
     }
 
     err = esp_https_ota_finish(ota_handle);
     if (err != ESP_OK) {
-        snprintf(status->error, sizeof(status->error), "OTA finish failed: %s", esp_err_to_name(err));
-        status->state = OTA_STATE_ERROR;
+        snprintf(s_status.error, sizeof(s_status.error), "OTA finish: %s", esp_err_to_name(err));
+        s_status.state = OTA_STATE_ERROR;
+        ESP_LOGE(TAG, "%s", s_status.error);
         return err;
     }
 
-    status->state = OTA_STATE_DONE;
-    status->progress_pct = 100;
+    s_status.state        = OTA_STATE_DONE;
+    s_status.progress_pct = 100;
     ESP_LOGI(TAG, "Firmware OTA complete — rebooting in 2s");
     vTaskDelay(pdMS_TO_TICKS(2000));
     esp_restart();
-    return ESP_OK; // nås ikke
+    return ESP_OK;
 }
 
 // ── Frontend OTA (SPIFFS-image) ─────────────────────────────────────────────
 
 #define FRONTEND_CHUNK  4096
 
-esp_err_t ota_update_frontend(const char *url, ota_status_t *status)
+esp_err_t ota_update_frontend(const char *url)
 {
     ESP_LOGI(TAG, "Starting frontend OTA from: %s", url);
-    status->state    = OTA_STATE_DOWNLOADING;
-    status->progress_pct = 0;
+    memset(&s_status, 0, sizeof(s_status));
+    s_status.state        = OTA_STATE_DOWNLOADING;
+    s_status.progress_pct = 0;
 
-    // Find SPIFFS-partitionen
     const esp_partition_t *part = esp_partition_find_first(
         ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_SPIFFS, NULL);
     if (!part) {
-        snprintf(status->error, sizeof(status->error), "SPIFFS partition not found");
-        status->state = OTA_STATE_ERROR;
+        snprintf(s_status.error, sizeof(s_status.error), "SPIFFS partition not found");
+        s_status.state = OTA_STATE_ERROR;
         return ESP_FAIL;
     }
 
@@ -238,8 +248,8 @@ esp_err_t ota_update_frontend(const char *url, ota_status_t *status)
     esp_http_client_handle_t client = esp_http_client_init(&cfg);
     esp_err_t err = esp_http_client_open(client, 0);
     if (err != ESP_OK) {
-        snprintf(status->error, sizeof(status->error), "HTTP open failed: %s", esp_err_to_name(err));
-        status->state = OTA_STATE_ERROR;
+        snprintf(s_status.error, sizeof(s_status.error), "HTTP open: %s", esp_err_to_name(err));
+        s_status.state = OTA_STATE_ERROR;
         esp_http_client_cleanup(client);
         return err;
     }
@@ -247,46 +257,44 @@ esp_err_t ota_update_frontend(const char *url, ota_status_t *status)
     int content_len = esp_http_client_fetch_headers(client);
     int code = esp_http_client_get_status_code(client);
     if (code != 200) {
-        snprintf(status->error, sizeof(status->error), "HTTP %d", code);
-        status->state = OTA_STATE_ERROR;
+        snprintf(s_status.error, sizeof(s_status.error), "HTTP %d", code);
+        s_status.state = OTA_STATE_ERROR;
         esp_http_client_cleanup(client);
         return ESP_FAIL;
     }
 
-    // Slet eksisterende SPIFFS-data
     ESP_LOGI(TAG, "Erasing SPIFFS partition (%lu bytes)...", part->size);
     esp_partition_erase_range(part, 0, part->size);
 
-    status->state = OTA_STATE_FLASHING;
-    uint8_t  buf[FRONTEND_CHUNK];
+    s_status.state = OTA_STATE_FLASHING;
+    uint8_t buf[FRONTEND_CHUNK];
     int total = 0, offset = 0;
 
     while (1) {
         int read = esp_http_client_read(client, (char *)buf, sizeof(buf));
         if (read < 0)  { err = ESP_FAIL; break; }
         if (read == 0) { err = ESP_OK;   break; }
-
         if (offset + read > (int)part->size) {
-            snprintf(status->error, sizeof(status->error), "Frontend image too large for SPIFFS");
+            snprintf(s_status.error, sizeof(s_status.error), "Frontend too large for SPIFFS");
             err = ESP_FAIL; break;
         }
         esp_partition_write(part, offset, buf, read);
         offset += read;
         total  += read;
         if (content_len > 0)
-            status->progress_pct = (total * 100) / content_len;
+            s_status.progress_pct = (total * 100) / content_len;
     }
 
     esp_http_client_close(client);
     esp_http_client_cleanup(client);
 
     if (err != ESP_OK) {
-        status->state = OTA_STATE_ERROR;
+        s_status.state = OTA_STATE_ERROR;
         return err;
     }
 
-    status->state        = OTA_STATE_DONE;
-    status->progress_pct = 100;
+    s_status.state        = OTA_STATE_DONE;
+    s_status.progress_pct = 100;
     ESP_LOGI(TAG, "Frontend OTA complete — %d bytes written to SPIFFS", total);
     return ESP_OK;
 }

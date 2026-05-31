@@ -74,14 +74,11 @@ typedef struct {
 static void ota_task(void *arg)
 {
     ota_task_args_t *args = (ota_task_args_t *)arg;
-    ota_status_t status = { .state = OTA_STATE_IDLE };
-
     if (args->is_firmware) {
-        ota_update_firmware(args->url, &status);
+        ota_update_firmware(args->url);
     } else {
-        ota_update_frontend(args->url, &status);
+        ota_update_frontend(args->url);
     }
-
     free(args);
     vTaskDelete(NULL);
 }
