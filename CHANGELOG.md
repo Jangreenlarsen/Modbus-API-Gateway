@@ -4,6 +4,16 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.2 build 0071] — 2026-05-31 — fix: partition-tabel tilføjer otadata + ota_1 (OTA virker nu)
+
+**Filer ændret:**
+- `firmware/partitions.csv` — tilføjet `otadata` (0x10000) og `ota_1` (0x1A0000), fjernet `factory`, `ota_0` rykket til 0x20000. NVS forbliver på 0x9000 (data bevaret)
+- `version.json`, `version.h` — bump til b0071
+
+**VIGTIGT**: Kræver USB-flash én gang for at skrive ny partition-tabel. Herefter virker OTA.
+
+---
+
 ## [0.4.2 build 0070] — 2026-05-31 — feat: OTA viser build-nummer + OTA test release
 
 **Filer ændret:**
