@@ -2,6 +2,34 @@
 
 ---
 
+## v0.4.0.3 build 0066 — 2026-05-31 — GPIO presets + ESP32 board variant
+
+RS485 Config-siden kender nu ESP32-boardet og foreslår korrekte GPIO-pins automatisk:
+
+- **Board variant** (30-pin / 38-pin) vælges øverst i RS485 Config — gemmes i NVS og overlever reboot
+- **Auto-preset**: Skifter man type (RS485 ↔ RS232), fyldes TX/RX/DE ud automatisk med sensible pins baseret på interface-nummer og board
+- **GPIO Preset-knap**: Nulstiller GPIO-felter til standard for det aktuelle board og interface
+- **Input-only validering**: Gem blokerer og advarer hvis GPIO 34-39 forsøges brugt som TX eller DE
+- **TX max=33, DE max=33**: Input-felter begrænser nu synligt at kun output-capable GPIO (0-33) vælges til TX/DE
+- **Status-side**: Viser board variant (30-pin / 38-pin)
+- **API**: `GET/PUT /api/v1/system/hardware` returnerer board variant + komplet preset-tabel
+
+**Preset-tabel 30-pin** (undgår W5500 standard-pins 12,13,14,23,33,34):
+| Iface | TX | RX | DE (RS485) |
+|-------|----|----|-----------|
+| 0     | 17 | 16 | 4         |
+| 1     | 25 | 26 | 27        |
+| 2     | 21 | 22 | 19        |
+| 3     | 32 | 35 | 15        |
+| 4     |  5 | 36 | 18        |
+| 5     |  2 | 39 |  0        |
+| 6     | 15 | 34 |  4        |
+| 7     | 18 | 38 | 19        |
+
+**38-pin**: iface 5-7 bruger GPIO 37/38 (eksponeret på bred board).
+
+---
+
 ## v0.4.0.2 build 0065 — 2026-05-31 — OTA-side: korrekt version-visning
 
 OTA-siden viste gammel GitHub release-version som "Tilgængelig" selv når installeret firmware er nyere. "Tilgængelig" viser nu "—" når ingen opdatering er tilgængelig. GitHub release v0.4.0.1-b0064 oprettet.

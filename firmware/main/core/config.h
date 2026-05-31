@@ -4,6 +4,11 @@
 #define GATEWAY_MAX_IFACES  8   // 2 HW UART + op til 6 SW UART
 
 typedef enum {
+    BOARD_ESP32_30PIN = 0,   // Standard 30-pin dev-board (f.eks. NodeMCU-32S, AZDelivery)
+    BOARD_ESP32_38PIN = 1,   // Bred 38-pin dev-board — eksponerer GPIO 37, 38
+} board_variant_t;
+
+typedef enum {
     IFACE_TYPE_RS485,
     IFACE_TYPE_RS232,
 } iface_type_t;
@@ -96,11 +101,12 @@ typedef struct {
 
 // Bump CONFIG_STRUCT_VERSION ved ENHVER ændring af gateway_config_t eller sub-structs.
 // NVS-load afviser blob hvis version ikke matcher → defaults indlæses.
-#define CONFIG_STRUCT_VERSION  11
+#define CONFIG_STRUCT_VERSION  12
 
 typedef struct {
     uint32_t         version;          // skal matche CONFIG_STRUCT_VERSION
     uint8_t          interface_count;
+    board_variant_t  board_variant;    // 30-pin eller 38-pin ESP32 dev-board
     iface_config_t   interfaces[GATEWAY_MAX_IFACES];
     eth_config_t     ethernet;
     wifi_config_gw_t wifi;
@@ -113,6 +119,11 @@ void config_set_defaults(gateway_config_t *cfg);
 
 // Sanitér loaded config — ret ugyldige felter til safe defaults
 void config_sanitize(gateway_config_t *cfg);
+
+// Hent GPIO-preset for et interface baseret på type og board-variant.
+// RS485: tx, rx og de udfyldes. RS232: de sættes til -1.
+void config_get_gpio_preset(int iface_id, iface_type_t type, board_variant_t board,
+                             int *tx, int *rx, int *de);
 
 // Default-værdier
 #define DEFAULT_BAUDRATE    9600
