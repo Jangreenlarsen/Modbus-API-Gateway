@@ -64,13 +64,14 @@ static esp_err_t http_get(const char *url, char *out_buf, int buf_size)
 // Returnerer true hvis remote > local (simpel string-sammenligning er ok for MAJOR.MINOR.PATCH)
 static bool version_newer(const char *local, const char *remote)
 {
-    // Sammenlign som versionstupel
-    int lM=0,lm=0,lp=0, rM=0,rm=0,rp=0;
-    sscanf(local,  "%d.%d.%d", &lM, &lm, &lp);
-    sscanf(remote, "%d.%d.%d", &rM, &rm, &rp);
+    // Understøtter både MAJOR.MINOR.PATCH og MAJOR.MINOR.PATCH.D (debug-format)
+    int lM=0,lm=0,lp=0,ld=0, rM=0,rm=0,rp=0,rd=0;
+    sscanf(local,  "%d.%d.%d.%d", &lM, &lm, &lp, &ld);
+    sscanf(remote, "%d.%d.%d.%d", &rM, &rm, &rp, &rd);
     if (rM != lM) return rM > lM;
     if (rm != lm) return rm > lm;
-    return rp > lp;
+    if (rp != lp) return rp > lp;
+    return rd > ld;
 }
 
 // ── GitHub releases API ─────────────────────────────────────────────────────

@@ -4,6 +4,21 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.1 build 0067] — 2026-05-31 — release: v0.4.1 — GPIO presets, board variant, OTA fix, cache fase 2
+
+**Filer ændret:**
+- `firmware/main/ota/ota_manager.c` — `version_newer()` understøtter nu MAJOR.MINOR.PATCH.D (4 komponenter)
+- `firmware/main/core/version.h`, `version.json` — bump til 0.4.1 b0067 (afslutter debug-serie 0.4.0.x)
+
+**Indeholder alt fra debug-serien 0.4.0.1–0.4.0.3:**
+- GPIO preset-tabel (30-pin + 38-pin board variant)
+- Cache fase 2: async refresh-task + historisk metrics SVG sparkline
+- OTA-siden viser "—" ved ingen opdatering
+- W5500 ISR-miss workaround
+- Interface navn-alias i REST API
+
+---
+
 ## [0.4.0.3 build 0066] — 2026-05-31 — debug: GPIO preset + board variant (30/38-pin)
 
 **Filer ændret:**
