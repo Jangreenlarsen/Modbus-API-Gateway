@@ -4,6 +4,20 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.5 build 0077] — 2026-05-31 — fix: OTA Installer-knap reagerer ikke (2 bugs)
+
+**Filer ændret:**
+- `firmware/main/ota/ota_manager.h` — `ota_update_firmware` og `ota_update_frontend` tager ikke længere `status*` parameter
+- `firmware/main/ota/ota_manager.c` — begge update-funktioner opdaterer nu `s_status` direkte (den globale der returneres af `ota_get_status()`). Asset-matching finder nu ethvert `.bin`-asset, ikke kun eksakt "firmware.bin"
+- `firmware/main/api/routes/ota.c` — `ota_task` bruger ikke længere lokal `status`-variabel
+- `version.json`, `version.h` — bump til 0.4.5 b0077
+
+**Bug 1 (knap gør ingenting)**: `OTA_FIRMWARE_ASSET="firmware.bin"` matchede aldrig release-asset navne som `modbus-gateway-v0.4.5-b0076.bin` → `firmware_url` altid tom → JS returnerede tidligt.
+
+**Bug 2 (progress opdateres aldrig)**: `ota_task` oprettede lokal `ota_status_t status` og sendte den til `ota_update_firmware`. Men `ota_get_status()` returnerer global `s_status` — som aldrig blev opdateret. Polleren så altid `state:"idle"`.
+
+---
+
 ## [0.4.5 build 0076] — 2026-05-31 — fix: PATCH-bump for at bootstrappe OTA forbi version-sammenligning bug
 
 **Filer ændret:**

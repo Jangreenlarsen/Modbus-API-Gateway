@@ -42,12 +42,13 @@ typedef struct {
 // Forespørg GitHub releases API og udfyld ota_info_t
 esp_err_t ota_check(ota_info_t *info);
 
-// Start firmware-opdatering (blokerer indtil færdig eller fejl)
-// Kalder esp_restart() ved succes
-esp_err_t ota_update_firmware(const char *url, ota_status_t *status);
+// Start firmware-opdatering (blokerer indtil færdig eller fejl).
+// Opdaterer den globale s_status direkte. Kalder esp_restart() ved succes.
+esp_err_t ota_update_firmware(const char *url);
 
-// Opdater frontend-filer på SPIFFS fra SPIFFS-image-URL
-esp_err_t ota_update_frontend(const char *url, ota_status_t *status);
+// Opdater frontend-filer på SPIFFS fra SPIFFS-image-URL.
+// Opdaterer den globale s_status direkte.
+esp_err_t ota_update_frontend(const char *url);
 
 // Hent seneste OTA-status (bruges af REST API)
 const ota_status_t *ota_get_status(void);
