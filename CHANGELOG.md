@@ -4,6 +4,16 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.2 build 0070] — 2026-05-31 — feat: OTA viser build-nummer + OTA test release
+
+**Filer ændret:**
+- `firmware/main/api/routes/ota.c` — `build` felt tilføjet til OTA check JSON response
+- `firmware/main/ota/ota_manager.h/.c` — `current_build` felt i `ota_info_t`
+- `firmware/main/api/routes/mgmt.c` — OTA "Installeret" viser nu "vX.X.X bNNNN"
+- `version.json`, `version.h` — bump til 0.4.2 b0070
+
+---
+
 ## [0.4.1 build 0069] — 2026-05-31 — fix: OTA firmware-download HTTP buffer for lille (512B → 4KB)
 
 **Filer ændret:**

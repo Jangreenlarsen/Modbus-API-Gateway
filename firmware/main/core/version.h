@@ -3,5 +3,5 @@
 // Eneste kilde til version og build-nummer.
 // Ændringer her recompilerer KUN de filer der inkluderer denne header
 // (main.c, serial_cli.c, system.c, ota_manager.c) — ikke alle 13 config.h-filer.
-#define GATEWAY_VERSION "0.4.1"
-#define GATEWAY_BUILD   "0069"
+#define GATEWAY_VERSION "0.4.2"
+#define GATEWAY_BUILD   "0070"

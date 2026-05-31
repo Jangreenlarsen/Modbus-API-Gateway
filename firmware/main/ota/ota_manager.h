@@ -24,6 +24,7 @@ typedef enum {
 
 typedef struct {
     char     current_version[16];
+    char     current_build[8];
     char     latest_version[16];
     bool     firmware_available;
     bool     frontend_available;

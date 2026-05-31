@@ -81,6 +81,7 @@ esp_err_t ota_check(ota_info_t *info)
     s_status.state = OTA_STATE_CHECKING;
     memset(info, 0, sizeof(*info));
     strncpy(info->current_version, GATEWAY_VERSION, sizeof(info->current_version));
+    strncpy(info->current_build,   GATEWAY_BUILD,   sizeof(info->current_build));
 
     char *buf = malloc(HTTP_BUF_SIZE);
     if (!buf) { s_status.state = OTA_STATE_ERROR; return ESP_ERR_NO_MEM; }

@@ -14,6 +14,7 @@ static char *ota_info_to_json(const ota_info_t *info)
 {
     cJSON *root = cJSON_CreateObject();
     cJSON_AddStringToObject(root, "current_version",   info->current_version);
+    cJSON_AddStringToObject(root, "build",             info->current_build);
     cJSON_AddStringToObject(root, "latest_version",    info->latest_version);
     cJSON_AddBoolToObject(root,   "firmware_available", info->firmware_available);
     cJSON_AddBoolToObject(root,   "frontend_available", info->frontend_available);
