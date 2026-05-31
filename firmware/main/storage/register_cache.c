@@ -1,4 +1,5 @@
 #include "register_cache.h"
+#include "config.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -10,6 +11,7 @@ static const char *TAG = "reg_cache";
 static cache_entry_t s_entries[CACHE_MAX_ENTRIES];
 static cache_stats_t s_stats;
 static SemaphoreHandle_t s_mutex;
+static gateway_config_t *s_cfg = NULL;
 
 #define LOCK()   xSemaphoreTake(s_mutex, portMAX_DELAY)
 #define UNLOCK() xSemaphoreGive(s_mutex)
@@ -19,16 +21,23 @@ static inline uint32_t now_ms(void)
     return (uint32_t)(esp_timer_get_time() / 1000ULL);
 }
 
-esp_err_t register_cache_init(void)
+esp_err_t register_cache_init(gateway_config_t *cfg)
 {
     s_mutex = xSemaphoreCreateMutex();
     if (!s_mutex) return ESP_ERR_NO_MEM;
     memset(s_entries, 0, sizeof(s_entries));
     memset(&s_stats, 0, sizeof(s_stats));
-    s_stats.enabled  = 1;
-    s_stats.ttl_ms   = 1000;     // default 1s freshness
+    s_cfg = cfg;
+    if (s_cfg) {
+        s_stats.enabled = s_cfg->cache.enabled ? 1 : 0;
+        s_stats.ttl_ms  = s_cfg->cache.ttl_ms;
+    } else {
+        s_stats.enabled = 1;
+        s_stats.ttl_ms  = 1000;
+    }
     s_stats.since_ms = now_ms();
-    ESP_LOGI(TAG, "Register cache klar (max %d entries, TTL %lums)",
+    ESP_LOGI(TAG, "Register cache klar (%s, max %d entries, TTL %lums)",
+             s_stats.enabled ? "aktiv" : "deaktiveret",
              CACHE_MAX_ENTRIES, (unsigned long)s_stats.ttl_ms);
     return ESP_OK;
 }
@@ -200,6 +209,7 @@ void cache_set_enabled(bool enabled)
 {
     LOCK();
     s_stats.enabled = enabled ? 1 : 0;
+    if (s_cfg) s_cfg->cache.enabled = s_stats.enabled;
     UNLOCK();
 }
 
@@ -207,6 +217,7 @@ void cache_set_ttl_ms(uint32_t ttl_ms)
 {
     LOCK();
     s_stats.ttl_ms = ttl_ms;
+    if (s_cfg) s_cfg->cache.ttl_ms = ttl_ms;
     UNLOCK();
 }
 

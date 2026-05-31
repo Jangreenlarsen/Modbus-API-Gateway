@@ -3,6 +3,9 @@
 #include <stdbool.h>
 #include "esp_err.h"
 
+// Forward decl — undgår cirkulær include
+struct gateway_config_t;
+
 // ── Modbus register cache — synchronous read-through ────────────────────────
 //
 // Inspireret af Modbus_server_slave_ESP32's async cache. Denne version er
@@ -51,7 +54,10 @@ typedef struct {
     uint32_t since_ms;       // millis() at last stats reset
 } cache_stats_t;
 
-esp_err_t register_cache_init(void);
+// Init cache. Hvis cfg er ikke-NULL, læses enabled+ttl_ms fra cfg.cache og
+// register_cache holder en peger så cache_set_*() kan opdatere cfg → næste
+// 'save' persisterer ændringer i NVS.
+esp_err_t register_cache_init(struct gateway_config_t *cfg);
 
 // Lookup: returner true ved HIT med fresh data → *out_value sat.
 // Fresh = entry status VALID OG (ttl_ms == 0 ELLER alder < ttl_ms).

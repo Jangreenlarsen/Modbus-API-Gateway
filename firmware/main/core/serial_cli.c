@@ -362,6 +362,13 @@ static void show_running_config(void)
         printf("End interface Modbus%d\r\n", f->id);
         printf("!\r\n");
     }
+
+    // ── Modbus cache ───────────────────────────────────────────────────────────
+    printf("Cache\r\n");
+    printf(" %s\r\n", s_cfg->cache.enabled ? "Enable" : "Disable");
+    printf(" TTL %lums\r\n", (unsigned long)s_cfg->cache.ttl_ms);
+    printf("End cache\r\n");
+    printf("!\r\n");
 }
 
 static void show_cache_detail(void)
@@ -400,14 +407,14 @@ static int cmd_cache(int argc, char **argv)
         return 0;
     }
     if (strcasecmp(argv[1], "show") == 0) { show_cache_detail(); return 0; }
-    if (strcasecmp(argv[1], "enable")  == 0) { cache_set_enabled(true);  printf("Cache: aktiveret\r\n"); return 0; }
-    if (strcasecmp(argv[1], "disable") == 0) { cache_set_enabled(false); printf("Cache: deaktiveret\r\n"); return 0; }
+    if (strcasecmp(argv[1], "enable")  == 0) { cache_set_enabled(true);  printf("Cache: aktiveret  (save+reboot for at persistere)\r\n"); return 0; }
+    if (strcasecmp(argv[1], "disable") == 0) { cache_set_enabled(false); printf("Cache: deaktiveret  (save+reboot for at persistere)\r\n"); return 0; }
     if (strcasecmp(argv[1], "ttl") == 0) {
         if (argc < 3) { printf("Brug: cache ttl <ms>\r\n"); return 1; }
         long ms = atol(argv[2]);
         if (ms < 0) { printf("Fejl: ms skal være >= 0\r\n"); return 1; }
         cache_set_ttl_ms((uint32_t)ms);
-        printf("Cache TTL: %ld ms\r\n", ms);
+        printf("Cache TTL: %ld ms  (save+reboot for at persistere)\r\n", ms);
         return 0;
     }
     if (strcasecmp(argv[1], "clear") == 0)       { cache_clear(); printf("Cache cleared\r\n"); return 0; }

@@ -4,6 +4,22 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.0 build 0062] — 2026-05-31 — feat: cache NVS-persistens (overlever reboot)
+
+**Filer ændret:**
+- `firmware/main/core/config.h` — `cache_config_t {enabled, ttl_ms}` tilføjet til `gateway_config_t.cache`; `CONFIG_STRUCT_VERSION` 9→10
+- `firmware/main/core/config.c` — defaults `enabled=1, ttl_ms=1000`; sanitize
+- `firmware/main/storage/register_cache.h` — `register_cache_init(gateway_config_t *cfg)` (var void). Forward-decl undgår cirkulær include
+- `firmware/main/storage/register_cache.c` — gemmer `s_cfg` pointer; init læser fra `cfg->cache`; `cache_set_enabled()` og `cache_set_ttl_ms()` opdaterer både runtime-state OG `cfg->cache` så næste `save` persisterer
+- `firmware/main/main.c` — `register_cache_init(&cfg)`
+- `firmware/main/core/serial_cli.c` — `show config` viser `Cache`-sektion; cache CLI-kommandoer nævner `save+reboot for at persistere`
+- `firmware/main/core/version.h` — 0.4.0 build 0062
+- `version.json` — 0.4.0 build 0062
+
+**Effekt:** TTL og enabled-flag overlever nu reboot. Ændringer via CLI eller REST modificerer den in-RAM cfg-struct, og næste `save` (CLI) persisterer til NVS. NVS invalideres på grund af CONFIG_STRUCT_VERSION mismatch ved første boot efter opgradering → defaults indlæses.
+
+---
+
 ## [0.4.0 build 0061] — 2026-05-30 — feat: Modbus register cache + stats/metrics side
 
 **Inspireret af** `Modbus_server_slave_ESP32`'s async cache. Denne version er synchronous (ingen baggrundstask, ingen priority queue) — fase 2 kan tilføje det.

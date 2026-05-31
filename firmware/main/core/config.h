@@ -85,9 +85,14 @@ typedef struct {
     char     api_key[65];    // API nøgle — max 64 tegn
 } api_config_t;
 
+typedef struct {
+    uint8_t  enabled;        // 1 = cache aktiv (read-through), 0 = bypass
+    uint32_t ttl_ms;         // freshness window i ms (0 = aldrig udløb)
+} cache_config_t;
+
 // Bump CONFIG_STRUCT_VERSION ved ENHVER ændring af gateway_config_t eller sub-structs.
 // NVS-load afviser blob hvis version ikke matcher → defaults indlæses.
-#define CONFIG_STRUCT_VERSION  9
+#define CONFIG_STRUCT_VERSION  10
 
 typedef struct {
     uint32_t         version;          // skal matche CONFIG_STRUCT_VERSION
@@ -96,6 +101,7 @@ typedef struct {
     eth_config_t     ethernet;
     wifi_config_gw_t wifi;
     api_config_t     api;
+    cache_config_t   cache;
 } gateway_config_t;
 
 // Default-konfiguration

@@ -48,7 +48,8 @@ void app_main(void)
     wifi_manager_init(&cfg.wifi);
 
     // 6. Register cache (skal initialiseres FØR modbus_manager bruger den)
-    register_cache_init();
+    // Får pointer til cfg så cache_set_*() kan opdatere cfg.cache → save persisterer
+    register_cache_init(&cfg);
 
     // 7. Modbus interfaces init — fejl er ikke fatal (interface måske ikke tilsluttet)
     esp_err_t mb_err = modbus_manager_init(&cfg);
