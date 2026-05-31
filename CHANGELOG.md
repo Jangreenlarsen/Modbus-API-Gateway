@@ -4,6 +4,14 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.1 build 0068] — 2026-05-31 — fix: OTA GitHub buffer for lille (4KB → 16KB)
+
+**Filer ændret:**
+- `firmware/main/ota/ota_manager.c` — `HTTP_BUF_SIZE` 4096 → 16384 (GitHub API-svar > 4KB ved release med assets), log ved JSON parse-fejl
+- `firmware/main/core/version.h`, `version.json` — bump til b0068
+
+---
+
 ## [0.4.1 build 0067] — 2026-05-31 — release: v0.4.1 — GPIO presets, board variant, OTA fix, cache fase 2
 
 **Filer ændret:**

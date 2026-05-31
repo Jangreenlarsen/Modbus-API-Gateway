@@ -18,7 +18,7 @@ const ota_status_t *ota_get_status(void) { return &s_status; }
 
 // ── HTTP response buffer ────────────────────────────────────────────────────
 
-#define HTTP_BUF_SIZE 4096
+#define HTTP_BUF_SIZE 16384
 
 typedef struct { char *buf; int len; int cap; } http_buf_t;
 
@@ -89,7 +89,11 @@ esp_err_t ota_check(ota_info_t *info)
 
     cJSON *json = cJSON_Parse(buf);
     free(buf);
-    if (!json) { s_status.state = OTA_STATE_ERROR; return ESP_FAIL; }
+    if (!json) {
+        ESP_LOGE(TAG, "JSON parse fejlede — svar for stort? (buf=%d bytes)", HTTP_BUF_SIZE);
+        s_status.state = OTA_STATE_ERROR;
+        return ESP_FAIL;
+    }
 
     // tag_name er typisk "v1.2.3" — strip 'v' prefix
     const char *tag = cJSON_GetStringValue(cJSON_GetObjectItem(json, "tag_name"));
