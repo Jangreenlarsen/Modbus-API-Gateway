@@ -4,6 +4,16 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.4 build 0075] — 2026-05-31 — fix: OTA version-sammenligning ignorerede build-nummer
+
+**Filer ændret:**
+- `firmware/main/ota/ota_manager.c` — `version_newer()` parser nu `-bNNNN` suffix; `ota_check()` sammenligner med "VERSION-bBUILD" lokalt
+- `version.json`, `version.h` — bump til b0075
+
+**Årsag**: GitHub release-tags har format `v0.4.4-b0074`. `sscanf("%d.%d.%d.%d")` stopper ved `-` → begge sider parsede til 0.4.4.0 → "ingen opdatering".
+
+---
+
 ## [0.4.4 build 0074] — 2026-05-31 — feat: OTA-side med trin-indikatorer og auto-reconnect
 
 **Filer ændret:**
