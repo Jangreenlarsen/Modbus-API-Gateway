@@ -35,8 +35,10 @@ Status: `planned` | `in-progress` | `done`
 - [ ] planned — Lokal register-cache i RAM/NVS (overlever korte Modbus-fejl)
 - [ ] planned — Web frontend monitoreringsside: live register-visning pr. slave med polling-konfiguration
 - [ ] planned — WebSocket push ved register-ændringer (real-time til monitoreringsklienter)
-- [ ] planned — Cache fase 2: async baggrundstask + priority queue (writes > fresh reads > refreshes), per-slave adaptive backoff (porteret fuldt fra Modbus_server_slave_ESP32 design)
-- [ ] planned — Cache NVS-persistens af stats/config (TTL, enabled overlever reboot)
+- [x] done    v0.4.0 b0063 — Cache fase 2: baggrunds-refresh task der holder hot data varmt (scanner cache for stale entries, refresher op til 8/cycle). NB: simpler end Modbus_server_slave_ESP32's priority queue + adaptive backoff design — fase 3 kan tilføje det hvis nødvendigt.
+- [x] done    v0.4.0 b0063 — Historisk metrics: ringbuffer af 60 samples × 10s = 10 min historik. SVG sparkline-graf i /mgmt med hit rate, requests/s, refreshes/s. REST `GET /api/v1/cache/history`.
+- [x] done    v0.4.0 b0062 — Cache NVS-persistens (TTL, enabled, refresh-config overlever reboot)
+- [ ] planned — Cache fase 3 (kun ved behov): per-slave adaptive backoff, priority queue (writes > fresh reads > refreshes), full async decoupling med PENDING-state
 - [ ] planned — REST API endpoints for slave register-bank (GET/PUT pr. interface for slave-mode-data)
 - [ ] planned — SW-UART slave mode (custom bit-bang svar-implementering)
 - [ ] planned — Alarm/threshold-logik med notifikation via WebSocket

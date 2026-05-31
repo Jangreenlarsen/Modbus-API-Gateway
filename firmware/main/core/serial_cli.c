@@ -367,6 +367,10 @@ static void show_running_config(void)
     printf("Cache\r\n");
     printf(" %s\r\n", s_cfg->cache.enabled ? "Enable" : "Disable");
     printf(" TTL %lums\r\n", (unsigned long)s_cfg->cache.ttl_ms);
+    printf(" Refresh %s\r\n", s_cfg->cache.refresh_enabled ? "on" : "off");
+    printf(" Refresh-interval %dms\r\n", s_cfg->cache.refresh_interval_ms);
+    printf(" Refresh-threshold %d%%\r\n", s_cfg->cache.refresh_threshold_pct);
+    printf(" History-interval %dms\r\n", s_cfg->cache.history_interval_ms);
     printf("End cache\r\n");
     printf("!\r\n");
 }
@@ -391,6 +395,12 @@ static void show_cache_detail(void)
     printf("  Errors      : %lu\r\n", (unsigned long)s->errors);
     printf("  Evictions   : %lu\r\n", (unsigned long)s->evictions);
     printf("  Total req's : %lu\r\n", (unsigned long)s->total_requests);
+    printf("  Bg-refresh  : %s  interval %dms  threshold %d%%\r\n",
+           s_cfg->cache.refresh_enabled ? "on" : "off",
+           s_cfg->cache.refresh_interval_ms,
+           s_cfg->cache.refresh_threshold_pct);
+    printf("  Refreshes   : %lu OK / %lu fejl\r\n",
+           (unsigned long)s->refresh_done, (unsigned long)s->refresh_failed);
     sep();
 }
 
@@ -401,6 +411,9 @@ static int cmd_cache(int argc, char **argv)
         printf("  cache show                 -- vis statistik\r\n");
         printf("  cache enable / disable     -- aktiver/deaktiver cache\r\n");
         printf("  cache ttl <ms>             -- sæt freshness TTL (0=aldrig udløb)\r\n");
+        printf("  cache refresh on|off       -- baggrunds-refresh task\r\n");
+        printf("  cache refresh interval <ms> -- scan-interval (default 200)\r\n");
+        printf("  cache refresh threshold <pct> -- refresh ved age > pct af TTL (default 75)\r\n");
         printf("  cache clear                -- tøm cache (ikke stats)\r\n");
         printf("  cache reset-stats          -- nulstil hit/miss-tællere\r\n");
         printf("  cache entries              -- list alle aktive cache-entries\r\n");
@@ -416,6 +429,24 @@ static int cmd_cache(int argc, char **argv)
         cache_set_ttl_ms((uint32_t)ms);
         printf("Cache TTL: %ld ms  (save+reboot for at persistere)\r\n", ms);
         return 0;
+    }
+    if (strcasecmp(argv[1], "refresh") == 0) {
+        if (argc < 3) { printf("Brug: cache refresh on|off|interval <ms>|threshold <pct>\r\n"); return 1; }
+        if (strcasecmp(argv[2], "on")  == 0) { s_cfg->cache.refresh_enabled = 1; printf("Cache refresh: on  (save+reboot for at persistere)\r\n"); return 0; }
+        if (strcasecmp(argv[2], "off") == 0) { s_cfg->cache.refresh_enabled = 0; printf("Cache refresh: off  (save+reboot for at persistere)\r\n"); return 0; }
+        if (strcasecmp(argv[2], "interval") == 0 && argc >= 4) {
+            int ms = atoi(argv[3]); if (ms < 50 || ms > 60000) { printf("Fejl: 50-60000 ms\r\n"); return 1; }
+            s_cfg->cache.refresh_interval_ms = (uint16_t)ms;
+            printf("Refresh interval: %d ms  (save+reboot for at persistere)\r\n", ms);
+            return 0;
+        }
+        if (strcasecmp(argv[2], "threshold") == 0 && argc >= 4) {
+            int p = atoi(argv[3]); if (p < 10 || p > 99) { printf("Fejl: 10-99 pct\r\n"); return 1; }
+            s_cfg->cache.refresh_threshold_pct = (uint8_t)p;
+            printf("Refresh threshold: %d%%  (save+reboot for at persistere)\r\n", p);
+            return 0;
+        }
+        printf("Brug: cache refresh on|off|interval <ms>|threshold <pct>\r\n"); return 1;
     }
     if (strcasecmp(argv[1], "clear") == 0)       { cache_clear(); printf("Cache cleared\r\n"); return 0; }
     if (strcasecmp(argv[1], "reset-stats") == 0) { cache_reset_stats(); printf("Cache stats reset\r\n"); return 0; }

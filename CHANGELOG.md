@@ -4,6 +4,28 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.0 build 0063] — 2026-05-31 — feat: cache fase 2 — async refresh-task + historisk metrics
+
+**Filer ændret:**
+- `firmware/main/storage/register_cache.h` + `.c` — ringbuffer `cache_history_sample_t[60]` (cumulative counter snapshots), `cache_history_sample()` / `cache_history_get()`, `cache_get_stale_entries()` (sorteret efter age desc), `cache_record_refresh()`. Stats udvidet med `refresh_done`/`refresh_failed`.
+- `firmware/main/core/config.h` — `cache_config_t` udvidet med `refresh_enabled`, `refresh_interval_ms`, `refresh_threshold_pct`, `history_interval_ms`. `CONFIG_STRUCT_VERSION` 10→11.
+- `firmware/main/core/config.c` — defaults: refresh on, 200ms interval, 75% threshold, 10s history-interval. Sanitize ranges.
+- `firmware/main/modbus/modbus_manager.c` — to nye FreeRTOS-tasks: `refresh_task` (scanner cache hver `refresh_interval_ms` for entries hvor age > TTL × threshold_pct, refresher op til 8/cycle), `history_task` (sampler stats hver `history_interval_ms`).
+- `firmware/main/api/routes/cache.c` + `.h` — ny `GET /api/v1/cache/history` endpoint. `cache_routes_set_cfg()` så PUT /cache/config kan opdatere refresh-felter. Stats-respons inkluderer refresh-tællere + config-felter.
+- `firmware/main/api/routes/mgmt.c` — Cache tab udvidet med refresh-toggle og **SVG sparkline-graf** der viser hit-rate (blå), requests/s (rød), refreshes/s (grøn). Computer deltas mellem samples for periode-rater.
+- `firmware/main/api/server.c` — registrér `route_get_cache_history`; api_index opdateret.
+- `firmware/main/main.c` — `cache_routes_set_cfg(&cfg)` før `api_server_start()`.
+- `firmware/main/core/serial_cli.c` — `cache refresh on|off|interval|threshold` kommandoer; `show cache` viser refresh-status + tællere; `show config` viser cache-sektion med refresh-felter.
+- `firmware/main/core/version.h` — 0.4.0 build 0063
+- `version.json` — 0.4.0 build 0063
+
+**Effekt:**
+- Bus-trafik bliver konsistent — refresh-task holder cache varm så klienter får ~0ms hits selv med lavt TTL.
+- `/mgmt` → Cache tab viser nu live sparkline over de seneste 10 minutter (60 samples × 10s).
+- Refresh kører age-baseret round-robin — mest stale entries refreshes først.
+
+---
+
 ## [0.4.0 build 0062] — 2026-05-31 — feat: cache NVS-persistens (overlever reboot)
 
 **Filer ændret:**

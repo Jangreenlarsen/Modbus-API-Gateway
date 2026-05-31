@@ -2,6 +2,47 @@
 
 ---
 
+## v0.4.0 build 0063 — 2026-05-31 — Cache fase 2: async refresh-task + historisk metrics
+
+Den synkron cache fra v0.4.0 b0061 fungerer som read-through — første læsning rammer bus, efterfølgende læsninger inden for TTL serveres fra cache. **Men** når TTL udløber skal næste klient stadig vente på bus-svar.
+
+Denne version løser det med en **baggrunds-refresh task** der holder hot data varmt:
+- Scanner cache hver 200ms for entries hvor `age > TTL × 75%`
+- Henter dem fra bus i baggrunden (op til 8 pr. cycle)
+- Klienter ser konsistent ~0ms latency selv på data der ellers ville være udløbet
+
+### Historisk metrics
+
+`/mgmt` → Cache tab har nu et **Historisk performance** kort med:
+- **SVG sparkline-graf** der viser de seneste 10 minutter (60 samples × 10s)
+  - Blå linje: hit rate (0-100%)
+  - Rød linje: requests/sekund
+  - Grøn linje: refreshes/sekund
+- Stats-tabel under grafen: senest målt hit rate, requests/s, refresh/s, gennemsnit, tidsvindue
+
+REST endpoint:
+```
+GET /api/v1/cache/history    → array af 60 samples med {t, hits, miss, err, used, rfr}
+```
+
+Cumulative-counter format — klient beregner delta mellem samples for periode-rater.
+
+### Refresh-konfiguration
+
+| Parameter | Default | Range | CLI |
+|-----------|---------|-------|-----|
+| Refresh enabled | on | on/off | `cache refresh on\|off` |
+| Scan interval | 200 ms | 50-60000 | `cache refresh interval <ms>` |
+| Age threshold | 75% af TTL | 10-99% | `cache refresh threshold <pct>` |
+| History sample interval | 10000 ms | 1000-600000 | (kun via REST) |
+
+### Effekt
+Med TTL=1000ms, threshold=75% og interval=200ms: en hot register-adresse refreshes ca. 1× per sekund. Klienter der poller hvert 100ms ser **alle** reads som cache-hits (~0ms latency) — bussen håndterer kun den ene refresh per sekund.
+
+Refresh hjælper kun entries der bliver brugt — ubrugte entries bliver naturligt udløbet/evictet.
+
+---
+
 ## v0.4.0 build 0061 — 2026-05-30 — Modbus register cache + monitoring
 
 **Cache engine** inspireret af `Modbus_server_slave_ESP32`-projektet — eliminerer redundant bus-trafik når flere klienter spørger om samme register inden for TTL-vinduet.
