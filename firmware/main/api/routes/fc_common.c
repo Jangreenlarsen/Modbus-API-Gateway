@@ -52,3 +52,29 @@ bool api_mb_ok(httpd_req_t *req, mb_result_t r, int iface, int slave)
     free(s);
     return false;
 }
+
+int api_recv_body(httpd_req_t *req, char *buf, int cap)
+{
+    int remaining = req->content_len;
+    if (remaining < 0) remaining = 0;
+    if (remaining > cap - 1) remaining = cap - 1;
+    int total = 0;
+    while (remaining > 0) {
+        int n = httpd_req_recv(req, buf + total, remaining);
+        if (n == HTTPD_SOCK_ERR_TIMEOUT) continue;
+        if (n <= 0) break;
+        total += n; remaining -= n;
+    }
+    buf[total] = '\0';
+    return total;
+}
+
+uint16_t api_query_u16(const char *query, const char *key, uint16_t def)
+{
+    char param[16];
+    if (httpd_query_key_value(query, key, param, sizeof(param)) != ESP_OK) return def;
+    long v = strtol(param, NULL, 10);
+    if (v < 0) v = 0;
+    if (v > 65535) v = 65535;
+    return (uint16_t)v;
+}

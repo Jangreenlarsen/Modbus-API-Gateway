@@ -11,3 +11,11 @@
 // Returnerer true hvis kaldet lykkedes (fortsæt med success-svar). Ved fejl
 // sendes fejl-JSON + status, og funktionen returnerer false.
 bool api_mb_ok(httpd_req_t *req, mb_result_t r, int iface, int slave);
+
+// Læs hele request-bodyen robust (M3): httpd_req_recv kan returnere partielle
+// reads og HTTPD_SOCK_ERR_TIMEOUT. Nul-terminerer. Returnerer antal bytes læst.
+int api_recv_body(httpd_req_t *req, char *buf, int cap);
+
+// Parse en uint16 query-parameter med clamp (L6): negative → 0, >65535 → 65535.
+// Returnerer def hvis nøglen mangler.
+uint16_t api_query_u16(const char *query, const char *key, uint16_t def);

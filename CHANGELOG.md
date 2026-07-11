@@ -4,6 +4,17 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.5.2 build 0082] — 2026-07-11 — fix: robuste request-bodies + input-validering (M3, L5, L6)
+
+**Filer ændret:**
+- `firmware/main/api/routes/fc_common.h/.c` — `api_recv_body()` (robust recv-loop) + `api_query_u16()` (clampet query-parse).
+- `firmware/main/api/routes/coils.c`, `holding_regs.c` — writes bruger `api_recv_body`; FC05 afviser tom/ugyldig body (400).
+- `firmware/main/api/routes/coils.c`, `discrete.c`, `holding_regs.c`, `input_regs.c` — reads bruger `api_query_u16` (negativ→0, >65535→65535).
+- `firmware/main/api/routes/interfaces.c` — bruger delt `api_recv_body`; egen recv-loop fjernet.
+- `version.json`, `version.h` — bump til 0.5.2 b0082
+
+---
+
 ## [0.5.1 build 0081] — 2026-07-11 — fix: ensret Modbus fejl-respons (H3, H2)
 
 **Filer ændret:**

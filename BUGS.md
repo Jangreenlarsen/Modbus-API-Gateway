@@ -20,7 +20,7 @@ Status: `open` | `investigating` | `fixed`
 **Medium**
 - [fixed] M1 v0.5.0 b0080 — Service-laget var en tom stub. LØST: `gateway_service` er nu et reelt lag — alle FC-routes kalder `gw_*`-funktioner (aldrig `modbus_manager` direkte), og service-laget ejer interface-opslag mod kørende config. Overholder ARCHITECTURE.md regel 1+2.
 - [fixed] M2 v0.5.0 b0080 — NVS-blob blev læst ved HVER Modbus-request. LØST: FC-routing bruger nu `gw_resolve_iface` mod kørende config i RAM — ingen NVS-læsning på hot-path. Config-CRUD læser stadig NVS.
-- [open] M3 v0.4.5 b0078 — Partial-read i write-handlers: FC05/FC06/FC0F/FC10 bruger enkelt `httpd_req_recv` der kan returnere delvise reads; kun `interfaces.c` har korrekt loop. Store `values`-arrays kan afkortes. → fælles `recv_body`-helper.
+- [fixed] M3 v0.5.2 b0082 — Partial-read i write-handlers. LØST: fælles `api_recv_body()` (recv-loop med timeout-håndtering) bruges nu i FC05/FC06/FC0F/FC10 samt interfaces.c (duplikeret loop fjernet).
 - [open] M4 v0.4.5 b0078 — OTA frontend markerer afbrudt download som "done": `read==0` behandles altid som success uden kontrol af `total` mod `content_len`. Netværksdrop → delvist frontend-image flashet. → valider modtaget størrelse.
 - [open] M5 v0.4.5 b0078 — OTA-check blokerer httpd-worker: `ota_check()` (op til 10s HTTP) kaldes synkront i handleren når ingen URL angives → kan stalle API. → flyt URL-opslag ind i ota_task.
 
@@ -29,8 +29,8 @@ Status: `open` | `investigating` | `fixed`
 - [open] L2 v0.4.5 b0078 — Cache-statistik forvrænget ved range-reads: `total_requests`/`hits`/`misses` tælles pr. register, ikke pr. request. → dokumentér eller separat api_requests-tæller.
 - [open] L3 v0.4.5 b0078 — `frontend_available == firmware_available` (samme sammenligning); frontend versioneres ikke separat. → dokumentér/accepter.
 - [open] L4 v0.4.5 b0078 — `cache_lookup` læser `s_stats.enabled` uden lås (benignt). → læs under lås for konsistens.
-- [open] L5 v0.4.5 b0078 — Tom/ugyldig body ved FC05 skriver stille coil=0 i stedet for 400. → returnér 400 ved manglende `value`.
-- [open] L6 v0.4.5 b0078 — `start`/`count` parses med `atoi` uden validering (negativ → wrap). → input-hærdning.
+- [fixed] L5 v0.5.2 b0082 — Tom/ugyldig body ved FC05. LØST: returnerer nu 400 hvis `value` mangler/ikke er bool/tal (skriver ikke stille coil=0).
+- [fixed] L6 v0.5.2 b0082 — `start`/`count` validering. LØST: fælles `api_query_u16()` clamper negative → 0 og >65535 → 65535 i alle read/write-routes.
 - [open] L7 v0.4.5 b0078 — DE-pin default GPIO0 (iface 5, 30-pin preset) er boot-strap pin. → dokumentér risiko.
 
 ---

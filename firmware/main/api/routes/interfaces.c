@@ -2,6 +2,7 @@
 #include "config.h"
 #include "config_store.h"
 #include "gateway_service.h"
+#include "fc_common.h"
 #include "cJSON.h"
 #include "coils.h"
 #include "discrete.h"
@@ -121,23 +122,6 @@ static esp_err_t get_interface_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-// Læs hele bodyen — httpd_req_recv kan returnere partial reads
-static int recv_body(httpd_req_t *req, char *buf, int cap)
-{
-    int remaining = req->content_len;
-    if (remaining < 0) remaining = 0;
-    if (remaining > cap - 1) remaining = cap - 1;
-    int total = 0;
-    while (remaining > 0) {
-        int n = httpd_req_recv(req, buf + total, remaining);
-        if (n == HTTPD_SOCK_ERR_TIMEOUT) continue;
-        if (n <= 0) break;
-        total += n; remaining -= n;
-    }
-    buf[total] = '\0';
-    return total;
-}
-
 // PUT /api/v1/interfaces/{id|name}      (og /api/v1/interfaces/{id|name}/config — bagudkompatibel)
 static esp_err_t put_interface_handler(httpd_req_t *req)
 {
@@ -149,7 +133,7 @@ static esp_err_t put_interface_handler(httpd_req_t *req)
     }
 
     char body[768] = {0};
-    recv_body(req, body, sizeof(body));
+    api_recv_body(req, body, sizeof(body));
 
     char key[32] = {0};
     parse_iface_key(req->uri, key, sizeof(key));

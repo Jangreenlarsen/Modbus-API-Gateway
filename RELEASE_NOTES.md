@@ -2,6 +2,14 @@
 
 ---
 
+## v0.5.2 build 0082 — 2026-07-11 — fix: mere robuste skrive-kald
+
+- **Store skrive-kald afkortes ikke længere.** Ved skrivning af mange coils/registre (FC0F/FC10) kunne request-bodyen tidligere blive læst delvist og give parse-fejl. Bodyen læses nu komplet.
+- **Tom skrivning afvises.** Et `PUT` af en enkelt coil uden gyldig `value` returnerede før stille "OK" og skrev 0. Nu returneres `400`.
+- **Robuste parametre.** Negative eller ugyldige `start`/`count`-værdier klampes nu til et gyldigt interval.
+
+---
+
 ## v0.5.1 build 0081 — 2026-07-11 — fix: ensartede fejlsvar
 
 Alle Modbus-endpoints (FC01–FC10) svarer nu med præcis samme fejlformat, som beskrevet i API-dokumentationen:
