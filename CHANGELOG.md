@@ -4,6 +4,17 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.4.6 build 0079] — 2026-07-11 — fix: kritiske robusthedsfejl (K1, K2, K3)
+
+**Filer ændret:**
+- `firmware/main/storage/config_store.c` — K3: `config_store_save` returnerer fejl ved NVS-open-fejl i stedet for `ESP_ERROR_CHECK` (kunne panikke enheden fra en ekstern PUT).
+- `firmware/main/modbus/mb_rtu_sw.c` — K2: `mb_sw_read_coils`/`mb_sw_read_discrete` clamper kopieret byte-antal til `(count+7)/8` → ingen stack-overflow fra en slave med for stort byte-count.
+- `firmware/main/modbus/modbus_manager.c` — K1: kun én HW-UART master initialiseres (esp-modbus global controller); yderligere HW-masters deaktiveres. Per-interface fejl er ikke længere fatal. `get_iface()` afviser ikke-ready interfaces.
+- `firmware/main/modbus/interface.h/.c` — nyt `ready`-felt; sættes efter vellykket init.
+- `version.json`, `version.h` — bump til 0.4.6 b0079
+
+---
+
 ## [0.4.5 build 0078] — 2026-05-31 — feat: live API log tab i management-siden
 
 **Filer ændret:**

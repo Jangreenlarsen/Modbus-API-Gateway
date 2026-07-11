@@ -8,9 +8,9 @@ Status: `open` | `investigating` | `fixed`
 ## Åbne — fundet i kodegennemgang (b0078, 2026-07-11)
 
 **Kritiske**
-- [open] K1 v0.4.5 b0078 — Flere HW-UART masters kolliderer: esp-modbus v1.x bruger én global controller (`master_interface_ptr`), så `mbc_master_send_request` ignorerer `iface->mb_handle` og rammer altid sidst-initialiserede master/UART. Per-interface-mutex giver falsk tryghed. Kun ét HW-master-interface fungerer reelt. → guard: valider/afvis >1 HW-master + dokumentér begrænsning.
-- [open] K2 v0.4.5 b0078 — Buffer overflow-risiko i SW-UART coil/discrete-læsning: `memcpy(out, resp+3, resp[2])` i `mb_sw_read_coils`/`mb_sw_read_discrete` bruger slave-rapporteret byte-count uden clamp mod caller-buffer. Refresh-task kalder med 1-byte stak-buffer → fejlbehæftet slave kan smadre stakken. → clamp til `(count+7)/8`.
-- [open] K3 v0.4.5 b0078 — `ESP_ERROR_CHECK(nvs_open(...))` i `config_store_save` panikker enheden hvis NVS er fuld/korrupt. Kaldes fra hver PUT-handler → ekstern klient kan trigge reboot-loop. → returnér fejl i stedet (samme mønster som b0016/b0017).
+- [fixed] K1 v0.4.6 b0079 — Flere HW-UART masters kolliderer: esp-modbus v1.x bruger én global controller. LØST: `modbus_manager_init` tillader kun én HW-master; yderligere HW-masters deaktiveres (`ready=false`, log-fejl) i stedet for stille at kapre den globale controller. Per-interface fejl er nu ikke fatal (fortsæt + start cache-tasks). Brug SW-UART til flere master-porte.
+- [fixed] K2 v0.4.6 b0079 — Buffer overflow-risiko i SW-UART coil/discrete-læsning. LØST: `mb_sw_read_coils`/`mb_sw_read_discrete` clamper nu kopieret byte-antal til `(count+7)/8` — en slave kan ikke overskride caller-bufferen via et for stort byte-count.
+- [fixed] K3 v0.4.6 b0079 — `ESP_ERROR_CHECK(nvs_open(...))` i `config_store_save` kunne panikke enheden. LØST: returnerer nu fejl ved NVS-open-fejl i stedet for at panicke (samme mønster som b0016/b0017).
 
 **Høj**
 - [open] H1 v0.4.5 b0078 — Config-ændringer anvendes ikke live og desynkroniserer iface-indekser: `modbus_manager_init` kaldes kun ved boot. Efter POST/DELETE resolver FC-dispatcher iface-id ud fra frisk NVS-load, mens `get_iface()` bruger boot-snapshot → forespørgsler rammer forkert/manglende interface indtil reboot. → FC-routing mod kørende config + `reboot_required`-flag i CRUD-svar.

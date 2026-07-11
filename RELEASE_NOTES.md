@@ -2,6 +2,16 @@
 
 ---
 
+## v0.4.6 build 0079 — 2026-07-11 — fix: kritiske robusthedsfejl
+
+Tre kritiske fejl fundet i kodegennemgang er rettet:
+
+1. **Enheden kunne panikke ved konfigurations-gem** — hvis NVS-flashen var fuld eller korrupt, kunne et enkelt `PUT`-kald fra en klient trigge en reboot-loop. Nu returneres en fejl i stedet.
+2. **Buffer-overflow-risiko på SW-UART** — en fejlbehæftet Modbus-slave kunne overskride en intern buffer ved coil/discrete-læsning. Antallet af kopierede bytes begrænses nu korrekt.
+3. **Kun én HW-UART master understøttes** — esp-modbus deler en global controller, så flere HW-master-porte kolliderede lydløst. Ekstra HW-masters deaktiveres nu med en tydelig log-fejl; brug SW-UART til flere master-porte. Samtidig er interface-init gjort robust: én fejlende port stopper ikke resten.
+
+---
+
 ## v0.4.5 build 0078 — 2026-05-31 — feat: live API log
 
 Ny "API Log" tab i management-siden viser alle indgående HTTP-kald i realtid:

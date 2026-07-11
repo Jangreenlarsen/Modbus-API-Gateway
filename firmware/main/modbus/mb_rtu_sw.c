@@ -209,7 +209,13 @@ mb_result_t mb_sw_read_coils(sw_uart_t *u, uint16_t tmo, uint8_t slave,
     uint8_t resp[MB_RTU_MAX_FRAME]; uint16_t resp_len = 0;
     QueueHandle_t q = (QueueHandle_t)sw_uart_get_userdata(u);
     mb_result_t r = do_transaction(u, q, tmo, req, 6, resp, &resp_len);
-    if (r.esp_err == ESP_OK) memcpy(out, resp + 3, resp[2]);
+    // K2: clamp til forventet byte-antal (count coils) — en fejlbehæftet slave
+    // må ikke kunne overskride caller-bufferen via et for stort byte-count.
+    if (r.esp_err == ESP_OK) {
+        uint8_t expected = (count + 7) / 8;
+        uint8_t n = resp[2] < expected ? resp[2] : expected;
+        memcpy(out, resp + 3, n);
+    }
     return r;
 }
 
@@ -220,7 +226,11 @@ mb_result_t mb_sw_read_discrete(sw_uart_t *u, uint16_t tmo, uint8_t slave,
     uint8_t resp[MB_RTU_MAX_FRAME]; uint16_t resp_len = 0;
     QueueHandle_t q = (QueueHandle_t)sw_uart_get_userdata(u);
     mb_result_t r = do_transaction(u, q, tmo, req, 6, resp, &resp_len);
-    if (r.esp_err == ESP_OK) memcpy(out, resp + 3, resp[2]);
+    if (r.esp_err == ESP_OK) {
+        uint8_t expected = (count + 7) / 8;
+        uint8_t n = resp[2] < expected ? resp[2] : expected;
+        memcpy(out, resp + 3, n);
+    }
     return r;
 }
 
