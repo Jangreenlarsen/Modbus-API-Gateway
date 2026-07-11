@@ -21,8 +21,8 @@ Status: `open` | `investigating` | `fixed`
 - [fixed] M1 v0.5.0 b0080 — Service-laget var en tom stub. LØST: `gateway_service` er nu et reelt lag — alle FC-routes kalder `gw_*`-funktioner (aldrig `modbus_manager` direkte), og service-laget ejer interface-opslag mod kørende config. Overholder ARCHITECTURE.md regel 1+2.
 - [fixed] M2 v0.5.0 b0080 — NVS-blob blev læst ved HVER Modbus-request. LØST: FC-routing bruger nu `gw_resolve_iface` mod kørende config i RAM — ingen NVS-læsning på hot-path. Config-CRUD læser stadig NVS.
 - [fixed] M3 v0.5.2 b0082 — Partial-read i write-handlers. LØST: fælles `api_recv_body()` (recv-loop med timeout-håndtering) bruges nu i FC05/FC06/FC0F/FC10 samt interfaces.c (duplikeret loop fjernet).
-- [open] M4 v0.4.5 b0078 — OTA frontend markerer afbrudt download som "done": `read==0` behandles altid som success uden kontrol af `total` mod `content_len`. Netværksdrop → delvist frontend-image flashet. → valider modtaget størrelse.
-- [open] M5 v0.4.5 b0078 — OTA-check blokerer httpd-worker: `ota_check()` (op til 10s HTTP) kaldes synkront i handleren når ingen URL angives → kan stalle API. → flyt URL-opslag ind i ota_task.
+- [fixed] M4 v0.5.3 b0083 — OTA frontend markerede afbrudt download som "done". LØST: efter download valideres `total` mod `content_len`; mismatch → ERROR i stedet for at flashe et ufuldstændigt image.
+- [fixed] M5 v0.5.3 b0083 — OTA-check blokerede httpd-worker. LØST: GitHub-URL-opslag sker nu i `ota_task` (baggrund), ikke i handleren. Handleren svarer straks `*_update_started`; "ingen opdatering" rapporteres via OTA-status (`ota_report_error`).
 
 **Lav / oprydning**
 - [open] L1 v0.4.5 b0078 — Død skeleton-kode `mb_rtu_sw_transaction` returnerer altid `ESP_ERR_NOT_FINISHED`, kaldes aldrig, og lækker en queue (`xQueueCreate` uden delete). → slet.

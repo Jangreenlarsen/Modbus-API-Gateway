@@ -2,6 +2,13 @@
 
 ---
 
+## v0.5.3 build 0083 — 2026-07-11 — fix: mere robust OTA
+
+- **Afbrudte frontend-opdateringer flashes ikke længere.** Hvis download blev afbrudt, kunne et ufuldstændigt frontend-image tidligere blive skrevet og markeret som færdigt. Nu kontrolleres den modtagne størrelse, og en ufuldstændig download fejler tydeligt.
+- **API'et fryser ikke under OTA-start.** Kontakten til GitHub (for at finde nyeste release) foregår nu i baggrunden i stedet for i selve HTTP-kaldet. `Installer`-knappen svarer derfor med det samme; status og evt. "ingen opdatering tilgængelig" ses via OTA-statussen.
+
+---
+
 ## v0.5.2 build 0082 — 2026-07-11 — fix: mere robuste skrive-kald
 
 - **Store skrive-kald afkortes ikke længere.** Ved skrivning af mange coils/registre (FC0F/FC10) kunne request-bodyen tidligere blive læst delvist og give parse-fejl. Bodyen læses nu komplet.

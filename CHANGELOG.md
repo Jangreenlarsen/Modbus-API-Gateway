@@ -4,6 +4,16 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.5.3 build 0083] — 2026-07-11 — fix: OTA-robusthed (M4, M5)
+
+**Filer ændret:**
+- `firmware/main/ota/ota_manager.c` — M4: frontend-OTA validerer modtaget størrelse mod `content_len`; ufuldstændig download → ERROR (ikke "done"). Ny `ota_report_error()`.
+- `firmware/main/ota/ota_manager.h` — deklaration af `ota_report_error()`.
+- `firmware/main/api/routes/ota.c` — M5: GitHub-URL-opslag flyttet til `ota_task` (baggrund); handleren blokerer ikke længere. Handleren svarer straks; fejl rapporteres via OTA-status.
+- `version.json`, `version.h` — bump til 0.5.3 b0083
+
+---
+
 ## [0.5.2 build 0082] — 2026-07-11 — fix: robuste request-bodies + input-validering (M3, L5, L6)
 
 **Filer ændret:**

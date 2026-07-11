@@ -52,3 +52,7 @@ esp_err_t ota_update_frontend(const char *url);
 
 // Hent seneste OTA-status (bruges af REST API)
 const ota_status_t *ota_get_status(void);
+
+// Sæt OTA-status til ERROR med en besked (bruges af OTA-task ved fx
+// "ingen opdatering tilgængelig", så handleren kan svare uden at blokere).
+void ota_report_error(const char *msg);
