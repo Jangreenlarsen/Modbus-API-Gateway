@@ -4,6 +4,17 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.5.0 build 0080] — 2026-07-11 — refactor: reelt service-lag + interface-routing (M1, H1, M2)
+
+**Filer ændret:**
+- `firmware/main/service/gateway_service.h/.c` — M1: service-laget er nu funktionelt. Ejer `gw_resolve_iface()` (opslag mod kørende config) + `gw_*` Modbus-operationer. API-laget kalder KUN dette lag.
+- `firmware/main/main.c` — kalder `gateway_service_init(&cfg)` med kørende config.
+- `firmware/main/api/routes/coils.c`, `discrete.c`, `holding_regs.c`, `input_regs.c` — kalder `gw_*` i stedet for `mb_*`; inkluderer `gateway_service.h` i stedet for `modbus_manager.h`.
+- `firmware/main/api/routes/interfaces.c` — H1/M2: FC-dispatchers resolver mod kørende config (ingen NVS på hot-path); POST/PUT/DELETE returnerer `reboot_required`.
+- `version.json`, `version.h` — bump til 0.5.0 b0080
+
+---
+
 ## [0.4.6 build 0079] — 2026-07-11 — fix: kritiske robusthedsfejl (K1, K2, K3)
 
 **Filer ændret:**

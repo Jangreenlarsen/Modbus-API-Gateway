@@ -1,5 +1,5 @@
 #include "coils.h"
-#include "modbus_manager.h"
+#include "gateway_service.h"
 #include "cJSON.h"
 #include <stdlib.h>
 #include <string.h>
@@ -16,7 +16,7 @@ esp_err_t api_fc01_read_coils(httpd_req_t *req, int iface, int slave)
     if (count > 2000) count = 2000;
 
     uint8_t bits[250] = {0};
-    mb_result_t result = mb_read_coils(iface, slave, start, count, bits);
+    mb_result_t result = gw_read_coils(iface, slave, start, count, bits);
 
     httpd_resp_set_type(req, "application/json");
     cJSON *root = cJSON_CreateObject();
@@ -51,7 +51,7 @@ esp_err_t api_fc05_write_coil(httpd_req_t *req, int iface, int slave, int addr)
     uint8_t on  = (val && cJSON_IsTrue(val)) ? 1 : 0;
     cJSON_Delete(json);
 
-    mb_result_t result = mb_write_coil(iface, slave, addr, on);
+    mb_result_t result = gw_write_coil(iface, slave, addr, on);
     httpd_resp_set_type(req, "application/json");
     cJSON *root = cJSON_CreateObject();
     cJSON_AddNumberToObject(root, "interface", iface);
@@ -96,7 +96,7 @@ esp_err_t api_fc0f_write_coils(httpd_req_t *req, int iface, int slave)
         if (cJSON_IsTrue(cJSON_GetArrayItem(vals, i))) bits[i/8] |= (1 << (i%8));
     cJSON_Delete(json);
 
-    mb_result_t result = mb_write_coils(iface, slave, start, count, bits);
+    mb_result_t result = gw_write_coils(iface, slave, start, count, bits);
     httpd_resp_set_type(req, "application/json");
     cJSON *root = cJSON_CreateObject();
     cJSON_AddNumberToObject(root, "interface", iface);

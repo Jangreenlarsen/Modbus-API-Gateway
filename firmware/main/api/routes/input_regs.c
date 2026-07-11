@@ -1,5 +1,5 @@
 #include "input_regs.h"
-#include "modbus_manager.h"
+#include "gateway_service.h"
 #include "cJSON.h"
 #include <stdlib.h>
 
@@ -15,7 +15,7 @@ esp_err_t api_fc04_read_input_regs(httpd_req_t *req, int iface, int slave)
     if (count > 125) count = 125;
 
     uint16_t regs[125];
-    mb_result_t result = mb_read_input_registers(iface, slave, start, count, regs);
+    mb_result_t result = gw_read_input_registers(iface, slave, start, count, regs);
 
     httpd_resp_set_type(req, "application/json");
     cJSON *root = cJSON_CreateObject();

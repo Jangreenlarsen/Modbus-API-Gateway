@@ -1,5 +1,5 @@
 #include "discrete.h"
-#include "modbus_manager.h"
+#include "gateway_service.h"
 #include "cJSON.h"
 #include <stdlib.h>
 
@@ -15,7 +15,7 @@ esp_err_t api_fc02_read_discrete_inputs(httpd_req_t *req, int iface, int slave)
     if (count > 2000) count = 2000;
 
     uint8_t bits[250] = {0};
-    mb_result_t result = mb_read_discrete_inputs(iface, slave, start, count, bits);
+    mb_result_t result = gw_read_discrete_inputs(iface, slave, start, count, bits);
 
     httpd_resp_set_type(req, "application/json");
     cJSON *root = cJSON_CreateObject();

@@ -1,5 +1,5 @@
 #include "holding_regs.h"
-#include "modbus_manager.h"
+#include "gateway_service.h"
 #include "esp_log.h"
 #include "cJSON.h"
 #include <stdlib.h>
@@ -19,7 +19,7 @@ esp_err_t api_fc03_read_holding_regs(httpd_req_t *req, int iface, int slave)
     if (count > 125) count = 125;
 
     uint16_t regs[125];
-    mb_result_t result = mb_read_holding_registers(iface, slave, start, count, regs);
+    mb_result_t result = gw_read_holding_registers(iface, slave, start, count, regs);
 
     httpd_resp_set_type(req, "application/json");
     if (result.esp_err == ESP_ERR_TIMEOUT) {
@@ -83,7 +83,7 @@ esp_err_t api_fc06_write_holding_reg(httpd_req_t *req, int iface, int slave, int
     uint16_t value = (uint16_t)val->valueint;
     cJSON_Delete(json);
 
-    mb_result_t result = mb_write_register(iface, slave, addr, value);
+    mb_result_t result = gw_write_register(iface, slave, addr, value);
     httpd_resp_set_type(req, "application/json");
 
     cJSON *root = cJSON_CreateObject();
@@ -135,7 +135,7 @@ esp_err_t api_fc10_write_holding_regs(httpd_req_t *req, int iface, int slave)
     for (int i = 0; i < count; i++) regs[i] = (uint16_t)cJSON_GetArrayItem(vals, i)->valueint;
     cJSON_Delete(json);
 
-    mb_result_t result = mb_write_registers(iface, slave, start, count, regs);
+    mb_result_t result = gw_write_registers(iface, slave, start, count, regs);
     httpd_resp_set_type(req, "application/json");
     cJSON *root = cJSON_CreateObject();
     cJSON_AddNumberToObject(root, "interface", iface);

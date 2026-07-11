@@ -13,13 +13,13 @@ Status: `open` | `investigating` | `fixed`
 - [fixed] K3 v0.4.6 b0079 — `ESP_ERROR_CHECK(nvs_open(...))` i `config_store_save` kunne panikke enheden. LØST: returnerer nu fejl ved NVS-open-fejl i stedet for at panicke (samme mønster som b0016/b0017).
 
 **Høj**
-- [open] H1 v0.4.5 b0078 — Config-ændringer anvendes ikke live og desynkroniserer iface-indekser: `modbus_manager_init` kaldes kun ved boot. Efter POST/DELETE resolver FC-dispatcher iface-id ud fra frisk NVS-load, mens `get_iface()` bruger boot-snapshot → forespørgsler rammer forkert/manglende interface indtil reboot. → FC-routing mod kørende config + `reboot_required`-flag i CRUD-svar.
+- [fixed] H1 v0.5.0 b0080 — Config-ændringer desynkroniserede iface-indekser. LØST: FC-routing resolver nu mod KØRENDE config (samme som modbus_manager bruger), så en request aldrig rammer et forkert/ikke-initialiseret interface. POST/PUT/DELETE returnerer `"reboot_required": true` så klienten ved at ændringen først anvendes efter reboot.
 - [open] H2 v0.4.5 b0078 — Modbus exception-koder surfaces aldrig for HW-interfaces: `mb_result_t.modbus_exception` sættes kun i SW-UART-stien. Dokumenteret `{"error":"modbus_exception","exception_code":N}` virker aldrig på HW-UART. → dokumentér esp-modbus-begrænsning + ensret fejl-JSON.
 - [open] H3 v0.4.5 b0078 — Inkonsistent exception-håndtering: kun `holding_regs.c` tjekker `result.modbus_exception`; coils/discrete/input_regs gør ikke → FC01/02/04 returnerer aldrig det dokumenterede exception-format. → fælles fejl-respons-helper på tværs af alle FC-routes.
 
 **Medium**
-- [open] M1 v0.4.5 b0078 — Service-laget er en tom stub (`gateway_service.c`). Routes kalder `modbus_manager` direkte i strid med ARCHITECTURE.md (API→service→modbus). → arkitektur-gæld; vurderes separat (fuld refactor er stor/risikabel).
-- [open] M2 v0.4.5 b0078 — NVS-blob læses ved HVER Modbus-request (`config_store_load` i FC-dispatcher) → unødig latency under polling. → brug kørende config i RAM (løses sammen med H1).
+- [fixed] M1 v0.5.0 b0080 — Service-laget var en tom stub. LØST: `gateway_service` er nu et reelt lag — alle FC-routes kalder `gw_*`-funktioner (aldrig `modbus_manager` direkte), og service-laget ejer interface-opslag mod kørende config. Overholder ARCHITECTURE.md regel 1+2.
+- [fixed] M2 v0.5.0 b0080 — NVS-blob blev læst ved HVER Modbus-request. LØST: FC-routing bruger nu `gw_resolve_iface` mod kørende config i RAM — ingen NVS-læsning på hot-path. Config-CRUD læser stadig NVS.
 - [open] M3 v0.4.5 b0078 — Partial-read i write-handlers: FC05/FC06/FC0F/FC10 bruger enkelt `httpd_req_recv` der kan returnere delvise reads; kun `interfaces.c` har korrekt loop. Store `values`-arrays kan afkortes. → fælles `recv_body`-helper.
 - [open] M4 v0.4.5 b0078 — OTA frontend markerer afbrudt download som "done": `read==0` behandles altid som success uden kontrol af `total` mod `content_len`. Netværksdrop → delvist frontend-image flashet. → valider modtaget størrelse.
 - [open] M5 v0.4.5 b0078 — OTA-check blokerer httpd-worker: `ota_check()` (op til 10s HTTP) kaldes synkront i handleren når ingen URL angives → kan stalle API. → flyt URL-opslag ind i ota_task.

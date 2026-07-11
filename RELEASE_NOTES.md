@@ -2,6 +2,18 @@
 
 ---
 
+## v0.5.0 build 0080 — 2026-07-11 — refactor: reelt service-lag
+
+Arkitekturen følger nu ARCHITECTURE.md korrekt: API-laget kalder udelukkende service-laget, som dispatcher Modbus-operationer videre. Tidligere kaldte REST-routes Modbus-laget direkte, og service-laget var en tom stub.
+
+Samtidig er interface-routing gjort konsistent:
+
+- **REST-kald rammer altid det rigtige interface.** Tidligere kunne indeksering blive ude af sync efter oprettelse/sletning af interfaces indtil reboot. Routing sker nu mod den kørende konfiguration.
+- **`reboot_required` i svar.** Når du opretter, ændrer eller sletter et interface, svarer API'et nu med `"reboot_required": true` — ændringen gemmes, men træder først i kraft efter genstart.
+- **Hurtigere polling.** Hvert Modbus-REST-kald læste tidligere hele konfigurationen fra flash (NVS). Det sker ikke længere på læse/skrive-stien.
+
+---
+
 ## v0.4.6 build 0079 — 2026-07-11 — fix: kritiske robusthedsfejl
 
 Tre kritiske fejl fundet i kodegennemgang er rettet:
