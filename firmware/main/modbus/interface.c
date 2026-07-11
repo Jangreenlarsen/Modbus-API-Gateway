@@ -114,12 +114,15 @@ static esp_err_t init_hw_slave(mb_interface_t *iface, const iface_config_t *cfg)
 esp_err_t mb_interface_init(mb_interface_t *iface, const iface_config_t *cfg)
 {
     memcpy(&iface->cfg, cfg, sizeof(iface_config_t));
+    iface->ready = false;
     iface->mutex = xSemaphoreCreateMutex();
 
     if (cfg->uart_mode == IFACE_UART_HW) {
-        return (cfg->mode == IFACE_MODE_SLAVE)
-               ? init_hw_slave(iface, cfg)
-               : init_hw_master(iface, cfg);
+        esp_err_t err = (cfg->mode == IFACE_MODE_SLAVE)
+                        ? init_hw_slave(iface, cfg)
+                        : init_hw_master(iface, cfg);
+        iface->ready = (err == ESP_OK);
+        return err;
     }
 
     // ── Software UART — kun master understøttes ───────────────────────────
@@ -146,6 +149,7 @@ esp_err_t mb_interface_init(mb_interface_t *iface, const iface_config_t *cfg)
     ESP_LOGI(TAG, "SW-UART MASTER interface %d: %s TX=GPIO%d RX=GPIO%d DE=GPIO%d @ %lu baud",
              cfg->id, cfg->type == IFACE_TYPE_RS485 ? "RS485" : "RS232",
              cfg->tx_pin, cfg->rx_pin, cfg->rts_pin, cfg->baudrate);
+    iface->ready = true;
     return ESP_OK;
 }
 

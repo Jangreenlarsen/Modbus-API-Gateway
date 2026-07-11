@@ -12,17 +12,6 @@
 
 uint16_t mb_crc16(const uint8_t *buf, uint16_t len);
 
-// Send en komplet RTU request og modtag svar
-// request_len: antal bytes i request (inkl. adresse og FC, UDEN CRC — tilføjes automatisk)
-// response: buffer til svar (inkl. CRC)
-// response_len: [in] max buffer-størrelse, [out] faktisk antal modtagne bytes
-mb_result_t mb_rtu_sw_transaction(sw_uart_t        *uart,
-                                   uint16_t          timeout_ms,
-                                   const uint8_t    *request,
-                                   uint16_t          request_len,
-                                   uint8_t          *response,
-                                   uint16_t         *response_len);
-
 // Hjælpere der bygger request og parser svar for hvert FC
 mb_result_t mb_sw_read_coils        (sw_uart_t *u, uint16_t tmo, uint8_t slave, uint16_t start, uint16_t count, uint8_t *out);
 mb_result_t mb_sw_read_discrete     (sw_uart_t *u, uint16_t tmo, uint8_t slave, uint16_t start, uint16_t count, uint8_t *out);

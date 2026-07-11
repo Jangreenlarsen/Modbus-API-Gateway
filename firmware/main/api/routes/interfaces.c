@@ -1,6 +1,8 @@
 #include "interfaces.h"
 #include "config.h"
 #include "config_store.h"
+#include "gateway_service.h"
+#include "fc_common.h"
 #include "cJSON.h"
 #include "coils.h"
 #include "discrete.h"
@@ -120,23 +122,6 @@ static esp_err_t get_interface_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
-// Læs hele bodyen — httpd_req_recv kan returnere partial reads
-static int recv_body(httpd_req_t *req, char *buf, int cap)
-{
-    int remaining = req->content_len;
-    if (remaining < 0) remaining = 0;
-    if (remaining > cap - 1) remaining = cap - 1;
-    int total = 0;
-    while (remaining > 0) {
-        int n = httpd_req_recv(req, buf + total, remaining);
-        if (n == HTTPD_SOCK_ERR_TIMEOUT) continue;
-        if (n <= 0) break;
-        total += n; remaining -= n;
-    }
-    buf[total] = '\0';
-    return total;
-}
-
 // PUT /api/v1/interfaces/{id|name}      (og /api/v1/interfaces/{id|name}/config — bagudkompatibel)
 static esp_err_t put_interface_handler(httpd_req_t *req)
 {
@@ -148,7 +133,7 @@ static esp_err_t put_interface_handler(httpd_req_t *req)
     }
 
     char body[768] = {0};
-    recv_body(req, body, sizeof(body));
+    api_recv_body(req, body, sizeof(body));
 
     char key[32] = {0};
     parse_iface_key(req->uri, key, sizeof(key));
@@ -201,6 +186,9 @@ static esp_err_t put_interface_handler(httpd_req_t *req)
     config_store_save(&cfg);
 
     cJSON *resp = iface_to_json(iface);
+    // H1: ændringen er persisteret men anvendes først ved reboot (interfaces
+    // initialiseres kun ved boot; kørende config er uændret).
+    cJSON_AddBoolToObject(resp, "reboot_required", 1);
     char *s = cJSON_PrintUnformatted(resp);
     cJSON_Delete(resp);
     httpd_resp_sendstr(req, s);
@@ -239,7 +227,10 @@ static esp_err_t post_interface_handler(httpd_req_t *req)
     cfg.interface_count++;
     config_store_save(&cfg);
 
-    char *s = cJSON_PrintUnformatted(iface_to_json(nf));
+    cJSON *resp = iface_to_json(nf);
+    cJSON_AddBoolToObject(resp, "reboot_required", 1);   // H1
+    char *s = cJSON_PrintUnformatted(resp);
+    cJSON_Delete(resp);
     httpd_resp_set_status(req, "201 Created");
     httpd_resp_sendstr(req, s); free(s);
     return ESP_OK;
@@ -274,7 +265,7 @@ static esp_err_t delete_interface_handler(httpd_req_t *req)
     }
     cfg.interface_count--;
     config_store_save(&cfg);
-    httpd_resp_sendstr(req, "{\"deleted\":true}");
+    httpd_resp_sendstr(req, "{\"deleted\":true,\"reboot_required\":true}");   // H1
     return ESP_OK;
 }
 
@@ -301,28 +292,37 @@ static esp_err_t master_get_dispatcher(httpd_req_t *req)
 {
     char key[32] = {0};
     parse_iface_key(req->uri, key, sizeof(key));
-    gateway_config_t cfg; config_store_load(&cfg);
-    int iface = resolve_iface(&cfg, key);
-    if (iface < 0) {
-        httpd_resp_set_type(req, "application/json");
-        httpd_resp_set_status(req, "404 Not Found");
-        httpd_resp_sendstr(req, "{\"error\":\"interface not found\"}");
-        return ESP_OK;
-    }
 
     int slave = 0;
     const char *op = find_fc_op(req->uri, &slave);
     if (!op) {
         // Config GET: /api/v1/interfaces/{key} (eller /{key}/config bagudkompat)
+        // — læses fra NVS (viser persisteret/afventende config).
         if (!is_config_request(req->uri)) {
             httpd_resp_set_type(req, "application/json");
             httpd_resp_set_status(req, "404 Not Found");
             httpd_resp_sendstr(req, "{\"error\":\"unknown route\"}");
             return ESP_OK;
         }
+        gateway_config_t cfg; config_store_load(&cfg);
+        int cid = resolve_iface(&cfg, key);
         httpd_resp_set_type(req, "application/json");
-        char *s = cJSON_PrintUnformatted(iface_to_json(&cfg.interfaces[iface]));
+        if (cid < 0) {
+            httpd_resp_set_status(req, "404 Not Found");
+            httpd_resp_sendstr(req, "{\"error\":\"interface not found\"}");
+            return ESP_OK;
+        }
+        char *s = cJSON_PrintUnformatted(iface_to_json(&cfg.interfaces[cid]));
         httpd_resp_sendstr(req, s); free(s);
+        return ESP_OK;
+    }
+
+    // FC-læsning — resolve mod KØRENDE config (ingen NVS på hot-path; H1/M2)
+    int iface = gw_resolve_iface(key);
+    if (iface < 0) {
+        httpd_resp_set_type(req, "application/json");
+        httpd_resp_set_status(req, "404 Not Found");
+        httpd_resp_sendstr(req, "{\"error\":\"interface not found\"}");
         return ESP_OK;
     }
 
@@ -341,20 +341,21 @@ static esp_err_t master_put_dispatcher(httpd_req_t *req)
 {
     char key[32] = {0};
     parse_iface_key(req->uri, key, sizeof(key));
-    gateway_config_t cfg; config_store_load(&cfg);
-    int iface = resolve_iface(&cfg, key);
+
+    int slave = 0;
+    const char *op = find_fc_op(req->uri, &slave);
+    if (!op) {
+        // Config PUT (fx /interfaces/0 eller /interfaces/0/config) — læser/gemmer NVS selv
+        return put_interface_handler(req);
+    }
+
+    // FC-skrivning — resolve mod KØRENDE config (ingen NVS på hot-path; H1/M2)
+    int iface = gw_resolve_iface(key);
     if (iface < 0) {
         httpd_resp_set_type(req, "application/json");
         httpd_resp_set_status(req, "404 Not Found");
         httpd_resp_sendstr(req, "{\"error\":\"interface not found\"}");
         return ESP_OK;
-    }
-
-    int slave = 0;
-    const char *op = find_fc_op(req->uri, &slave);
-    if (!op) {
-        // Config PUT (fx /interfaces/0 eller /interfaces/0/config)
-        return put_interface_handler(req);
     }
 
     // FC05: coils/{addr}      FC0F: coils

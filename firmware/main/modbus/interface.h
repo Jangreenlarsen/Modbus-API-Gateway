@@ -4,6 +4,7 @@
 #include "sw_uart.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include <stdbool.h>
 
 #define SLAVE_HOLDING_COUNT   128
 #define SLAVE_INPUT_COUNT     128
@@ -12,6 +13,7 @@
 
 typedef struct {
     iface_config_t    cfg;
+    bool              ready;      // true når init lykkedes — ellers afvis operationer
     SemaphoreHandle_t mutex;      // én transaktion ad gangen pr. interface
 
     // HW UART: esp-modbus handle

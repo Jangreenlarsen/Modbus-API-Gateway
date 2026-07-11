@@ -24,16 +24,35 @@ esp_err_t modbus_manager_init(const gateway_config_t *cfg)
 {
     s_iface_count = cfg->interface_count;
     s_cfg_ref     = cfg;
+    bool hw_master_up = false;   // K1: esp-modbus v1.x har én global master-controller
     for (int i = 0; i < s_iface_count; i++) {
-        esp_err_t err = mb_interface_init(&s_interfaces[i], &cfg->interfaces[i]);
-        if (err != ESP_OK) {
-            ESP_LOGE(TAG, "Interface %d init failed: %s", i, esp_err_to_name(err));
-            return err;
+        const iface_config_t *ic = &cfg->interfaces[i];
+        bool is_hw_master = (ic->uart_mode == IFACE_UART_HW && ic->mode == IFACE_MODE_MASTER);
+
+        // K1: kun ÉN HW-UART master kan fungere — esp-modbus deler en global
+        // controller-peger. Deaktivér yderligere HW-masters i stedet for at lade
+        // dem stille kapre den globale controller.
+        if (is_hw_master && hw_master_up) {
+            memcpy(&s_interfaces[i].cfg, ic, sizeof(iface_config_t));
+            s_interfaces[i].ready = false;
+            s_interfaces[i].mutex = NULL;
+            ESP_LOGE(TAG, "Interface %d: yderligere HW-UART master understøttes ikke "
+                          "(esp-modbus global controller) — deaktiveret. Brug SW-UART.", i);
+            continue;
         }
+
+        // Per-interface fejl er ikke fatal: log, marker ikke-ready, fortsæt så
+        // resterende interfaces + cache-tasks stadig starter.
+        esp_err_t err = mb_interface_init(&s_interfaces[i], ic);
+        if (err != ESP_OK) {
+            ESP_LOGE(TAG, "Interface %d init failed: %s — deaktiveret", i, esp_err_to_name(err));
+            continue;
+        }
+        if (is_hw_master) hw_master_up = true;
         ESP_LOGI(TAG, "Interface %d ready (%s, %lu baud)",
                  i,
-                 cfg->interfaces[i].type == IFACE_TYPE_RS485 ? "RS485" : "RS232",
-                 cfg->interfaces[i].baudrate);
+                 ic->type == IFACE_TYPE_RS485 ? "RS485" : "RS232",
+                 ic->baudrate);
     }
 
     // Start baggrundstasks (cache refresh + history snapshot)
@@ -46,6 +65,7 @@ esp_err_t modbus_manager_init(const gateway_config_t *cfg)
 static mb_interface_t *get_iface(uint8_t iface)
 {
     if (iface >= s_iface_count) return NULL;
+    if (!s_interfaces[iface].ready) return NULL;   // deaktiveret/fejlet interface
     return &s_interfaces[iface];
 }
 

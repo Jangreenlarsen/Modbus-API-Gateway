@@ -2,6 +2,63 @@
 
 ---
 
+## v0.5.4 build 0084 — 2026-07-11 — chore: oprydning
+
+Intern oprydning uden funktionelle ændringer: ubrugt skeleton-kode i software-UART-laget er fjernet, og en cache-tilgang er gjort trådsikker. Afslutter den runde af rettelser, der fulgte af kodegennemgangen (18 fund: 3 kritiske, 3 høj, 5 medium, 7 lav — rettet eller dokumenteret).
+
+---
+
+## v0.5.3 build 0083 — 2026-07-11 — fix: mere robust OTA
+
+- **Afbrudte frontend-opdateringer flashes ikke længere.** Hvis download blev afbrudt, kunne et ufuldstændigt frontend-image tidligere blive skrevet og markeret som færdigt. Nu kontrolleres den modtagne størrelse, og en ufuldstændig download fejler tydeligt.
+- **API'et fryser ikke under OTA-start.** Kontakten til GitHub (for at finde nyeste release) foregår nu i baggrunden i stedet for i selve HTTP-kaldet. `Installer`-knappen svarer derfor med det samme; status og evt. "ingen opdatering tilgængelig" ses via OTA-statussen.
+
+---
+
+## v0.5.2 build 0082 — 2026-07-11 — fix: mere robuste skrive-kald
+
+- **Store skrive-kald afkortes ikke længere.** Ved skrivning af mange coils/registre (FC0F/FC10) kunne request-bodyen tidligere blive læst delvist og give parse-fejl. Bodyen læses nu komplet.
+- **Tom skrivning afvises.** Et `PUT` af en enkelt coil uden gyldig `value` returnerede før stille "OK" og skrev 0. Nu returneres `400`.
+- **Robuste parametre.** Negative eller ugyldige `start`/`count`-værdier klampes nu til et gyldigt interval.
+
+---
+
+## v0.5.1 build 0081 — 2026-07-11 — fix: ensartede fejlsvar
+
+Alle Modbus-endpoints (FC01–FC10) svarer nu med præcis samme fejlformat, som beskrevet i API-dokumentationen:
+
+- **Timeout** → `504` med `{"error":"modbus_timeout"}`
+- **Modbus-undtagelse** → `400` med `{"error":"modbus_exception","exception_code":N,"description":"..."}`
+- **Øvrige fejl** → `400` med `{"error":"modbus_error","detail":"..."}`
+
+Tidligere brugte kun holding-register-læsning dette format; coils, discrete inputs og input registers gav et andet, uensartet svar.
+
+Bemærk: `exception_code` er kun tilgængelig på software-UART-interfaces — esp-modbus-biblioteket (HW-UART) videregiver ikke undtagelseskoden, så dér ses fejlen som `modbus_error`.
+
+---
+
+## v0.5.0 build 0080 — 2026-07-11 — refactor: reelt service-lag
+
+Arkitekturen følger nu ARCHITECTURE.md korrekt: API-laget kalder udelukkende service-laget, som dispatcher Modbus-operationer videre. Tidligere kaldte REST-routes Modbus-laget direkte, og service-laget var en tom stub.
+
+Samtidig er interface-routing gjort konsistent:
+
+- **REST-kald rammer altid det rigtige interface.** Tidligere kunne indeksering blive ude af sync efter oprettelse/sletning af interfaces indtil reboot. Routing sker nu mod den kørende konfiguration.
+- **`reboot_required` i svar.** Når du opretter, ændrer eller sletter et interface, svarer API'et nu med `"reboot_required": true` — ændringen gemmes, men træder først i kraft efter genstart.
+- **Hurtigere polling.** Hvert Modbus-REST-kald læste tidligere hele konfigurationen fra flash (NVS). Det sker ikke længere på læse/skrive-stien.
+
+---
+
+## v0.4.6 build 0079 — 2026-07-11 — fix: kritiske robusthedsfejl
+
+Tre kritiske fejl fundet i kodegennemgang er rettet:
+
+1. **Enheden kunne panikke ved konfigurations-gem** — hvis NVS-flashen var fuld eller korrupt, kunne et enkelt `PUT`-kald fra en klient trigge en reboot-loop. Nu returneres en fejl i stedet.
+2. **Buffer-overflow-risiko på SW-UART** — en fejlbehæftet Modbus-slave kunne overskride en intern buffer ved coil/discrete-læsning. Antallet af kopierede bytes begrænses nu korrekt.
+3. **Kun én HW-UART master understøttes** — esp-modbus deler en global controller, så flere HW-master-porte kolliderede lydløst. Ekstra HW-masters deaktiveres nu med en tydelig log-fejl; brug SW-UART til flere master-porte. Samtidig er interface-init gjort robust: én fejlende port stopper ikke resten.
+
+---
+
 ## v0.4.5 build 0078 — 2026-05-31 — feat: live API log
 
 Ny "API Log" tab i management-siden viser alle indgående HTTP-kald i realtid:

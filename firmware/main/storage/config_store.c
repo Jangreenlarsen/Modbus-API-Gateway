@@ -43,8 +43,14 @@ esp_err_t config_store_load(gateway_config_t *cfg)
 esp_err_t config_store_save(const gateway_config_t *cfg)
 {
     nvs_handle_t h;
-    ESP_ERROR_CHECK(nvs_open(NVS_NS, NVS_READWRITE, &h));
-    esp_err_t err = nvs_set_blob(h, NVS_KEY, cfg, sizeof(gateway_config_t));
+    // Ikke ESP_ERROR_CHECK: en ekstern PUT-klient må ikke kunne panikke
+    // enheden hvis NVS er fuld/korrupt — returnér fejl i stedet (jf. K3).
+    esp_err_t err = nvs_open(NVS_NS, NVS_READWRITE, &h);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "NVS open (rw) fejlede: %s — config ikke gemt", esp_err_to_name(err));
+        return err;
+    }
+    err = nvs_set_blob(h, NVS_KEY, cfg, sizeof(gateway_config_t));
     if (err == ESP_OK) err = nvs_commit(h);
     nvs_close(h);
     if (err == ESP_OK) ESP_LOGI(TAG, "Config saved");

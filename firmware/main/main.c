@@ -9,6 +9,7 @@
 #include "config_store.h"
 #include "modbus_manager.h"
 #include "register_cache.h"
+#include "gateway_service.h"
 #include "server.h"
 #include "serial_cli.h"
 #include "routes/cache.h"
@@ -57,6 +58,9 @@ void app_main(void)
     if (mb_err != ESP_OK) {
         ESP_LOGW(TAG, "Modbus init fejl (%s) — kører videre uden Modbus", esp_err_to_name(mb_err));
     }
+
+    // 7b. Service-lag — API-laget dispatcher Modbus-kald herigennem
+    gateway_service_init(&cfg);
 
     // 8. HTTP/WebSocket server start
     cache_routes_set_cfg(&cfg);  // så PUT /cache/config kan opdatere refresh-felter

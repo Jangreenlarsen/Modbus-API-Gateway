@@ -20,76 +20,6 @@ uint16_t mb_crc16(const uint8_t *buf, uint16_t len)
     return crc;
 }
 
-// ── RX accumulator ──────────────────────────────────────────────────────────
-// SW-UART kalder rx_callback fra ISR — vi putter bytes i en FreeRTOS queue
-
-typedef struct {
-    QueueHandle_t queue;
-} rx_ctx_t;
-
-static void rx_cb(uint8_t byte, void *ctx)
-{
-    rx_ctx_t *r = (rx_ctx_t *)ctx;
-    xQueueSendFromISR(r->queue, &byte, NULL);
-}
-
-// ── Hoved-transaktion ────────────────────────────────────────────────────────
-
-mb_result_t mb_rtu_sw_transaction(sw_uart_t     *uart,
-                                   uint16_t       timeout_ms,
-                                   const uint8_t *request,
-                                   uint16_t       request_len,
-                                   uint8_t       *response,
-                                   uint16_t      *response_len)
-{
-    mb_result_t result = {0};
-
-    // Byg komplet frame med CRC
-    uint8_t frame[MB_RTU_MAX_FRAME];
-    if (request_len + 2 > MB_RTU_MAX_FRAME) {
-        result.esp_err = ESP_ERR_INVALID_SIZE; return result;
-    }
-    memcpy(frame, request, request_len);
-    uint16_t crc = mb_crc16(frame, request_len);
-    frame[request_len]     = crc & 0xFF;   // CRC low
-    frame[request_len + 1] = crc >> 8;     // CRC high
-
-    // Opret midlertidig RX queue og hook callback
-    rx_ctx_t rx_ctx = { .queue = xQueueCreate(MB_RTU_MAX_FRAME, 1) };
-    sw_uart_config_t *cfg = (sw_uart_config_t *)uart; // kun til at sætte callback
-    // Sæt callback direkte via sw_uart's offentlige API er ikke muligt her —
-    // callback registreres ved sw_uart_init. Vi bruger en global per-uart queue
-    // der initialiseres i mb_interface_init (se nedenfor).
-    // Her antager vi at rx_ctx er sat op udefra — se mb_interface_init i interface.c.
-    (void)rx_ctx; // placeholder — se interface.c
-
-    // Send frame (sw_uart_write håndterer DE/RE og venter til TX done)
-    esp_err_t err = sw_uart_write(uart, frame, request_len + 2);
-    if (err != ESP_OK) { result.esp_err = err; return result; }
-
-    // Modtag svar — vent på stilhed i MB_RTU_SILENCE_MS efter første byte
-    uint8_t  resp[MB_RTU_MAX_FRAME];
-    uint16_t resp_pos   = 0;
-    uint32_t deadline   = timeout_ms;
-    bool     first_byte = true;
-
-    while (deadline > 0) {
-        uint8_t b;
-        uint32_t wait = first_byte ? timeout_ms : MB_RTU_SILENCE_MS;
-        // sw_uart_ms_since_last_rx bruges til at detektere frame-afslutning
-        uint32_t since = sw_uart_ms_since_last_rx(uart);
-        if (!first_byte && since >= MB_RTU_SILENCE_MS) break;
-
-        vTaskDelay(pdMS_TO_TICKS(1));
-        deadline--;
-    }
-    // NOTE: Den faktiske byte-akkumulering sker via rx_callback sat i interface.c
-    // Dette er skeleton — se interface.c for komplet integration.
-
-    result.esp_err = ESP_ERR_NOT_FINISHED; // erstattes af interface.c
-    return result;
-}
-
 // ── Komplet SW-UART Modbus implementation ────────────────────────────────────
 // Bygger request, sender via sw_uart_write, akkumulerer svar fra rx_queue,
 // validerer CRC og parser svar.
@@ -209,7 +139,13 @@ mb_result_t mb_sw_read_coils(sw_uart_t *u, uint16_t tmo, uint8_t slave,
     uint8_t resp[MB_RTU_MAX_FRAME]; uint16_t resp_len = 0;
     QueueHandle_t q = (QueueHandle_t)sw_uart_get_userdata(u);
     mb_result_t r = do_transaction(u, q, tmo, req, 6, resp, &resp_len);
-    if (r.esp_err == ESP_OK) memcpy(out, resp + 3, resp[2]);
+    // K2: clamp til forventet byte-antal (count coils) — en fejlbehæftet slave
+    // må ikke kunne overskride caller-bufferen via et for stort byte-count.
+    if (r.esp_err == ESP_OK) {
+        uint8_t expected = (count + 7) / 8;
+        uint8_t n = resp[2] < expected ? resp[2] : expected;
+        memcpy(out, resp + 3, n);
+    }
     return r;
 }
 
@@ -220,7 +156,11 @@ mb_result_t mb_sw_read_discrete(sw_uart_t *u, uint16_t tmo, uint8_t slave,
     uint8_t resp[MB_RTU_MAX_FRAME]; uint16_t resp_len = 0;
     QueueHandle_t q = (QueueHandle_t)sw_uart_get_userdata(u);
     mb_result_t r = do_transaction(u, q, tmo, req, 6, resp, &resp_len);
-    if (r.esp_err == ESP_OK) memcpy(out, resp + 3, resp[2]);
+    if (r.esp_err == ESP_OK) {
+        uint8_t expected = (count + 7) / 8;
+        uint8_t n = resp[2] < expected ? resp[2] : expected;
+        memcpy(out, resp + 3, n);
+    }
     return r;
 }
 

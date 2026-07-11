@@ -4,6 +4,70 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.5.4 build 0084] — 2026-07-11 — chore: fjern død kode + cache-lås (L1, L4)
+
+**Filer ændret:**
+- `firmware/main/modbus/mb_rtu_sw.c`, `mb_rtu_sw.h` — L1: fjernet den døde `mb_rtu_sw_transaction` (+ `rx_cb`/`rx_ctx_t`) der aldrig blev kaldt og lækkede en queue.
+- `firmware/main/storage/register_cache.c` — L4: `cache_lookup` læser `enabled` inde i mutex-låsen.
+- L2, L3, L7 markeret [accepted] i BUGS.md (ingen kodeændring — dokumenteret rationale).
+- `version.json`, `version.h` — bump til 0.5.4 b0084
+
+---
+
+## [0.5.3 build 0083] — 2026-07-11 — fix: OTA-robusthed (M4, M5)
+
+**Filer ændret:**
+- `firmware/main/ota/ota_manager.c` — M4: frontend-OTA validerer modtaget størrelse mod `content_len`; ufuldstændig download → ERROR (ikke "done"). Ny `ota_report_error()`.
+- `firmware/main/ota/ota_manager.h` — deklaration af `ota_report_error()`.
+- `firmware/main/api/routes/ota.c` — M5: GitHub-URL-opslag flyttet til `ota_task` (baggrund); handleren blokerer ikke længere. Handleren svarer straks; fejl rapporteres via OTA-status.
+- `version.json`, `version.h` — bump til 0.5.3 b0083
+
+---
+
+## [0.5.2 build 0082] — 2026-07-11 — fix: robuste request-bodies + input-validering (M3, L5, L6)
+
+**Filer ændret:**
+- `firmware/main/api/routes/fc_common.h/.c` — `api_recv_body()` (robust recv-loop) + `api_query_u16()` (clampet query-parse).
+- `firmware/main/api/routes/coils.c`, `holding_regs.c` — writes bruger `api_recv_body`; FC05 afviser tom/ugyldig body (400).
+- `firmware/main/api/routes/coils.c`, `discrete.c`, `holding_regs.c`, `input_regs.c` — reads bruger `api_query_u16` (negativ→0, >65535→65535).
+- `firmware/main/api/routes/interfaces.c` — bruger delt `api_recv_body`; egen recv-loop fjernet.
+- `version.json`, `version.h` — bump til 0.5.2 b0082
+
+---
+
+## [0.5.1 build 0081] — 2026-07-11 — fix: ensret Modbus fejl-respons (H3, H2)
+
+**Filer ændret:**
+- `firmware/main/api/routes/fc_common.h/.c` — ny `api_mb_ok()`: fælles fejl-respons for alle FC-routes (`modbus_timeout` 504 / `modbus_exception` 400 / `modbus_error` 400) med exception-beskrivelser.
+- `firmware/main/api/routes/coils.c`, `discrete.c`, `holding_regs.c`, `input_regs.c` — bruger `api_mb_ok()`; duplikeret/inkonsistent fejlkode fjernet. FC01/02/04 returnerer nu også det dokumenterede exception-format.
+- `firmware/main/CMakeLists.txt` — tilføjet `api/routes/fc_common.c`.
+- H2: esp-modbus v1.x-begrænsning (ingen HW exception-kode) dokumenteret i `fc_common.c`.
+- `version.json`, `version.h` — bump til 0.5.1 b0081
+
+---
+
+## [0.5.0 build 0080] — 2026-07-11 — refactor: reelt service-lag + interface-routing (M1, H1, M2)
+
+**Filer ændret:**
+- `firmware/main/service/gateway_service.h/.c` — M1: service-laget er nu funktionelt. Ejer `gw_resolve_iface()` (opslag mod kørende config) + `gw_*` Modbus-operationer. API-laget kalder KUN dette lag.
+- `firmware/main/main.c` — kalder `gateway_service_init(&cfg)` med kørende config.
+- `firmware/main/api/routes/coils.c`, `discrete.c`, `holding_regs.c`, `input_regs.c` — kalder `gw_*` i stedet for `mb_*`; inkluderer `gateway_service.h` i stedet for `modbus_manager.h`.
+- `firmware/main/api/routes/interfaces.c` — H1/M2: FC-dispatchers resolver mod kørende config (ingen NVS på hot-path); POST/PUT/DELETE returnerer `reboot_required`.
+- `version.json`, `version.h` — bump til 0.5.0 b0080
+
+---
+
+## [0.4.6 build 0079] — 2026-07-11 — fix: kritiske robusthedsfejl (K1, K2, K3)
+
+**Filer ændret:**
+- `firmware/main/storage/config_store.c` — K3: `config_store_save` returnerer fejl ved NVS-open-fejl i stedet for `ESP_ERROR_CHECK` (kunne panikke enheden fra en ekstern PUT).
+- `firmware/main/modbus/mb_rtu_sw.c` — K2: `mb_sw_read_coils`/`mb_sw_read_discrete` clamper kopieret byte-antal til `(count+7)/8` → ingen stack-overflow fra en slave med for stort byte-count.
+- `firmware/main/modbus/modbus_manager.c` — K1: kun én HW-UART master initialiseres (esp-modbus global controller); yderligere HW-masters deaktiveres. Per-interface fejl er ikke længere fatal. `get_iface()` afviser ikke-ready interfaces.
+- `firmware/main/modbus/interface.h/.c` — nyt `ready`-felt; sættes efter vellykket init.
+- `version.json`, `version.h` — bump til 0.4.6 b0079
+
+---
+
 ## [0.4.5 build 0078] — 2026-05-31 — feat: live API log tab i management-siden
 
 **Filer ændret:**

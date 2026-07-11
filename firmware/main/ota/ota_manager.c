@@ -16,6 +16,13 @@ static ota_status_t s_status = { .state = OTA_STATE_IDLE };
 
 const ota_status_t *ota_get_status(void) { return &s_status; }
 
+void ota_report_error(const char *msg)
+{
+    memset(&s_status, 0, sizeof(s_status));
+    s_status.state = OTA_STATE_ERROR;
+    if (msg) snprintf(s_status.error, sizeof(s_status.error), "%s", msg);
+}
+
 // ── HTTP response buffer ────────────────────────────────────────────────────
 
 #define HTTP_BUF_SIZE 16384
@@ -291,6 +298,16 @@ esp_err_t ota_update_frontend(const char *url)
     if (err != ESP_OK) {
         s_status.state = OTA_STATE_ERROR;
         return err;
+    }
+
+    // M4: en afbrudt download giver read==0 (err=OK) men et ufuldstændigt image.
+    // Afvis hvis vi ikke modtog hele den annoncerede content-length.
+    if (content_len > 0 && total != content_len) {
+        snprintf(s_status.error, sizeof(s_status.error),
+                 "Ufuldstændig download: %d/%d bytes", total, content_len);
+        s_status.state = OTA_STATE_ERROR;
+        ESP_LOGE(TAG, "%s", s_status.error);
+        return ESP_FAIL;
     }
 
     s_status.state        = OTA_STATE_DONE;
