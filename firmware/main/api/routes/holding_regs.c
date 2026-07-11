@@ -1,5 +1,6 @@
 #include "holding_regs.h"
 #include "gateway_service.h"
+#include "fc_common.h"
 #include "esp_log.h"
 #include "cJSON.h"
 #include <stdlib.h>
@@ -20,28 +21,9 @@ esp_err_t api_fc03_read_holding_regs(httpd_req_t *req, int iface, int slave)
 
     uint16_t regs[125];
     mb_result_t result = gw_read_holding_registers(iface, slave, start, count, regs);
+    if (!api_mb_ok(req, result, iface, slave)) return ESP_OK;
 
     httpd_resp_set_type(req, "application/json");
-    if (result.esp_err == ESP_ERR_TIMEOUT) {
-        httpd_resp_set_status(req, "504 Gateway Timeout");
-        cJSON *err = cJSON_CreateObject();
-        cJSON_AddStringToObject(err, "error", "modbus_timeout");
-        cJSON_AddNumberToObject(err, "interface", iface);
-        cJSON_AddNumberToObject(err, "slave", slave);
-        char *s = cJSON_PrintUnformatted(err); cJSON_Delete(err);
-        httpd_resp_sendstr(req, s); free(s);
-        return ESP_OK;
-    }
-    if (result.modbus_exception) {
-        httpd_resp_set_status(req, "400 Bad Request");
-        cJSON *err = cJSON_CreateObject();
-        cJSON_AddStringToObject(err, "error", "modbus_exception");
-        cJSON_AddNumberToObject(err, "exception_code", result.modbus_exception);
-        char *s = cJSON_PrintUnformatted(err); cJSON_Delete(err);
-        httpd_resp_sendstr(req, s); free(s);
-        return ESP_OK;
-    }
-
     cJSON *root = cJSON_CreateObject();
     cJSON_AddNumberToObject(root, "interface", iface);
     cJSON_AddNumberToObject(root, "slave", slave);
@@ -84,17 +66,14 @@ esp_err_t api_fc06_write_holding_reg(httpd_req_t *req, int iface, int slave, int
     cJSON_Delete(json);
 
     mb_result_t result = gw_write_register(iface, slave, addr, value);
-    httpd_resp_set_type(req, "application/json");
+    if (!api_mb_ok(req, result, iface, slave)) return ESP_OK;
 
+    httpd_resp_set_type(req, "application/json");
     cJSON *root = cJSON_CreateObject();
     cJSON_AddNumberToObject(root, "interface", iface);
     cJSON_AddNumberToObject(root, "slave", slave);
     cJSON_AddNumberToObject(root, "register", addr);
     cJSON_AddNumberToObject(root, "value", value);
-    if (result.esp_err != ESP_OK) {
-        cJSON_AddStringToObject(root, "error", esp_err_to_name(result.esp_err));
-        httpd_resp_set_status(req, result.esp_err == ESP_ERR_TIMEOUT ? "504 Gateway Timeout" : "400 Bad Request");
-    }
     char *s = cJSON_PrintUnformatted(root); cJSON_Delete(root);
     httpd_resp_sendstr(req, s); free(s);
     return ESP_OK;
@@ -136,16 +115,14 @@ esp_err_t api_fc10_write_holding_regs(httpd_req_t *req, int iface, int slave)
     cJSON_Delete(json);
 
     mb_result_t result = gw_write_registers(iface, slave, start, count, regs);
+    if (!api_mb_ok(req, result, iface, slave)) return ESP_OK;
+
     httpd_resp_set_type(req, "application/json");
     cJSON *root = cJSON_CreateObject();
     cJSON_AddNumberToObject(root, "interface", iface);
     cJSON_AddNumberToObject(root, "slave", slave);
     cJSON_AddNumberToObject(root, "start", start);
     cJSON_AddNumberToObject(root, "count", count);
-    if (result.esp_err != ESP_OK) {
-        cJSON_AddStringToObject(root, "error", esp_err_to_name(result.esp_err));
-        httpd_resp_set_status(req, result.esp_err == ESP_ERR_TIMEOUT ? "504 Gateway Timeout" : "400 Bad Request");
-    }
     char *s = cJSON_PrintUnformatted(root); cJSON_Delete(root);
     httpd_resp_sendstr(req, s); free(s);
     return ESP_OK;

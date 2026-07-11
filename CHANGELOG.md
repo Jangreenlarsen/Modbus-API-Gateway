@@ -4,6 +4,17 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.5.1 build 0081] — 2026-07-11 — fix: ensret Modbus fejl-respons (H3, H2)
+
+**Filer ændret:**
+- `firmware/main/api/routes/fc_common.h/.c` — ny `api_mb_ok()`: fælles fejl-respons for alle FC-routes (`modbus_timeout` 504 / `modbus_exception` 400 / `modbus_error` 400) med exception-beskrivelser.
+- `firmware/main/api/routes/coils.c`, `discrete.c`, `holding_regs.c`, `input_regs.c` — bruger `api_mb_ok()`; duplikeret/inkonsistent fejlkode fjernet. FC01/02/04 returnerer nu også det dokumenterede exception-format.
+- `firmware/main/CMakeLists.txt` — tilføjet `api/routes/fc_common.c`.
+- H2: esp-modbus v1.x-begrænsning (ingen HW exception-kode) dokumenteret i `fc_common.c`.
+- `version.json`, `version.h` — bump til 0.5.1 b0081
+
+---
+
 ## [0.5.0 build 0080] — 2026-07-11 — refactor: reelt service-lag + interface-routing (M1, H1, M2)
 
 **Filer ændret:**

@@ -1,5 +1,6 @@
 #include "input_regs.h"
 #include "gateway_service.h"
+#include "fc_common.h"
 #include "cJSON.h"
 #include <stdlib.h>
 
@@ -16,6 +17,7 @@ esp_err_t api_fc04_read_input_regs(httpd_req_t *req, int iface, int slave)
 
     uint16_t regs[125];
     mb_result_t result = gw_read_input_registers(iface, slave, start, count, regs);
+    if (!api_mb_ok(req, result, iface, slave)) return ESP_OK;
 
     httpd_resp_set_type(req, "application/json");
     cJSON *root = cJSON_CreateObject();
@@ -24,13 +26,8 @@ esp_err_t api_fc04_read_input_regs(httpd_req_t *req, int iface, int slave)
     cJSON_AddNumberToObject(root, "function", 4);
     cJSON_AddNumberToObject(root, "start", start);
     cJSON_AddNumberToObject(root, "count", count);
-    if (result.esp_err == ESP_OK) {
-        cJSON *arr = cJSON_AddArrayToObject(root, "registers");
-        for (int i = 0; i < count; i++) cJSON_AddItemToArray(arr, cJSON_CreateNumber(regs[i]));
-    } else {
-        cJSON_AddStringToObject(root, "error", esp_err_to_name(result.esp_err));
-        httpd_resp_set_status(req, result.esp_err == ESP_ERR_TIMEOUT ? "504 Gateway Timeout" : "400 Bad Request");
-    }
+    cJSON *arr = cJSON_AddArrayToObject(root, "registers");
+    for (int i = 0; i < count; i++) cJSON_AddItemToArray(arr, cJSON_CreateNumber(regs[i]));
     char *s = cJSON_PrintUnformatted(root); cJSON_Delete(root);
     httpd_resp_sendstr(req, s); free(s);
     return ESP_OK;

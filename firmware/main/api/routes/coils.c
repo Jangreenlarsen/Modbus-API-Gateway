@@ -1,5 +1,6 @@
 #include "coils.h"
 #include "gateway_service.h"
+#include "fc_common.h"
 #include "cJSON.h"
 #include <stdlib.h>
 #include <string.h>
@@ -17,6 +18,7 @@ esp_err_t api_fc01_read_coils(httpd_req_t *req, int iface, int slave)
 
     uint8_t bits[250] = {0};
     mb_result_t result = gw_read_coils(iface, slave, start, count, bits);
+    if (!api_mb_ok(req, result, iface, slave)) return ESP_OK;
 
     httpd_resp_set_type(req, "application/json");
     cJSON *root = cJSON_CreateObject();
@@ -25,14 +27,9 @@ esp_err_t api_fc01_read_coils(httpd_req_t *req, int iface, int slave)
     cJSON_AddNumberToObject(root, "function", 1);
     cJSON_AddNumberToObject(root, "start", start);
     cJSON_AddNumberToObject(root, "count", count);
-    if (result.esp_err == ESP_OK) {
-        cJSON *arr = cJSON_AddArrayToObject(root, "coils");
-        for (int i = 0; i < count; i++)
-            cJSON_AddItemToArray(arr, cJSON_CreateBool((bits[i/8] >> (i%8)) & 1));
-    } else {
-        cJSON_AddStringToObject(root, "error", esp_err_to_name(result.esp_err));
-        httpd_resp_set_status(req, result.esp_err == ESP_ERR_TIMEOUT ? "504 Gateway Timeout" : "400 Bad Request");
-    }
+    cJSON *arr = cJSON_AddArrayToObject(root, "coils");
+    for (int i = 0; i < count; i++)
+        cJSON_AddItemToArray(arr, cJSON_CreateBool((bits[i/8] >> (i%8)) & 1));
     char *s = cJSON_PrintUnformatted(root); cJSON_Delete(root);
     httpd_resp_sendstr(req, s); free(s);
     return ESP_OK;
@@ -52,16 +49,14 @@ esp_err_t api_fc05_write_coil(httpd_req_t *req, int iface, int slave, int addr)
     cJSON_Delete(json);
 
     mb_result_t result = gw_write_coil(iface, slave, addr, on);
+    if (!api_mb_ok(req, result, iface, slave)) return ESP_OK;
+
     httpd_resp_set_type(req, "application/json");
     cJSON *root = cJSON_CreateObject();
     cJSON_AddNumberToObject(root, "interface", iface);
     cJSON_AddNumberToObject(root, "slave", slave);
     cJSON_AddNumberToObject(root, "coil", addr);
     cJSON_AddBoolToObject(root, "value", on);
-    if (result.esp_err != ESP_OK) {
-        cJSON_AddStringToObject(root, "error", esp_err_to_name(result.esp_err));
-        httpd_resp_set_status(req, result.esp_err == ESP_ERR_TIMEOUT ? "504 Gateway Timeout" : "400 Bad Request");
-    }
     char *s = cJSON_PrintUnformatted(root); cJSON_Delete(root);
     httpd_resp_sendstr(req, s); free(s);
     return ESP_OK;
@@ -97,16 +92,14 @@ esp_err_t api_fc0f_write_coils(httpd_req_t *req, int iface, int slave)
     cJSON_Delete(json);
 
     mb_result_t result = gw_write_coils(iface, slave, start, count, bits);
+    if (!api_mb_ok(req, result, iface, slave)) return ESP_OK;
+
     httpd_resp_set_type(req, "application/json");
     cJSON *root = cJSON_CreateObject();
     cJSON_AddNumberToObject(root, "interface", iface);
     cJSON_AddNumberToObject(root, "slave", slave);
     cJSON_AddNumberToObject(root, "start", start);
     cJSON_AddNumberToObject(root, "count", count);
-    if (result.esp_err != ESP_OK) {
-        cJSON_AddStringToObject(root, "error", esp_err_to_name(result.esp_err));
-        httpd_resp_set_status(req, result.esp_err == ESP_ERR_TIMEOUT ? "504 Gateway Timeout" : "400 Bad Request");
-    }
     char *s = cJSON_PrintUnformatted(root); cJSON_Delete(root);
     httpd_resp_sendstr(req, s); free(s);
     return ESP_OK;

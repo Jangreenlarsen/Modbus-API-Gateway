@@ -2,6 +2,20 @@
 
 ---
 
+## v0.5.1 build 0081 — 2026-07-11 — fix: ensartede fejlsvar
+
+Alle Modbus-endpoints (FC01–FC10) svarer nu med præcis samme fejlformat, som beskrevet i API-dokumentationen:
+
+- **Timeout** → `504` med `{"error":"modbus_timeout"}`
+- **Modbus-undtagelse** → `400` med `{"error":"modbus_exception","exception_code":N,"description":"..."}`
+- **Øvrige fejl** → `400` med `{"error":"modbus_error","detail":"..."}`
+
+Tidligere brugte kun holding-register-læsning dette format; coils, discrete inputs og input registers gav et andet, uensartet svar.
+
+Bemærk: `exception_code` er kun tilgængelig på software-UART-interfaces — esp-modbus-biblioteket (HW-UART) videregiver ikke undtagelseskoden, så dér ses fejlen som `modbus_error`.
+
+---
+
 ## v0.5.0 build 0080 — 2026-07-11 — refactor: reelt service-lag
 
 Arkitekturen følger nu ARCHITECTURE.md korrekt: API-laget kalder udelukkende service-laget, som dispatcher Modbus-operationer videre. Tidligere kaldte REST-routes Modbus-laget direkte, og service-laget var en tom stub.

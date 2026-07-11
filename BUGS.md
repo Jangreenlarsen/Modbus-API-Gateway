@@ -14,8 +14,8 @@ Status: `open` | `investigating` | `fixed`
 
 **Høj**
 - [fixed] H1 v0.5.0 b0080 — Config-ændringer desynkroniserede iface-indekser. LØST: FC-routing resolver nu mod KØRENDE config (samme som modbus_manager bruger), så en request aldrig rammer et forkert/ikke-initialiseret interface. POST/PUT/DELETE returnerer `"reboot_required": true` så klienten ved at ændringen først anvendes efter reboot.
-- [open] H2 v0.4.5 b0078 — Modbus exception-koder surfaces aldrig for HW-interfaces: `mb_result_t.modbus_exception` sættes kun i SW-UART-stien. Dokumenteret `{"error":"modbus_exception","exception_code":N}` virker aldrig på HW-UART. → dokumentér esp-modbus-begrænsning + ensret fejl-JSON.
-- [open] H3 v0.4.5 b0078 — Inkonsistent exception-håndtering: kun `holding_regs.c` tjekker `result.modbus_exception`; coils/discrete/input_regs gør ikke → FC01/02/04 returnerer aldrig det dokumenterede exception-format. → fælles fejl-respons-helper på tværs af alle FC-routes.
+- [fixed] H2 v0.5.1 b0081 — Modbus exception-koder på HW-interfaces. DELVIST/DOKUMENTERET: esp-modbus v1.x eksponerer ikke exception-koden via `mbc_master_send_request`, så `exception_code` er kun tilgængelig på SW-UART. HW-UART-fejl rapporteres nu ensartet som `modbus_error` med `detail`. Begrænsningen er noteret i `fc_common.c`. Fuld HW-exception-parsing kræver esp-modbus v2.x.
+- [fixed] H3 v0.5.1 b0081 — Inkonsistent exception-håndtering. LØST: ny `api_mb_ok()` i `fc_common.c` giver PRÆCIS samme fejl-JSON (`modbus_timeout`/`modbus_exception`/`modbus_error`) for ALLE FC01–FC10-routes. Duplikeret fejlkode fjernet fra hver route.
 
 **Medium**
 - [fixed] M1 v0.5.0 b0080 — Service-laget var en tom stub. LØST: `gateway_service` er nu et reelt lag — alle FC-routes kalder `gw_*`-funktioner (aldrig `modbus_manager` direkte), og service-laget ejer interface-opslag mod kørende config. Overholder ARCHITECTURE.md regel 1+2.
