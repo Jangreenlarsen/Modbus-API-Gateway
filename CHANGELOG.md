@@ -4,6 +4,16 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.5.4 build 0084] — 2026-07-11 — chore: fjern død kode + cache-lås (L1, L4)
+
+**Filer ændret:**
+- `firmware/main/modbus/mb_rtu_sw.c`, `mb_rtu_sw.h` — L1: fjernet den døde `mb_rtu_sw_transaction` (+ `rx_cb`/`rx_ctx_t`) der aldrig blev kaldt og lækkede en queue.
+- `firmware/main/storage/register_cache.c` — L4: `cache_lookup` læser `enabled` inde i mutex-låsen.
+- L2, L3, L7 markeret [accepted] i BUGS.md (ingen kodeændring — dokumenteret rationale).
+- `version.json`, `version.h` — bump til 0.5.4 b0084
+
+---
+
 ## [0.5.3 build 0083] — 2026-07-11 — fix: OTA-robusthed (M4, M5)
 
 **Filer ændret:**

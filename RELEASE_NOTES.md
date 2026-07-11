@@ -2,6 +2,12 @@
 
 ---
 
+## v0.5.4 build 0084 — 2026-07-11 — chore: oprydning
+
+Intern oprydning uden funktionelle ændringer: ubrugt skeleton-kode i software-UART-laget er fjernet, og en cache-tilgang er gjort trådsikker. Afslutter den runde af rettelser, der fulgte af kodegennemgangen (18 fund: 3 kritiske, 3 høj, 5 medium, 7 lav — rettet eller dokumenteret).
+
+---
+
 ## v0.5.3 build 0083 — 2026-07-11 — fix: mere robust OTA
 
 - **Afbrudte frontend-opdateringer flashes ikke længere.** Hvis download blev afbrudt, kunne et ufuldstændigt frontend-image tidligere blive skrevet og markeret som færdigt. Nu kontrolleres den modtagne størrelse, og en ufuldstændig download fejler tydeligt.

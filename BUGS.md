@@ -25,13 +25,13 @@ Status: `open` | `investigating` | `fixed`
 - [fixed] M5 v0.5.3 b0083 — OTA-check blokerede httpd-worker. LØST: GitHub-URL-opslag sker nu i `ota_task` (baggrund), ikke i handleren. Handleren svarer straks `*_update_started`; "ingen opdatering" rapporteres via OTA-status (`ota_report_error`).
 
 **Lav / oprydning**
-- [open] L1 v0.4.5 b0078 — Død skeleton-kode `mb_rtu_sw_transaction` returnerer altid `ESP_ERR_NOT_FINISHED`, kaldes aldrig, og lækker en queue (`xQueueCreate` uden delete). → slet.
-- [open] L2 v0.4.5 b0078 — Cache-statistik forvrænget ved range-reads: `total_requests`/`hits`/`misses` tælles pr. register, ikke pr. request. → dokumentér eller separat api_requests-tæller.
-- [open] L3 v0.4.5 b0078 — `frontend_available == firmware_available` (samme sammenligning); frontend versioneres ikke separat. → dokumentér/accepter.
-- [open] L4 v0.4.5 b0078 — `cache_lookup` læser `s_stats.enabled` uden lås (benignt). → læs under lås for konsistens.
+- [fixed] L1 v0.5.4 b0084 — Død skeleton-kode `mb_rtu_sw_transaction` (+ `rx_cb`/`rx_ctx_t`). LØST: slettet fra `mb_rtu_sw.c` og `.h` (den rigtige transceiver er `do_transaction`).
+- [accepted] L2 v0.4.5 b0078 — Cache-statistik tælles pr. register, ikke pr. request. ACCEPTERET: cachen er per-register, så per-register-tælling er meningsfuld. Dokumenteret; ingen kodeændring.
+- [accepted] L3 v0.4.5 b0078 — `frontend_available == firmware_available`. ACCEPTERET: firmware og frontend udgives sammen (samme release-tag), så samme sammenligning er korrekt indtil de versioneres separat.
+- [fixed] L4 v0.5.4 b0084 — `cache_lookup` læste `s_stats.enabled` uden lås. LØST: enabled læses nu inde i mutex-låsen.
 - [fixed] L5 v0.5.2 b0082 — Tom/ugyldig body ved FC05. LØST: returnerer nu 400 hvis `value` mangler/ikke er bool/tal (skriver ikke stille coil=0).
 - [fixed] L6 v0.5.2 b0082 — `start`/`count` validering. LØST: fælles `api_query_u16()` clamper negative → 0 og >65535 → 65535 i alle read/write-routes.
-- [open] L7 v0.4.5 b0078 — DE-pin default GPIO0 (iface 5, 30-pin preset) er boot-strap pin. → dokumentér risiko.
+- [accepted] L7 v0.4.5 b0078 — DE-pin default GPIO0 (iface 5, 30-pin preset) er boot-strap pin. ACCEPTERET: allerede kommenteret i `config.c` ("brug med forsigtighed"); DE-pin kan omkonfigureres. Ingen kodeændring.
 
 ---
 

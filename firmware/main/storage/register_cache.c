@@ -77,9 +77,8 @@ static cache_entry_t *alloc_entry(void)
 
 bool cache_lookup(int iface, int slave, int fc, int addr, uint16_t *out_value)
 {
-    if (!s_stats.enabled) return false;
-
     LOCK();
+    if (!s_stats.enabled) { UNLOCK(); return false; }   // L4: læs enabled under lås
     s_stats.total_requests++;
     cache_entry_t *e = find_entry(iface, slave, fc, addr);
     bool hit = false;
