@@ -4,6 +4,14 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.5.7 build 0088] — 2026-07-12 — fix: WiFi-status i /mgmt vises pålideligt (F2)
+
+**Filer ændret:**
+- `firmware/main/api/routes/mgmt.c` — F2: WiFi-status manglede intermittent i web-GUI'en når både WiFi+Ethernet var forbundet (CLI virkede). `/system` og `/system/wifi` var to konkurrerende kald til samme DOM-felt uden auto-refresh. LØST: `_wifiData` sættes eksplicit og bevares ved fejl; status-fanen auto-opdaterer hvert 5s (self-healing) og stopper timeren når man forlader fanen.
+- `version.json`, `version.h` — bump til 0.5.7 b0088
+
+---
+
 ## [0.5.6 build 0087] — 2026-07-12 — fix: Ethernet statisk IP + link-events (F1)
 
 **Filer ændret:**

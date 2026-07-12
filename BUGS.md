@@ -7,6 +7,7 @@ Status: `open` | `investigating` | `fixed`
 
 ## Feltfejl (2026-07-12)
 
+- [fixed] F2 v0.5.7 b0088 — WiFi-status vises ikke i web-GUI (/mgmt) når både WiFi og Ethernet er forbundet (CLI `show wifi` virker fint). Root cause: mgmt-statussiden henter `/system` og `/system/wifi` som to konkurrerende kald der begge skriver samme DOM-felt (`t-net`), og WiFi-rækken vises kun hvis `/system/wifi` har nået at sætte `_wifiData`. Uden auto-refresh — og ved socket-pres (`lru_purge_enable`) kan ét kald droppes — stod WiFi som "—" indtil manuel Opdater. LØST: deterministisk render (`_wifiData` sættes eksplicit, bevares ved fejl) + auto-refresh af status-fanen hvert 5s (self-healing).
 - [fixed] F1 v0.5.6 b0087 — Ethernet forbinder ikke selvom switch-link er oppe. Root cause: Ethernet-laget (`ethernet.c`) håndterede IKKE statisk IP (læste aldrig `cfg->ip`/`gw`/`netmask`), tvang ikke DHCP-start, og havde ingen `ETH_EVENT`-handler — i modsætning til WiFi-laget. Statisk IP blev derfor ignoreret, og der var ingen link-up/down-logning til diagnose. LØST: tilføjet `on_eth_event` (link UP/DOWN + driver start/stop-log), statisk-IP-anvendelse med validering (spejler `wifi_manager`), og forceret DHCP-genstart ved link-up.
 
 ---
