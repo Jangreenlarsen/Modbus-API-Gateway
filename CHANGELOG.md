@@ -4,6 +4,26 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.5.7 build 0088] — 2026-07-12 — fix: WiFi-status i /mgmt vises pålideligt (F2)
+
+**Filer ændret:**
+- `firmware/main/api/routes/mgmt.c` — F2: WiFi-status manglede intermittent i web-GUI'en når både WiFi+Ethernet var forbundet (CLI virkede). `/system` og `/system/wifi` var to konkurrerende kald til samme DOM-felt uden auto-refresh. LØST: `_wifiData` sættes eksplicit og bevares ved fejl; status-fanen auto-opdaterer hvert 5s (self-healing) og stopper timeren når man forlader fanen.
+- `version.json`, `version.h` — bump til 0.5.7 b0088
+
+---
+
+## [0.5.6 build 0087] — 2026-07-12 — fix: Ethernet statisk IP + link-events (F1)
+
+**Filer ændret:**
+- `firmware/main/core/ethernet.c` — F1: Ethernet-laget håndterede ikke statisk IP (læste aldrig `cfg->ip`/`gw`/`netmask`), tvang ikke DHCP-start, og havde ingen `ETH_EVENT`-handler. Tilføjet:
+  - `configure_ip()` — parser statisk IP med validering (spejler `wifi_manager`), fald tilbage til DHCP ved ugyldig adresse.
+  - `on_eth_event()` — logger link UP/DOWN + driver start/stop; anvender IP-config ved link-up.
+  - `apply_ip_config()` — statisk: `dhcpc_stop` + `set_ip_info`; DHCP: forceret `dhcpc_stop`+`start`.
+  - ETH_EVENT-handler registreres EFTER driver-init så statisk IP ikke overskrives af glue'ens DHCP-start.
+- `version.json`, `version.h` — bump til 0.5.6 b0087
+
+---
+
 ## [0.5.5 build 0086] — 2026-07-12 — fix: HW-slave guard (N1, komplet K1)
 
 **Filer ændret:**
