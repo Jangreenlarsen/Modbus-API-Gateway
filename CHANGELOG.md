@@ -4,6 +4,14 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.5.5 build 0086] — 2026-07-12 — fix: HW-slave guard (N1, komplet K1)
+
+**Filer ændret:**
+- `firmware/main/modbus/modbus_manager.c` — N1: guarden tracker nu både `hw_master_up` og `hw_slave_up`. esp-modbus' slave-controller er også en global singleton, så to HW-slaves kolliderede tidligere lydløst. Der tillades nu højst én HW-master og højst én HW-slave (kan sameksistere).
+- `version.json`, `version.h` — bump til 0.5.5 b0086
+
+---
+
 ## [0.5.4 build 0084] — 2026-07-11 — chore: fjern død kode + cache-lås (L1, L4)
 
 **Filer ændret:**
