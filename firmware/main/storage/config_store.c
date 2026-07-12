@@ -35,7 +35,9 @@ esp_err_t config_store_load(gateway_config_t *cfg)
         config_set_defaults(cfg);
     } else {
         config_sanitize(cfg);
-        ESP_LOGI(TAG, "Config loaded v%d (%d interface(s))", cfg->version, cfg->interface_count);
+        // DEBUG (ikke INFO): kaldes ved hvert /system + /interfaces-request, og
+        // statussiden auto-opdaterer hvert 5s → ellers spammer den loggen.
+        ESP_LOGD(TAG, "Config loaded v%d (%d interface(s))", cfg->version, cfg->interface_count);
     }
     return ESP_OK;
 }
