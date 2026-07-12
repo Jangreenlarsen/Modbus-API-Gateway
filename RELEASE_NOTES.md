@@ -2,6 +2,12 @@
 
 ---
 
+## v0.5.5 build 0086 — 2026-07-12 — fix: HW-slave-beskyttelse
+
+Opfølgning på kodegennemgangen: beskyttelsen mod flere hardware-UART-controllere dækkede kun master-rollen. Da Modbus-biblioteket også deler én global slave-controller, kunne to hardware-slaves kollidere lydløst. Nu tillades der højst én hardware-master **og** højst én hardware-slave (de kan sameksistere) — ekstra hardware-porte skal bruge software-UART.
+
+---
+
 ## v0.5.4 build 0084 — 2026-07-11 — chore: oprydning
 
 Intern oprydning uden funktionelle ændringer: ubrugt skeleton-kode i software-UART-laget er fjernet, og en cache-tilgang er gjort trådsikker. Afslutter den runde af rettelser, der fulgte af kodegennemgangen (18 fund: 3 kritiske, 3 høj, 5 medium, 7 lav — rettet eller dokumenteret).

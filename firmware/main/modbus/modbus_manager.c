@@ -24,20 +24,26 @@ esp_err_t modbus_manager_init(const gateway_config_t *cfg)
 {
     s_iface_count = cfg->interface_count;
     s_cfg_ref     = cfg;
-    bool hw_master_up = false;   // K1: esp-modbus v1.x har én global master-controller
+    // K1/N1: esp-modbus v1.x har ÉN global master-controller OG én global
+    // slave-controller. Der kan derfor køre højst én HW-UART master og højst én
+    // HW-UART slave. En master og en slave kan sameksistere (separate globaler).
+    bool hw_master_up = false;
+    bool hw_slave_up  = false;
     for (int i = 0; i < s_iface_count; i++) {
         const iface_config_t *ic = &cfg->interfaces[i];
-        bool is_hw_master = (ic->uart_mode == IFACE_UART_HW && ic->mode == IFACE_MODE_MASTER);
+        bool is_hw        = (ic->uart_mode == IFACE_UART_HW);
+        bool is_hw_master = is_hw && ic->mode == IFACE_MODE_MASTER;
+        bool is_hw_slave  = is_hw && ic->mode == IFACE_MODE_SLAVE;
 
-        // K1: kun ÉN HW-UART master kan fungere — esp-modbus deler en global
-        // controller-peger. Deaktivér yderligere HW-masters i stedet for at lade
-        // dem stille kapre den globale controller.
-        if (is_hw_master && hw_master_up) {
+        // Deaktivér den 2. HW-controller af samme rolle i stedet for at lade den
+        // stille kapre den globale controller-peger.
+        if ((is_hw_master && hw_master_up) || (is_hw_slave && hw_slave_up)) {
             memcpy(&s_interfaces[i].cfg, ic, sizeof(iface_config_t));
             s_interfaces[i].ready = false;
             s_interfaces[i].mutex = NULL;
-            ESP_LOGE(TAG, "Interface %d: yderligere HW-UART master understøttes ikke "
-                          "(esp-modbus global controller) — deaktiveret. Brug SW-UART.", i);
+            ESP_LOGE(TAG, "Interface %d: yderligere HW-UART %s understøttes ikke "
+                          "(esp-modbus global controller) — deaktiveret. Brug SW-UART.",
+                     i, is_hw_master ? "master" : "slave");
             continue;
         }
 
@@ -49,6 +55,7 @@ esp_err_t modbus_manager_init(const gateway_config_t *cfg)
             continue;
         }
         if (is_hw_master) hw_master_up = true;
+        if (is_hw_slave)  hw_slave_up  = true;
         ESP_LOGI(TAG, "Interface %d ready (%s, %lu baud)",
                  i,
                  ic->type == IFACE_TYPE_RS485 ? "RS485" : "RS232",
