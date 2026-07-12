@@ -13,6 +13,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
+#include "lwip/ip4_addr.h"
+#include <strings.h>   // strcasecmp
 
 static const char *TAG = "ethernet";
 static EventGroupHandle_t s_eth_event_group;
@@ -21,6 +23,75 @@ static char s_ip[16] = "0.0.0.0";
 static bool s_eth_available = false;
 static int  s_w5500_int_gpio = -1;
 static TaskHandle_t s_w5500_rx_task = NULL;
+
+// IP-konfiguration (statisk eller DHCP) — spejler wifi_manager
+static esp_netif_t        *s_eth_netif     = NULL;
+static bool                s_use_static_ip = false;
+static esp_netif_ip_info_t s_static_ip;
+
+// Parse cfg->ip/gw/netmask → s_use_static_ip + s_static_ip.
+// Ugyldig/korrupt IP → fald tilbage til DHCP (som wifi_manager).
+static void configure_ip(const eth_config_t *cfg)
+{
+    s_use_static_ip = false;
+    memset(&s_static_ip, 0, sizeof(s_static_ip));
+    if (cfg->ip[0] && strcasecmp(cfg->ip, "dhcp") != 0) {
+        ip4_addr_t test;
+        if (ip4addr_aton(cfg->ip, &test) && test.addr != 0) {
+            ip4_addr_t a;
+            ip4addr_aton(cfg->ip,      &a); s_static_ip.ip.addr      = a.addr;
+            ip4addr_aton(cfg->gw,      &a); s_static_ip.gw.addr      = a.addr;
+            ip4addr_aton(cfg->netmask, &a); s_static_ip.netmask.addr = a.addr;
+            s_use_static_ip = true;
+            ESP_LOGI(TAG, "Ethernet statisk IP konfigureret: %s  gw %s  mask %s",
+                     cfg->ip, cfg->gw, cfg->netmask);
+        } else {
+            ESP_LOGW(TAG, "Ethernet IP '%s' ugyldig/korrupt — bruger DHCP", cfg->ip);
+        }
+    } else {
+        ESP_LOGI(TAG, "Ethernet DHCP aktiv");
+    }
+}
+
+// Anvend den konfigurerede IP på netif'et (kaldes ved link-up).
+static void apply_ip_config(void)
+{
+    if (!s_eth_netif) return;
+    if (s_use_static_ip) {
+        esp_netif_dhcpc_stop(s_eth_netif);   // ignorér fejl hvis allerede stoppet
+        esp_netif_set_ip_info(s_eth_netif, &s_static_ip);
+        ESP_LOGI(TAG, "Ethernet statisk IP anvendt: " IPSTR, IP2STR(&s_static_ip.ip));
+    } else {
+        // Tving DHCP-genstart (samme robusthed som wifi_manager) — sikrer DHCP
+        // kører selv hvis klienten blev stoppet af en tidligere config.
+        esp_netif_dhcpc_stop(s_eth_netif);
+        esp_netif_dhcpc_start(s_eth_netif);
+        ESP_LOGI(TAG, "Ethernet link UP — DHCP starter");
+    }
+}
+
+// ETH_EVENT-handler — logger link-tilstand og anvender IP-config ved link-up.
+static void on_eth_event(void *arg, esp_event_base_t base, int32_t id, void *data)
+{
+    switch (id) {
+    case ETHERNET_EVENT_CONNECTED:
+        ESP_LOGI(TAG, "Ethernet link UP");
+        apply_ip_config();
+        break;
+    case ETHERNET_EVENT_DISCONNECTED:
+        ESP_LOGW(TAG, "Ethernet link DOWN");
+        xEventGroupClearBits(s_eth_event_group, ETH_CONNECTED_BIT);
+        break;
+    case ETHERNET_EVENT_START:
+        ESP_LOGI(TAG, "Ethernet driver startet");
+        break;
+    case ETHERNET_EVENT_STOP:
+        ESP_LOGI(TAG, "Ethernet driver stoppet");
+        break;
+    default:
+        break;
+    }
+}
 
 // ── WORKAROUND for ESP-IDF W5500 edge-triggered ISR-miss ─────────────────────
 // W5500's RX task ("w5500_tsk") venter på ulTaskNotifyTake(timeout=1000ms).
@@ -207,6 +278,10 @@ esp_err_t ethernet_init(const eth_config_t *cfg)
 
     esp_netif_config_t netif_cfg = ESP_NETIF_DEFAULT_ETH();
     esp_netif_t *eth_netif = esp_netif_new(&netif_cfg);
+    s_eth_netif = eth_netif;
+
+    // Parse statisk-IP vs DHCP FØR driveren starter
+    configure_ip(cfg);
 
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_ETH_GOT_IP, on_got_ip, NULL));
 
@@ -216,9 +291,18 @@ esp_err_t ethernet_init(const eth_config_t *cfg)
     else
         ret = init_w5500(cfg, eth_netif);
 
-    if (ret == ESP_OK)
-        s_eth_available = true;
-    return ret;
+    if (ret != ESP_OK)
+        return ret;
+    s_eth_available = true;
+
+    // Registrér ETH_EVENT-handleren EFTER init (esp_netif_attach har nu
+    // registreret glue-handleren) — så vores handler kører sidst og en statisk
+    // IP ikke overskrives af glue'ens DHCP-start ved link-up.
+    ESP_ERROR_CHECK(esp_event_handler_register(ETH_EVENT, ESP_EVENT_ANY_ID, on_eth_event, NULL));
+
+    // Hvis link allerede er oppe, anvend IP-config med det samme.
+    if (s_use_static_ip) apply_ip_config();
+    return ESP_OK;
 }
 
 void ethernet_wait_for_ip(uint32_t timeout_ms)

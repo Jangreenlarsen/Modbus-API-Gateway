@@ -2,6 +2,19 @@
 
 ---
 
+## v0.5.6 build 0087 — 2026-07-12 — fix: Ethernet forbinder nu (statisk IP + link-events)
+
+Ethernet kunne stå med link oppe på switchen uden nogensinde at forbinde. Årsagen var, at Ethernet-laget — i modsætning til WiFi — hverken understøttede **statisk IP** (den konfigurerede IP/gateway/netmaske blev helt ignoreret), tvang DHCP-start, eller loggede link-tilstand.
+
+Nu:
+- **Statisk IP virker.** Har du sat en fast IP, anvendes den (med validering; ugyldig adresse falder tilbage til DHCP).
+- **DHCP tvinges i gang** ved link-up, som på WiFi-siden.
+- **Link-status logges** (`Ethernet link UP/DOWN`, driver start/stop) — så det nu er tydeligt i seriel-loggen, om ESP32 overhovedet ser linket, eller om det er SPI/hardware der driller.
+
+Hvis linket stadig ikke ses efter denne opdatering, peger loggen (ingen "link UP") på W5500 SPI-forbindelsen/pins frem for netværket.
+
+---
+
 ## v0.5.5 build 0086 — 2026-07-12 — fix: HW-slave-beskyttelse
 
 Opfølgning på kodegennemgangen: beskyttelsen mod flere hardware-UART-controllere dækkede kun master-rollen. Da Modbus-biblioteket også deler én global slave-controller, kunne to hardware-slaves kollidere lydløst. Nu tillades der højst én hardware-master **og** højst én hardware-slave (de kan sameksistere) — ekstra hardware-porte skal bruge software-UART.

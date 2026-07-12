@@ -5,6 +5,12 @@ Status: `open` | `investigating` | `fixed`
 
 ---
 
+## Feltfejl (2026-07-12)
+
+- [fixed] F1 v0.5.6 b0087 — Ethernet forbinder ikke selvom switch-link er oppe. Root cause: Ethernet-laget (`ethernet.c`) håndterede IKKE statisk IP (læste aldrig `cfg->ip`/`gw`/`netmask`), tvang ikke DHCP-start, og havde ingen `ETH_EVENT`-handler — i modsætning til WiFi-laget. Statisk IP blev derfor ignoreret, og der var ingen link-up/down-logning til diagnose. LØST: tilføjet `on_eth_event` (link UP/DOWN + driver start/stop-log), statisk-IP-anvendelse med validering (spejler `wifi_manager`), og forceret DHCP-genstart ved link-up.
+
+---
+
 ## Re-analyse efter implementering (b0085, 2026-07-12)
 
 - [fixed] N1 v0.5.5 b0086 — K1-guarden var asymmetrisk: den blokerede kun en 2. HW-UART **master**, men esp-modbus' slave-controller er også en global singleton (`slave_interface_ptr`), så to HW-**slaves** kolliderede stadig lydløst. LØST: guarden i `modbus_manager_init` tracker nu både `hw_master_up` og `hw_slave_up` og deaktiverer den anden HW-controller af hver rolle. (Én HW-master + én HW-slave kan sameksistere — separate globaler.)
