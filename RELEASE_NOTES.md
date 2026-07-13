@@ -2,6 +2,12 @@
 
 ---
 
+## v0.5.8 build 0089 — 2026-07-12 — fix: mindre log-støj
+
+Seriel-loggen gentog `Config loaded v12` cirka hvert 5. sekund, fordi status-sidens auto-opdatering læste konfigurationen ved hvert opslag. Beskeden er nu flyttet til debug-niveau, så den normale log er ren igen. (Rent kosmetisk — ingen funktionel ændring.)
+
+---
+
 ## v0.5.7 build 0088 — 2026-07-12 — fix: WiFi-status vises nu pålideligt i web-GUI
 
 Når både WiFi og Ethernet var forbundet, kunne WiFi-status mangle i management-siden (`/mgmt`), selvom CLI'ens `show wifi` viste den fint. Årsagen var, at siden hentede system- og WiFi-status i to samtidige kald uden at opdatere sig selv — ramte timingen skævt (eller blev et kald droppet under travlhed), stod WiFi som "—" indtil man manuelt trykkede *Opdater*.

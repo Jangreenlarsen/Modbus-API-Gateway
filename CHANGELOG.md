@@ -4,6 +4,14 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.5.8 build 0089] — 2026-07-12 — fix: fjern config-load log-spam (F3)
+
+**Filer ændret:**
+- `firmware/main/storage/config_store.c` — F3: `Config loaded`-beskeden demoteret fra INFO til DEBUG. F2's 5s auto-refresh kalder `/system` + `/interfaces` (begge loader config) → INFO-linjer hvert 5s. Nu stille på standard-logniveau.
+- `version.json`, `version.h` — bump til 0.5.8 b0089
+
+---
+
 ## [0.5.7 build 0088] — 2026-07-12 — fix: WiFi-status i /mgmt vises pålideligt (F2)
 
 **Filer ændret:**
