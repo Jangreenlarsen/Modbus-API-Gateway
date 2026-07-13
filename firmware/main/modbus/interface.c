@@ -135,7 +135,18 @@ esp_err_t mb_interface_init(mb_interface_t *iface, const iface_config_t *cfg)
                  cfg->id, cfg->baudrate, SW_UART_MAX_BAUD);
         return ESP_ERR_INVALID_ARG;
     }
+    // Afvis interfaces uden konfigurerede pins (fx nyoprettet via POST) i stedet
+    // for at bit-bange på GPIO -1 → GPIO-fejl-spam + falsk "ready".
+    if (cfg->tx_pin < 0 || cfg->rx_pin < 0) {
+        ESP_LOGE(TAG, "Interface %d: SW-UART mangler TX/RX pins (TX=%d RX=%d) — deaktiveret",
+                 cfg->id, cfg->tx_pin, cfg->rx_pin);
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (cfg->type == IFACE_TYPE_RS485 && cfg->rts_pin < 0)
+        ESP_LOGW(TAG, "Interface %d: SW-UART RS485 uden DE-pin — retningsstyring inaktiv", cfg->id);
+
     QueueHandle_t rx_q = xQueueCreate(256, sizeof(uint8_t));
+    if (!rx_q) return ESP_ERR_NO_MEM;
     sw_uart_config_t sw_cfg = {
         .tx_pin          = cfg->tx_pin,
         .rx_pin          = cfg->rx_pin,
@@ -144,7 +155,12 @@ esp_err_t mb_interface_init(mb_interface_t *iface, const iface_config_t *cfg)
         .rx_callback     = sw_rx_callback,
         .rx_callback_ctx = rx_q,
     };
-    ESP_ERROR_CHECK(sw_uart_init(&iface->sw_uart, &sw_cfg));
+    esp_err_t sw_err = sw_uart_init(&iface->sw_uart, &sw_cfg);
+    if (sw_err != ESP_OK) {
+        ESP_LOGE(TAG, "Interface %d: sw_uart_init: %s — deaktiveret", cfg->id, esp_err_to_name(sw_err));
+        vQueueDelete(rx_q);
+        return sw_err;
+    }
     sw_uart_set_userdata(iface->sw_uart, rx_q);
     ESP_LOGI(TAG, "SW-UART MASTER interface %d: %s TX=GPIO%d RX=GPIO%d DE=GPIO%d @ %lu baud",
              cfg->id, cfg->type == IFACE_TYPE_RS485 ? "RS485" : "RS232",
