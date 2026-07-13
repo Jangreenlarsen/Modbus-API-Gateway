@@ -1,7 +1,6 @@
 #pragma once
 
-// Eneste kilde til version og build-nummer.
-// Ændringer her recompilerer KUN de filer der inkluderer denne header
-// (main.c, serial_cli.c, system.c, ota_manager.c) — ikke alle 13 config.h-filer.
+// AUTO-GENERERET fra version.json af scripts/gen_version.py ved hvert build.
+// Rediger IKKE manuelt — ret version.json i stedet.
 #define GATEWAY_VERSION "0.5.8"
 #define GATEWAY_BUILD   "0089"
