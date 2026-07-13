@@ -4,6 +4,15 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [tooling] — 2026-07-13 — version.h auto-genereres fra version.json (F4)
+
+**Filer ændret (ingen versionsbump — build-tooling):**
+- `scripts/gen_version.py` — ny PlatformIO pre-build hook: genererer `firmware/main/core/version.h` fra `version.json` før hver kompilering. Forhindrer fejletiketterede OTA-binærer (release-binær bygget før versionsbump → forkert indbygget version → evig "update available"-loop).
+- `platformio.ini` — `extra_scripts = pre:scripts/gen_version.py`.
+- `firmware/main/core/version.h` — nu auto-genereret (rediger version.json i stedet).
+
+---
+
 ## [0.5.8 build 0089] — 2026-07-12 — fix: fjern config-load log-spam (F3)
 
 **Filer ændret:**
