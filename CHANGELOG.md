@@ -4,6 +4,15 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.5.9 build 0090] — 2026-07-13 — fix: afvis SW-UART uden pins (F5)
+
+**Filer ændret:**
+- `firmware/main/modbus/interface.c` — SW-UART-master afvises hvis TX/RX pins < 0 (interface markeres ikke-ready i stedet for at bit-bange på GPIO -1). `ESP_ERROR_CHECK(sw_uart_init)` erstattet med fejl-retur + oprydning af rx-queue. Advarsel ved RS485 uden DE-pin.
+- `firmware/main/modbus/sw_uart.c` — defensiv pin-validering i `sw_uart_init`; `gpio_install_isr_service` kaldes kun én gang (fjerner "already installed"-spam).
+- `version.json` — bump til 0.5.9 b0090 (`version.h` auto-genereres).
+
+---
+
 ## [tooling] — 2026-07-13 — version.h auto-genereres fra version.json (F4)
 
 **Filer ændret (ingen versionsbump — build-tooling):**

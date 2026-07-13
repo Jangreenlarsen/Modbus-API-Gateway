@@ -2,6 +2,12 @@
 
 ---
 
+## v0.5.9 build 0090 — 2026-07-13 — fix: interfaces uden pins spammer ikke længere
+
+Et Modbus-interface oprettet uden GPIO-pins (software-UART, fx lige efter "opret nyt interface") blev tidligere markeret som aktivt og fyldte boot-loggen med `GPIO_PIN mask error`. Nu afvises et sådant interface pænt (markeres deaktiveret) indtil du konfigurerer TX/RX-pins, og gentagne software-UART-porte giver ikke længere "ISR already installed"-fejl.
+
+---
+
 ## v0.5.8 build 0089 — 2026-07-12 — fix: mindre log-støj
 
 Seriel-loggen gentog `Config loaded v12` cirka hvert 5. sekund, fordi status-sidens auto-opdatering læste konfigurationen ved hvert opslag. Beskeden er nu flyttet til debug-niveau, så den normale log er ren igen. (Rent kosmetisk — ingen funktionel ændring.)

@@ -168,6 +168,13 @@ static void IRAM_ATTR rx_gpio_isr(void *arg)
 
 esp_err_t sw_uart_init(sw_uart_t **out, const sw_uart_config_t *cfg)
 {
+    // Bit-bang UART KRÆVER gyldige TX+RX GPIO'er. Uden validering giver
+    // (1ULL << -1) en ugyldig pin-maske → "GPIO_PIN mask error"-spam og et
+    // ikke-fungerende interface der stadig markeres "ready".
+    if (cfg->tx_pin < 0 || cfg->rx_pin < 0) {
+        ESP_LOGE(TAG, "SW-UART kræver gyldige TX+RX pins (TX=%d RX=%d)", cfg->tx_pin, cfg->rx_pin);
+        return ESP_ERR_INVALID_ARG;
+    }
     if (cfg->baudrate > SW_UART_MAX_BAUD) {
         ESP_LOGE(TAG, "Baudrate %lu > max %d — brug hardware UART", cfg->baudrate, SW_UART_MAX_BAUD);
         return ESP_ERR_INVALID_ARG;
@@ -222,8 +229,13 @@ esp_err_t sw_uart_init(sw_uart_t **out, const sw_uart_config_t *cfg)
     ESP_ERROR_CHECK(gptimer_register_event_callbacks(u->timer, &cbs, u));
     ESP_ERROR_CHECK(gptimer_enable(u->timer));
 
-    // GPIO ISR — installer service hvis ikke allerede gjort
-    gpio_install_isr_service(0);
+    // GPIO ISR — installer service KUN én gang (ellers logger ESP-IDF en
+    // "already installed"-fejl for hvert ekstra SW-interface).
+    static bool s_isr_installed = false;
+    if (!s_isr_installed) {
+        esp_err_t ie = gpio_install_isr_service(0);
+        if (ie == ESP_OK || ie == ESP_ERR_INVALID_STATE) s_isr_installed = true;
+    }
     gpio_isr_handler_add(cfg->rx_pin, rx_gpio_isr, u);
 
     ESP_LOGI(TAG, "SW-UART init: TX=GPIO%d RX=GPIO%d DE=GPIO%d @ %lu baud (bit=%lu µs)",
