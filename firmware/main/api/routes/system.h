@@ -9,3 +9,5 @@ extern const httpd_uri_t route_put_system_hardware;
 extern const httpd_uri_t route_get_system_gpio;
 extern const httpd_uri_t route_get_system_log;
 extern const httpd_uri_t route_post_system_log_clear;
+extern const httpd_uri_t route_get_modbus_log;
+extern const httpd_uri_t route_post_modbus_log_clear;

@@ -103,6 +103,8 @@ static esp_err_t api_index_handler(httpd_req_t *req)
     EP("PUT",  "/api/v1/interfaces/:key/slaves/:sid/coils?start=N",            "FC0F: skriv flere coils  {\"values\":[true,false]}");
     EP("PUT",  "/api/v1/interfaces/:key/slaves/:sid/holding-registers/:addr",  "FC06: skriv enkelt register  {\"value\":1234}");
     EP("PUT",  "/api/v1/interfaces/:key/slaves/:sid/holding-registers?start=N","FC10: skriv flere registers  {\"values\":[1234,5678]}");
+    EP("GET",  "/api/v1/modbus/log?since=N",                                  "Dekodet Modbus-bus-log (seq/tid/iface/slave/fc/addr/count/status)");
+    EP("POST", "/api/v1/modbus/log/clear",                                    "Ryd Modbus-loggen");
     EP("GET",  "/api/v1/cache/stats",                                         "Cache statistik: hits, misses, hit_rate, entries, TTL, refresh-tællere");
     EP("GET",  "/api/v1/cache/entries",                                       "Alle cache-entries med iface/slave/fc/addr/value/age");
     EP("GET",  "/api/v1/cache/history",                                       "Tidsseriedata (60 samples) for hits/miss/err/used/refresh");
@@ -167,6 +169,8 @@ esp_err_t api_server_start(const api_config_t *cfg)
     reg(s_server, &route_get_system_gpio);
     reg(s_server, &route_get_system_log);
     reg(s_server, &route_post_system_log_clear);
+    reg(s_server, &route_get_modbus_log);
+    reg(s_server, &route_post_modbus_log_clear);
 
     // OTA routes
     reg(s_server, &route_get_ota_check);

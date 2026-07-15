@@ -2,6 +2,20 @@
 
 ---
 
+## v0.8.0 build 0093 — 2026-07-13 — feat: dekodet Modbus-log
+
+Ny **Modbus Log**-fane i management-GUI'en viser alle Modbus-bus-transaktioner i realtid — dekodet og læsevenligt:
+
+- **Funktion** oversat til navn (fx "FC03 Read Holding")
+- **Iface, slave, adresse og antal** pr. transaktion
+- **Status** farvekodet: ok (grøn), timeout (orange), exception (rød, med exception-kode), fejl
+- **Værdi** (første register/coil) i decimal + hex
+- Live-opdatering hvert 1,5 sek, med pause- og ryd-knap
+
+Nyttigt til fejlfinding: du kan se præcis hvad der sendes på bussen og hvordan slaverne svarer.
+
+---
+
 ## v0.7.0 build 0092 — 2026-07-13 — feat: loopback-selvtest af interface
 
 Hvert Modbus-interface har nu en **Test**-knap i management-GUI'en. Den sender et telegram ud på TX og verificerer at det modtages retur på RX — en hurtig selvtest af UART-stien.

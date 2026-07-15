@@ -8,6 +8,7 @@ idf_component_register(
         "modbus/interface.c"
         "modbus/sw_uart.c"
         "modbus/mb_rtu_sw.c"
+        "modbus/modbus_log.c"
         "storage/config_store.c"
         "storage/register_cache.c"
         "service/gateway_service.c"

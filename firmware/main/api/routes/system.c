@@ -1,5 +1,6 @@
 #include "system.h"
 #include "api_log.h"
+#include "modbus_log.h"
 #include "config.h"
 #include "config_store.h"
 #include "version.h"
@@ -217,6 +218,35 @@ static esp_err_t post_system_log_clear_handler(httpd_req_t *req)
     httpd_resp_sendstr(req, "{\"status\":\"cleared\"}");
     return ESP_OK;
 }
+
+// ── Modbus-log (dekodede bus-transaktioner) ─────────────────────────────────
+
+static esp_err_t get_modbus_log_handler(httpd_req_t *req)
+{
+    uint32_t since = 0;
+    char qs[32] = {0};
+    if (httpd_req_get_url_query_str(req, qs, sizeof(qs)) == ESP_OK) {
+        char val[16] = {0};
+        if (httpd_query_key_value(qs, "since", val, sizeof(val)) == ESP_OK)
+            since = (uint32_t)strtoul(val, NULL, 10);
+    }
+    httpd_resp_set_type(req, "application/json");
+    char *s = modbus_log_since_json(since);
+    httpd_resp_sendstr(req, s);
+    free(s);
+    return ESP_OK;
+}
+
+static esp_err_t post_modbus_log_clear_handler(httpd_req_t *req)
+{
+    modbus_log_clear();
+    httpd_resp_set_type(req, "application/json");
+    httpd_resp_sendstr(req, "{\"status\":\"cleared\"}");
+    return ESP_OK;
+}
+
+const httpd_uri_t route_get_modbus_log       = { .uri="/api/v1/modbus/log",          .method=HTTP_GET,  .handler=get_modbus_log_handler };
+const httpd_uri_t route_post_modbus_log_clear= { .uri="/api/v1/modbus/log/clear",    .method=HTTP_POST, .handler=post_modbus_log_clear_handler };
 
 const httpd_uri_t route_get_system          = { .uri="/api/v1/system",              .method=HTTP_GET,  .handler=get_system_handler };
 const httpd_uri_t route_post_reboot         = { .uri="/api/v1/system/reboot",       .method=HTTP_POST, .handler=post_reboot_handler };

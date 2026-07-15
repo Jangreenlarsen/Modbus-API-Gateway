@@ -4,6 +4,19 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.8.0 build 0093] — 2026-07-13 — feat: dekodet Modbus-log i web-GUI (Feature 3)
+
+**Filer ændret:**
+- `firmware/main/modbus/modbus_log.c/.h` — ny ring-buffer (100 entries, mutex-beskyttet) over dekodede Modbus-bus-transaktioner med seq-baseret polling.
+- `firmware/main/modbus/modbus_manager.c` — `modbus_log_init()` ved init + `modbus_log_add()` efter hver af de 8 bus-operationer (FC01-FC16) med iface/slave/fc/addr/count/status/første-værdi.
+- `firmware/main/CMakeLists.txt` — tilføjet `modbus/modbus_log.c`.
+- `firmware/main/api/routes/system.c/.h` — `GET /api/v1/modbus/log?since=N` + `POST /api/v1/modbus/log/clear`.
+- `firmware/main/api/server.c` — registrér routes + API-index.
+- `firmware/main/api/routes/mgmt.c` — ny "Modbus Log"-fane: live-poll (1,5s), FC-navne, status-farver, pause + ryd.
+- `version.json` — bump til 0.8.0 b0093 (feature).
+
+---
+
 ## [0.7.0 build 0092] — 2026-07-13 — feat: interface loopback-selvtest (Feature 1)
 
 **Filer ændret:**

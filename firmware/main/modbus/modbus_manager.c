@@ -1,6 +1,7 @@
 #include "modbus_manager.h"
 #include "interface.h"
 #include "register_cache.h"
+#include "modbus_log.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -25,6 +26,7 @@ esp_err_t modbus_manager_init(const gateway_config_t *cfg)
 {
     s_iface_count = cfg->interface_count;
     s_cfg_ref     = cfg;
+    modbus_log_init();
     // K1/N1: esp-modbus v1.x har ÉN global master-controller OG én global
     // slave-controller. Der kan derfor køre højst én HW-UART master og højst én
     // HW-UART slave. En master og en slave kan sameksistere (separate globaler).
@@ -117,6 +119,7 @@ mb_result_t mb_read_coils(uint8_t iface, uint8_t slave, uint16_t start, uint16_t
         cache_store_coils(iface, slave, CACHE_FC_COIL, start, count, out);
     else
         cache_mark_error(iface, slave, CACHE_FC_COIL, start);
+    modbus_log_add(iface, slave, 1, start, count, r, (r.esp_err==ESP_OK)?(out[0]&1):0);
     return r;
 }
 
@@ -134,6 +137,7 @@ mb_result_t mb_read_discrete_inputs(uint8_t iface, uint8_t slave, uint16_t start
         cache_store_coils(iface, slave, CACHE_FC_DISCRETE, start, count, out);
     else
         cache_mark_error(iface, slave, CACHE_FC_DISCRETE, start);
+    modbus_log_add(iface, slave, 2, start, count, r, (r.esp_err==ESP_OK)?(out[0]&1):0);
     return r;
 }
 
@@ -150,6 +154,7 @@ mb_result_t mb_read_holding_registers(uint8_t iface, uint8_t slave, uint16_t sta
         cache_store_regs(iface, slave, CACHE_FC_HOLDING, start, count, out);
     else
         cache_mark_error(iface, slave, CACHE_FC_HOLDING, start);
+    modbus_log_add(iface, slave, 3, start, count, r, (r.esp_err==ESP_OK)?out[0]:0);
     return r;
 }
 
@@ -166,6 +171,7 @@ mb_result_t mb_read_input_registers(uint8_t iface, uint8_t slave, uint16_t start
         cache_store_regs(iface, slave, CACHE_FC_INPUT, start, count, out);
     else
         cache_mark_error(iface, slave, CACHE_FC_INPUT, start);
+    modbus_log_add(iface, slave, 4, start, count, r, (r.esp_err==ESP_OK)?out[0]:0);
     return r;
 }
 
@@ -182,6 +188,7 @@ mb_result_t mb_write_coil(uint8_t iface, uint8_t slave, uint16_t addr, uint8_t v
     } else {
         cache_invalidate(iface, slave, CACHE_FC_COIL, addr);
     }
+    modbus_log_add(iface, slave, 5, addr, 1, r, value ? 1 : 0);
     return r;
 }
 
@@ -194,6 +201,7 @@ mb_result_t mb_write_register(uint8_t iface, uint8_t slave, uint16_t addr, uint1
         cache_store(iface, slave, CACHE_FC_HOLDING, addr, value);
     else
         cache_invalidate(iface, slave, CACHE_FC_HOLDING, addr);
+    modbus_log_add(iface, slave, 6, addr, 1, r, value);
     return r;
 }
 
@@ -206,6 +214,7 @@ mb_result_t mb_write_coils(uint8_t iface, uint8_t slave, uint16_t start, uint16_
         cache_store_coils(iface, slave, CACHE_FC_COIL, start, count, bits);
     else
         for (int i = 0; i < count; i++) cache_invalidate(iface, slave, CACHE_FC_COIL, start + i);
+    modbus_log_add(iface, slave, 15, start, count, r, (count>0)?(bits[0]&1):0);
     return r;
 }
 
@@ -218,6 +227,7 @@ mb_result_t mb_write_registers(uint8_t iface, uint8_t slave, uint16_t start, uin
         cache_store_regs(iface, slave, CACHE_FC_HOLDING, start, count, regs);
     else
         for (int i = 0; i < count; i++) cache_invalidate(iface, slave, CACHE_FC_HOLDING, start + i);
+    modbus_log_add(iface, slave, 16, start, count, r, (count>0)?regs[0]:0);
     return r;
 }
 
