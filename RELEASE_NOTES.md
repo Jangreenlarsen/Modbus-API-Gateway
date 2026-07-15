@@ -2,6 +2,20 @@
 
 ---
 
+## v0.6.0 build 0091 — 2026-07-13 — feat: GPIO-oversigt på interface-konfig
+
+Interface-konfig-siden i management-GUI'en viser nu en samlet oversigt over hvilke GPIO'er du kan bruge til TX/RX/DE:
+
+- **Grøn** = fri (kan bruges som TX, RX eller DE)
+- **Grå** = kun RX (GPIO 34-39 er input-only)
+- **Rød** = reserveret (flash, UART0-konsol eller Ethernet/W5500)
+- **Gul kant** = strapping/boot-pin (brug med forsigtighed)
+- **•** = allerede brugt af et interface
+
+Oversigten tager højde for din board-variant (30/38-pin) og din aktive Ethernet-opsætning, så pins optaget af W5500 automatisk markeres som reserveret.
+
+---
+
 ## v0.5.9 build 0090 — 2026-07-13 — fix: interfaces uden pins spammer ikke længere
 
 Et Modbus-interface oprettet uden GPIO-pins (software-UART, fx lige efter "opret nyt interface") blev tidligere markeret som aktivt og fyldte boot-loggen med `GPIO_PIN mask error`. Nu afvises et sådant interface pænt (markeres deaktiveret) indtil du konfigurerer TX/RX-pins, og gentagne software-UART-porte giver ikke længere "ISR already installed"-fejl.

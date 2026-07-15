@@ -4,6 +4,16 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.6.0 build 0091] — 2026-07-13 — feat: GPIO-oversigt på interface-konfig (Feature 2)
+
+**Filer ændret:**
+- `firmware/main/api/routes/system.c/.h` — nyt `GET /api/v1/system/gpio`: beregner pr. GPIO tx/rx/de-brugbarhed, input-only, strapping-caution, `reserved_by` (flash/uart0/ethernet) og `used_by` (interface-id+rolle) ift. board-variant + aktiv Ethernet-config.
+- `firmware/main/api/server.c` — registrér route + tilføj til API-index.
+- `firmware/main/api/routes/mgmt.c` — farvekodet GPIO-chip-grid + legende i interfaces-fanen; opdateres ved fane-load og board-skift.
+- `version.json` — bump til 0.6.0 b0091 (feature).
+
+---
+
 ## [0.5.9 build 0090] — 2026-07-13 — fix: afvis SW-UART uden pins (F5)
 
 **Filer ændret:**

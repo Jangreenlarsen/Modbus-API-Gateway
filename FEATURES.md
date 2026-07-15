@@ -7,6 +7,8 @@ Status: `planned` | `in-progress` | `done`
 
 ## Færdige features
 
+- [x] done    v0.6.0 b0091 — GPIO-oversigt på interface-konfig-siden: `GET /api/v1/system/gpio` beregner pr. GPIO om den kan bruges som TX/RX/DE ift. board-variant + aktiv Ethernet-config (reserverede/optagne pins markeres). Farvekodet chip-grid i /mgmt interfaces-fanen.
+
 - [x] done    v0.1.0 — Basis Modbus RTU master på ét RS485-interface (UART1)
 - [x] done    v0.1.0 — NVS-baseret konfigurationspersistens (alle interface-parametre)
 - [x] done    v0.1.0 — REST API: fuld FC01–FC10/FC0F mapping med 1:1 Modbus-operationer

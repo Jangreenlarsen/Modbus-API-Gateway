@@ -81,6 +81,7 @@ static esp_err_t api_index_handler(httpd_req_t *req)
     EP("POST", "/api/v1/system/reboot",                                       "Genstart gateway");
     EP("GET",  "/api/v1/system/hardware",                                     "Board variant + GPIO presets for alle interfaces");
     EP("PUT",  "/api/v1/system/hardware",                                     "Gem board variant  {\"board_variant\":\"30pin\"|\"38pin\"}");
+    EP("GET",  "/api/v1/system/gpio",                                         "GPIO-tilgængelighed (tx/rx/de, input-only, reserveret, brugt-af) ift. board + ethernet");
     EP("GET",  "/api/v1/system/wifi",                                         "WiFi status");
     EP("PUT",  "/api/v1/system/wifi",                                         "Konfigurér WiFi (enabled, ssid, password, ip, ap_fallback)");
     EP("GET",  "/api/v1/system/wifi/scan",                                    "Scan efter tilgængelige WiFi-netværk");
@@ -161,6 +162,7 @@ esp_err_t api_server_start(const api_config_t *cfg)
     reg(s_server, &route_post_reboot);
     reg(s_server, &route_get_system_hardware);
     reg(s_server, &route_put_system_hardware);
+    reg(s_server, &route_get_system_gpio);
     reg(s_server, &route_get_system_log);
     reg(s_server, &route_post_system_log_clear);
 

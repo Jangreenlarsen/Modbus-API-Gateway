@@ -106,6 +106,90 @@ static esp_err_t put_system_hardware_handler(httpd_req_t *req)
     return ESP_OK;
 }
 
+// ── GET /api/v1/system/gpio — GPIO-tilgængelighed til interface-pins ─────────
+// Beregner pr. GPIO om den kan bruges som TX/RX/DE, ift. board-variant og den
+// aktive Ethernet-config (pins optaget af W5500/LAN8720 markeres reserveret).
+
+static bool gpio_exists(int g, board_variant_t board)
+{
+    if (g < 0 || g > 39) return false;
+    if (g == 20 || g == 24 || (g >= 28 && g <= 31)) return false;   // findes ikke på ESP32
+    if (board == BOARD_ESP32_30PIN && (g == 37 || g == 38)) return false;  // ikke eksponeret
+    return true;
+}
+static bool gpio_input_only(int g)  { return g >= 34 && g <= 39; }
+static bool gpio_is_flash(int g)    { return g >= 6 && g <= 11; }
+static bool gpio_is_strapping(int g){ return g==0 || g==2 || g==5 || g==12 || g==15; }
+
+static const char *gpio_reserved_by(int g, const eth_config_t *e)
+{
+    if (gpio_is_flash(g)) return "flash";
+    if (g == 1 || g == 3) return "uart0";
+    if (!e->enabled) return NULL;
+    if (e->hw_type == ETH_HW_W5500) {
+        if (g==e->spi_cs_gpio || g==e->spi_mosi_gpio || g==e->spi_miso_gpio || g==e->spi_sclk_gpio) return "ethernet";
+        if (e->spi_rst_gpio >= 0 && g==e->spi_rst_gpio) return "ethernet";
+        if (e->spi_int_gpio >= 0 && g==e->spi_int_gpio) return "ethernet";
+    } else if (e->hw_type == ETH_HW_LAN8720) {
+        static const int rmii[] = { 0, 19, 21, 22, 25, 26, 27 };  // faste RMII-pins
+        for (unsigned i = 0; i < sizeof(rmii)/sizeof(rmii[0]); i++) if (g==rmii[i]) return "ethernet";
+        if (e->mdc_gpio  >= 0 && g==e->mdc_gpio)  return "ethernet";
+        if (e->mdio_gpio >= 0 && g==e->mdio_gpio) return "ethernet";
+        if (e->phy_rst_gpio >= 0 && g==e->phy_rst_gpio) return "ethernet";
+    }
+    return NULL;
+}
+
+// Hvilket interface (id) bruger pin'en, og som hvilken rolle. -1 = fri.
+static int gpio_used_by(int g, const gateway_config_t *cfg, const char **role)
+{
+    for (int i = 0; i < cfg->interface_count; i++) {
+        const iface_config_t *f = &cfg->interfaces[i];
+        if (f->tx_pin  == g) { *role = "TX"; return f->id; }
+        if (f->rx_pin  == g) { *role = "RX"; return f->id; }
+        if (f->rts_pin == g) { *role = "DE"; return f->id; }
+    }
+    return -1;
+}
+
+static esp_err_t get_system_gpio_handler(httpd_req_t *req)
+{
+    gateway_config_t cfg; config_store_load(&cfg);
+
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "board_variant",
+        cfg.board_variant == BOARD_ESP32_38PIN ? "38pin" : "30pin");
+    cJSON *arr = cJSON_AddArrayToObject(root, "gpios");
+
+    for (int g = 0; g <= 39; g++) {
+        if (!gpio_exists(g, cfg.board_variant)) continue;
+        const char *res    = gpio_reserved_by(g, &cfg.ethernet);
+        bool        inonly = gpio_input_only(g);
+        bool        freep  = (res == NULL);
+
+        cJSON *e = cJSON_CreateObject();
+        cJSON_AddNumberToObject(e, "gpio",       g);
+        cJSON_AddBoolToObject(e,   "tx",         freep && !inonly);
+        cJSON_AddBoolToObject(e,   "rx",         freep);
+        cJSON_AddBoolToObject(e,   "de",         freep && !inonly);
+        cJSON_AddBoolToObject(e,   "input_only", inonly);
+        cJSON_AddBoolToObject(e,   "caution",    gpio_is_strapping(g));
+        if (res) cJSON_AddStringToObject(e, "reserved_by", res);
+        const char *role = NULL;
+        int uid = gpio_used_by(g, &cfg, &role);
+        if (uid >= 0) {
+            cJSON_AddNumberToObject(e, "used_by",   uid);
+            cJSON_AddStringToObject(e, "used_role", role);
+        }
+        cJSON_AddItemToArray(arr, e);
+    }
+
+    httpd_resp_set_type(req, "application/json");
+    char *s = cJSON_PrintUnformatted(root); cJSON_Delete(root);
+    httpd_resp_sendstr(req, s); free(s);
+    return ESP_OK;
+}
+
 // ── GET /api/v1/system/log?since=N ──────────────────────────────────────────
 
 static esp_err_t get_system_log_handler(httpd_req_t *req)
@@ -138,5 +222,6 @@ const httpd_uri_t route_get_system          = { .uri="/api/v1/system",          
 const httpd_uri_t route_post_reboot         = { .uri="/api/v1/system/reboot",       .method=HTTP_POST, .handler=post_reboot_handler };
 const httpd_uri_t route_get_system_hardware = { .uri="/api/v1/system/hardware",     .method=HTTP_GET,  .handler=get_system_hardware_handler };
 const httpd_uri_t route_put_system_hardware = { .uri="/api/v1/system/hardware",     .method=HTTP_PUT,  .handler=put_system_hardware_handler };
+const httpd_uri_t route_get_system_gpio     = { .uri="/api/v1/system/gpio",         .method=HTTP_GET,  .handler=get_system_gpio_handler };
 const httpd_uri_t route_get_system_log      = { .uri="/api/v1/system/log",          .method=HTTP_GET,  .handler=get_system_log_handler };
 const httpd_uri_t route_post_system_log_clear = { .uri="/api/v1/system/log/clear",  .method=HTTP_POST, .handler=post_system_log_clear_handler };
