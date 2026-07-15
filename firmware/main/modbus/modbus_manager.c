@@ -6,6 +6,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include <string.h>
+#include <stdio.h>
 
 static const char *TAG = "modbus_mgr";
 
@@ -218,6 +219,23 @@ mb_result_t mb_write_registers(uint8_t iface, uint8_t slave, uint16_t start, uin
     else
         for (int i = 0; i < count; i++) cache_invalidate(iface, slave, CACHE_FC_HOLDING, start + i);
     return r;
+}
+
+// ── Loopback-selvtest ──────────────────────────────────────────────────────
+
+esp_err_t mb_selftest(uint8_t iface, bool external, selftest_result_t *out)
+{
+    mb_interface_t *p = get_iface(iface);
+    if (!p) {
+        memset(out, 0, sizeof(*out));
+        snprintf(out->detail, sizeof(out->detail), "Interface ikke aktivt");
+        return ESP_ERR_INVALID_ARG;
+    }
+    esp_err_t e = mb_interface_selftest(p, external, out);
+    // Loopback kan have efterladt "svar" i esp-modbus — invalidér cachen for
+    // dette interface så efterfølgende reads går til bussen.
+    cache_invalidate_iface(iface);
+    return e;
 }
 
 // ── Cache refresh-task ────────────────────────────────────────────────────

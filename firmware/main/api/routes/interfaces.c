@@ -381,8 +381,64 @@ static esp_err_t master_put_dispatcher(httpd_req_t *req)
     return ESP_OK;
 }
 
+// Tjek om URI'en slutter på et bestemt action-suffix efter nøgle-segmentet.
+static bool uri_has_action(const char *uri, const char *action)
+{
+    const char *prefix = "/api/v1/interfaces/";
+    const char *p = strstr(uri, prefix);
+    if (!p) return false;
+    p += strlen(prefix);
+    while (*p && *p != '/' && *p != '?') p++;   // skip nøgle-segment
+    size_t al = strlen(action);
+    return strncmp(p, action, al) == 0 && (p[al] == '\0' || p[al] == '?');
+}
+
+// POST /api/v1/interfaces/{key}/selftest   body: {"mode":"internal"|"external"}
+static esp_err_t master_post_dispatcher(httpd_req_t *req)
+{
+    httpd_resp_set_type(req, "application/json");
+    if (!uri_has_action(req->uri, "/selftest")) {
+        httpd_resp_set_status(req, "404 Not Found");
+        httpd_resp_sendstr(req, "{\"error\":\"unknown action\"}");
+        return ESP_OK;
+    }
+
+    char key[32] = {0};
+    parse_iface_key(req->uri, key, sizeof(key));
+    int iface = gw_resolve_iface(key);
+    if (iface < 0) {
+        httpd_resp_set_status(req, "404 Not Found");
+        httpd_resp_sendstr(req, "{\"error\":\"interface not found\"}");
+        return ESP_OK;
+    }
+
+    char body[64] = {0};
+    api_recv_body(req, body, sizeof(body));
+    cJSON *json = body[0] ? cJSON_Parse(body) : NULL;
+    cJSON *m    = json ? cJSON_GetObjectItem(json, "mode") : NULL;
+    bool external = (m && cJSON_IsString(m) && strcasecmp(m->valuestring, "external") == 0);
+    cJSON_Delete(json);
+
+    selftest_result_t r;
+    gw_selftest_iface((uint8_t)iface, external, &r);
+
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddNumberToObject(root, "interface",   iface);
+    cJSON_AddBoolToObject(root,   "passed",      r.passed);
+    cJSON_AddStringToObject(root, "mode",        r.mode);
+    cJSON_AddNumberToObject(root, "tx_bytes",    r.tx_bytes);
+    cJSON_AddNumberToObject(root, "rx_bytes",    r.rx_bytes);
+    cJSON_AddNumberToObject(root, "mismatches",  r.mismatches);
+    cJSON_AddNumberToObject(root, "duration_ms", r.duration_ms);
+    cJSON_AddStringToObject(root, "detail",      r.detail);
+    char *s = cJSON_PrintUnformatted(root); cJSON_Delete(root);
+    httpd_resp_sendstr(req, s); free(s);
+    return ESP_OK;
+}
+
 const httpd_uri_t route_get_interfaces       = { .uri="/api/v1/interfaces",   .method=HTTP_GET,    .handler=get_interfaces_handler };
 const httpd_uri_t route_get_interface        = { .uri="/api/v1/interfaces/*", .method=HTTP_GET,    .handler=master_get_dispatcher };
 const httpd_uri_t route_put_interface_config = { .uri="/api/v1/interfaces/*", .method=HTTP_PUT,    .handler=master_put_dispatcher };
 const httpd_uri_t route_post_interface       = { .uri="/api/v1/interfaces",   .method=HTTP_POST,   .handler=post_interface_handler };
+const httpd_uri_t route_post_interface_action= { .uri="/api/v1/interfaces/*", .method=HTTP_POST,   .handler=master_post_dispatcher };
 const httpd_uri_t route_delete_interface     = { .uri="/api/v1/interfaces/*", .method=HTTP_DELETE, .handler=delete_interface_handler };

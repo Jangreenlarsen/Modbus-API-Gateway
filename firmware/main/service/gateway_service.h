@@ -27,3 +27,6 @@ mb_result_t gw_write_coil(uint8_t iface, uint8_t slave, uint16_t addr, uint8_t v
 mb_result_t gw_write_register(uint8_t iface, uint8_t slave, uint16_t addr, uint16_t value);
 mb_result_t gw_write_coils(uint8_t iface, uint8_t slave, uint16_t start, uint16_t count, const uint8_t *bits);
 mb_result_t gw_write_registers(uint8_t iface, uint8_t slave, uint16_t start, uint16_t count, const uint16_t *regs);
+
+// Loopback-selvtest på et interface (opslag mod kørende config).
+esp_err_t gw_selftest_iface(uint8_t iface, bool external, selftest_result_t *out);

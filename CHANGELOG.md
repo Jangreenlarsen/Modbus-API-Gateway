@@ -4,6 +4,21 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.7.0 build 0092] — 2026-07-13 — feat: interface loopback-selvtest (Feature 1)
+
+**Filer ændret:**
+- `firmware/main/modbus/modbus_manager.h/.c` — `selftest_result_t` + `mb_selftest()`; invaliderer cache efter test.
+- `firmware/main/modbus/interface.h/.c` — `mb_interface_selftest()`: HW-UART master sender FC03 med intern UART-loopback (`uart_set_loop_back`); TIMEOUT=fejl, ellers OK. SW-UART/slave afvises med klar besked.
+- `firmware/main/service/gateway_service.h/.c` — `gw_selftest_iface()`.
+- `firmware/main/api/routes/interfaces.c/.h` — `POST /api/v1/interfaces/{key}/selftest` via ny `master_post_dispatcher` (wildcard).
+- `firmware/main/api/server.c` — registrér route + API-index.
+- `firmware/main/api/routes/mgmt.c` — "Test"-knap + resultat-felt pr. interface.
+- `version.json` — bump til 0.7.0 b0092 (feature).
+
+**Note:** HW-UART bruger esp-modbus' RX-sti (echo-heuristik) for at undgå konflikt med esp-modbus' driver. Kræver hardware-validering. CLI-kommando udestår.
+
+---
+
 ## [0.6.0 build 0091] — 2026-07-13 — feat: GPIO-oversigt på interface-konfig (Feature 2)
 
 **Filer ændret:**

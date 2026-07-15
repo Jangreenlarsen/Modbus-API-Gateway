@@ -94,6 +94,7 @@ static esp_err_t api_index_handler(httpd_req_t *req)
     EP("GET",  "/api/v1/interfaces/:key",                                     "Hent interface-config — :key er id (0,1,..) ELLER navn-alias");
     EP("PUT",  "/api/v1/interfaces/:key",                                     "Opdatér interface (name, mode, slave_addr, baudrate, type, tx_pin, rx_pin, rts_pin, ...)");
     EP("DELETE","/api/v1/interfaces/:key",                                    "Slet Modbus-interface og renummerér");
+    EP("POST", "/api/v1/interfaces/:key/selftest",                            "Loopback-selvtest  {\"mode\":\"internal\"|\"external\"}");
     EP("GET",  "/api/v1/interfaces/:key/slaves/:sid/coils?start=N&count=N",    "FC01: læs coils  (:key = id eller navn)");
     EP("GET",  "/api/v1/interfaces/:key/slaves/:sid/discrete-inputs?start=N&count=N", "FC02: læs discrete inputs");
     EP("GET",  "/api/v1/interfaces/:key/slaves/:sid/holding-registers?start=N&count=N", "FC03: læs holding registers");
@@ -155,6 +156,7 @@ esp_err_t api_server_start(const api_config_t *cfg)
     reg(s_server, &route_get_interface);
     reg(s_server, &route_put_interface_config);
     reg(s_server, &route_post_interface);
+    reg(s_server, &route_post_interface_action);
     reg(s_server, &route_delete_interface);
 
     // System routes

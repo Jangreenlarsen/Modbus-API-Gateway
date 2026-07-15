@@ -2,6 +2,18 @@
 
 ---
 
+## v0.7.0 build 0092 — 2026-07-13 — feat: loopback-selvtest af interface
+
+Hvert Modbus-interface har nu en **Test**-knap i management-GUI'en. Den sender et telegram ud på TX og verificerer at det modtages retur på RX — en hurtig selvtest af UART-stien.
+
+- **HW-UART (RS232/RS485):** bruger ESP32'ens interne UART-loopback — ingen ledninger nødvendige. Resultatet viser BESTÅET/FEJLET, antal bytes og varighed.
+- **Ekstern jumper** (fysisk TX↔RX) understøttes via API'et (`{"mode":"external"}`) til at teste hele stien inkl. RS232-transceiveren.
+- **SW-UART** kan ikke loopback-testes (bit-bang deler timer mellem TX og RX), og selvtest gælder kun master-mode.
+
+Bemærk: HW-UART-testen er verificeret ved compilering; den skal afprøves på hardware.
+
+---
+
 ## v0.6.0 build 0091 — 2026-07-13 — feat: GPIO-oversigt på interface-konfig
 
 Interface-konfig-siden i management-GUI'en viser nu en samlet oversigt over hvilke GPIO'er du kan bruge til TX/RX/DE:

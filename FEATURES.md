@@ -7,6 +7,7 @@ Status: `planned` | `in-progress` | `done`
 
 ## Færdige features
 
+- [x] done    v0.7.0 b0092 — Interface loopback-selvtest: `POST /api/v1/interfaces/{key}/selftest {"mode":"internal"|"external"}`. HW-UART master sender en FC03-forespørgsel med (intern) UART-loopback og verificerer at telegrammet modtages retur på RX (TIMEOUT=fejl, ellers OK). Test-knap pr. interface i /mgmt. SW-UART understøttes ikke (bit-bang deler timer mellem TX/RX); slave-mode heller ikke. CLI udestår.
 - [x] done    v0.6.0 b0091 — GPIO-oversigt på interface-konfig-siden: `GET /api/v1/system/gpio` beregner pr. GPIO om den kan bruges som TX/RX/DE ift. board-variant + aktiv Ethernet-config (reserverede/optagne pins markeres). Farvekodet chip-grid i /mgmt interfaces-fanen.
 
 - [x] done    v0.1.0 — Basis Modbus RTU master på ét RS485-interface (UART1)
