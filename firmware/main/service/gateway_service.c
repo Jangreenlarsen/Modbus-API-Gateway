@@ -61,3 +61,6 @@ mb_result_t gw_write_coils(uint8_t iface, uint8_t slave, uint16_t start, uint16_
 
 mb_result_t gw_write_registers(uint8_t iface, uint8_t slave, uint16_t start, uint16_t count, const uint16_t *regs)
 { return mb_write_registers(iface, slave, start, count, regs); }
+
+esp_err_t gw_selftest_iface(uint8_t iface, bool external, selftest_result_t *out)
+{ return mb_selftest(iface, external, out); }

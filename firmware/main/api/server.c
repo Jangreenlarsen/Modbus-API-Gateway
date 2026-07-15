@@ -81,6 +81,7 @@ static esp_err_t api_index_handler(httpd_req_t *req)
     EP("POST", "/api/v1/system/reboot",                                       "Genstart gateway");
     EP("GET",  "/api/v1/system/hardware",                                     "Board variant + GPIO presets for alle interfaces");
     EP("PUT",  "/api/v1/system/hardware",                                     "Gem board variant  {\"board_variant\":\"30pin\"|\"38pin\"}");
+    EP("GET",  "/api/v1/system/gpio",                                         "GPIO-tilgængelighed (tx/rx/de, input-only, reserveret, brugt-af) ift. board + ethernet");
     EP("GET",  "/api/v1/system/wifi",                                         "WiFi status");
     EP("PUT",  "/api/v1/system/wifi",                                         "Konfigurér WiFi (enabled, ssid, password, ip, ap_fallback)");
     EP("GET",  "/api/v1/system/wifi/scan",                                    "Scan efter tilgængelige WiFi-netværk");
@@ -93,6 +94,7 @@ static esp_err_t api_index_handler(httpd_req_t *req)
     EP("GET",  "/api/v1/interfaces/:key",                                     "Hent interface-config — :key er id (0,1,..) ELLER navn-alias");
     EP("PUT",  "/api/v1/interfaces/:key",                                     "Opdatér interface (name, mode, slave_addr, baudrate, type, tx_pin, rx_pin, rts_pin, ...)");
     EP("DELETE","/api/v1/interfaces/:key",                                    "Slet Modbus-interface og renummerér");
+    EP("POST", "/api/v1/interfaces/:key/selftest",                            "Loopback-selvtest  {\"mode\":\"internal\"|\"external\"}");
     EP("GET",  "/api/v1/interfaces/:key/slaves/:sid/coils?start=N&count=N",    "FC01: læs coils  (:key = id eller navn)");
     EP("GET",  "/api/v1/interfaces/:key/slaves/:sid/discrete-inputs?start=N&count=N", "FC02: læs discrete inputs");
     EP("GET",  "/api/v1/interfaces/:key/slaves/:sid/holding-registers?start=N&count=N", "FC03: læs holding registers");
@@ -101,6 +103,8 @@ static esp_err_t api_index_handler(httpd_req_t *req)
     EP("PUT",  "/api/v1/interfaces/:key/slaves/:sid/coils?start=N",            "FC0F: skriv flere coils  {\"values\":[true,false]}");
     EP("PUT",  "/api/v1/interfaces/:key/slaves/:sid/holding-registers/:addr",  "FC06: skriv enkelt register  {\"value\":1234}");
     EP("PUT",  "/api/v1/interfaces/:key/slaves/:sid/holding-registers?start=N","FC10: skriv flere registers  {\"values\":[1234,5678]}");
+    EP("GET",  "/api/v1/modbus/log?since=N",                                  "Dekodet Modbus-bus-log (seq/tid/iface/slave/fc/addr/count/status)");
+    EP("POST", "/api/v1/modbus/log/clear",                                    "Ryd Modbus-loggen");
     EP("GET",  "/api/v1/cache/stats",                                         "Cache statistik: hits, misses, hit_rate, entries, TTL, refresh-tællere");
     EP("GET",  "/api/v1/cache/entries",                                       "Alle cache-entries med iface/slave/fc/addr/value/age");
     EP("GET",  "/api/v1/cache/history",                                       "Tidsseriedata (60 samples) for hits/miss/err/used/refresh");
@@ -154,6 +158,7 @@ esp_err_t api_server_start(const api_config_t *cfg)
     reg(s_server, &route_get_interface);
     reg(s_server, &route_put_interface_config);
     reg(s_server, &route_post_interface);
+    reg(s_server, &route_post_interface_action);
     reg(s_server, &route_delete_interface);
 
     // System routes
@@ -161,8 +166,11 @@ esp_err_t api_server_start(const api_config_t *cfg)
     reg(s_server, &route_post_reboot);
     reg(s_server, &route_get_system_hardware);
     reg(s_server, &route_put_system_hardware);
+    reg(s_server, &route_get_system_gpio);
     reg(s_server, &route_get_system_log);
     reg(s_server, &route_post_system_log_clear);
+    reg(s_server, &route_get_modbus_log);
+    reg(s_server, &route_post_modbus_log_clear);
 
     // OTA routes
     reg(s_server, &route_get_ota_check);

@@ -4,6 +4,44 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.8.0 build 0093] — 2026-07-13 — feat: dekodet Modbus-log i web-GUI (Feature 3)
+
+**Filer ændret:**
+- `firmware/main/modbus/modbus_log.c/.h` — ny ring-buffer (100 entries, mutex-beskyttet) over dekodede Modbus-bus-transaktioner med seq-baseret polling.
+- `firmware/main/modbus/modbus_manager.c` — `modbus_log_init()` ved init + `modbus_log_add()` efter hver af de 8 bus-operationer (FC01-FC16) med iface/slave/fc/addr/count/status/første-værdi.
+- `firmware/main/CMakeLists.txt` — tilføjet `modbus/modbus_log.c`.
+- `firmware/main/api/routes/system.c/.h` — `GET /api/v1/modbus/log?since=N` + `POST /api/v1/modbus/log/clear`.
+- `firmware/main/api/server.c` — registrér routes + API-index.
+- `firmware/main/api/routes/mgmt.c` — ny "Modbus Log"-fane: live-poll (1,5s), FC-navne, status-farver, pause + ryd.
+- `version.json` — bump til 0.8.0 b0093 (feature).
+
+---
+
+## [0.7.0 build 0092] — 2026-07-13 — feat: interface loopback-selvtest (Feature 1)
+
+**Filer ændret:**
+- `firmware/main/modbus/modbus_manager.h/.c` — `selftest_result_t` + `mb_selftest()`; invaliderer cache efter test.
+- `firmware/main/modbus/interface.h/.c` — `mb_interface_selftest()`: HW-UART master sender FC03 med intern UART-loopback (`uart_set_loop_back`); TIMEOUT=fejl, ellers OK. SW-UART/slave afvises med klar besked.
+- `firmware/main/service/gateway_service.h/.c` — `gw_selftest_iface()`.
+- `firmware/main/api/routes/interfaces.c/.h` — `POST /api/v1/interfaces/{key}/selftest` via ny `master_post_dispatcher` (wildcard).
+- `firmware/main/api/server.c` — registrér route + API-index.
+- `firmware/main/api/routes/mgmt.c` — "Test"-knap + resultat-felt pr. interface.
+- `version.json` — bump til 0.7.0 b0092 (feature).
+
+**Note:** HW-UART bruger esp-modbus' RX-sti (echo-heuristik) for at undgå konflikt med esp-modbus' driver. Kræver hardware-validering. CLI-kommando udestår.
+
+---
+
+## [0.6.0 build 0091] — 2026-07-13 — feat: GPIO-oversigt på interface-konfig (Feature 2)
+
+**Filer ændret:**
+- `firmware/main/api/routes/system.c/.h` — nyt `GET /api/v1/system/gpio`: beregner pr. GPIO tx/rx/de-brugbarhed, input-only, strapping-caution, `reserved_by` (flash/uart0/ethernet) og `used_by` (interface-id+rolle) ift. board-variant + aktiv Ethernet-config.
+- `firmware/main/api/server.c` — registrér route + tilføj til API-index.
+- `firmware/main/api/routes/mgmt.c` — farvekodet GPIO-chip-grid + legende i interfaces-fanen; opdateres ved fane-load og board-skift.
+- `version.json` — bump til 0.6.0 b0091 (feature).
+
+---
+
 ## [0.5.9 build 0090] — 2026-07-13 — fix: afvis SW-UART uden pins (F5)
 
 **Filer ændret:**

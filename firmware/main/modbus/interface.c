@@ -1,12 +1,14 @@
 #include "interface.h"
 #include "mb_rtu_sw.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "driver/uart.h"
 #include "esp_modbus_common.h"
 #include "esp_modbus_master.h"
 #include "esp_modbus_slave.h"
 #include "freertos/queue.h"
 #include <string.h>
+#include <stdio.h>
 
 // Modbus function codes — mb_functioncode_t er ikke eksporteret i esp-modbus v1.x
 #define MB_FUNC_READ_COILS                0x01
@@ -315,4 +317,59 @@ mb_result_t mb_interface_write_registers(mb_interface_t *iface, uint8_t slave,
     }
     MB_UNLOCK(iface);
     return r;
+}
+
+// ── Loopback-selvtest ────────────────────────────────────────────────────────
+// HW-UART master: send en FC03-forespørgsel med (evt. intern) loopback. Ved en
+// fungerende TX→RX-sti ekkoes telegrammet og esp-modbus modtager det som en
+// malformet "respons" → returnerer noget != TIMEOUT. TIMEOUT = intet kom retur.
+// SW-UART kan ikke loopback-testes (bit-bang deler én gptimer mellem TX og RX).
+
+esp_err_t mb_interface_selftest(mb_interface_t *iface, bool external, selftest_result_t *out)
+{
+    memset(out, 0, sizeof(*out));
+    snprintf(out->mode, sizeof(out->mode), "%s", external ? "external" : "internal");
+    uint32_t t0 = (uint32_t)(esp_timer_get_time() / 1000);
+
+    if (IS_SW(iface)) {
+        snprintf(out->detail, sizeof(out->detail),
+                 "SW-UART understøtter ikke loopback (delt TX/RX-timer)");
+        out->duration_ms = (uint32_t)(esp_timer_get_time() / 1000) - t0;
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    if (iface->cfg.mode == IFACE_MODE_SLAVE) {
+        snprintf(out->detail, sizeof(out->detail), "Loopback-selvtest kun i master-mode");
+        out->duration_ms = (uint32_t)(esp_timer_get_time() / 1000) - t0;
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+
+    if (!MB_LOCK(iface)) {
+        snprintf(out->detail, sizeof(out->detail), "Interface optaget (timeout)");
+        return ESP_ERR_TIMEOUT;
+    }
+
+    int uart = iface->cfg.uart_num;
+    if (!external) uart_set_loop_back(uart, true);
+    uart_flush(uart);
+
+    uint8_t rx[8] = {0};
+    mb_param_request_t req = { 1, MB_FUNC_READ_HOLDING_REGISTER, 0, 1 };
+    esp_err_t e = mbc_master_send_request(&req, rx);
+
+    if (!external) uart_set_loop_back(uart, false);
+    MB_UNLOCK(iface);
+
+    out->tx_bytes = 8;   // FC03(1 reg)-frame: addr+fc+start(2)+cnt(2)+crc(2)
+    out->passed   = (e != ESP_ERR_TIMEOUT);
+    out->rx_bytes = out->passed ? 8 : 0;
+    if (out->passed) {
+        snprintf(out->detail, sizeof(out->detail), "OK — telegram modtaget retur på RX");
+    } else {
+        snprintf(out->detail, sizeof(out->detail), "Intet modtaget på RX (%s)%s",
+                 esp_err_to_name(e),
+                 (iface->cfg.type == IFACE_TYPE_RS485 && external)
+                     ? " — RS485 ekstern kræver A/B-loop" : "");
+    }
+    out->duration_ms = (uint32_t)(esp_timer_get_time() / 1000) - t0;
+    return ESP_OK;
 }

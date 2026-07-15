@@ -7,6 +7,10 @@ Status: `planned` | `in-progress` | `done`
 
 ## Færdige features
 
+- [x] done    v0.8.0 b0093 — Dekodet Modbus-log i web-GUI: ring-buffer (100 entries) over bus-transaktioner, hooket i modbus_manager. `GET /api/v1/modbus/log?since=N` + `POST /api/v1/modbus/log/clear`. Ny "Modbus Log"-fane i /mgmt med live-poll, FC-navne, slave/adr/antal/status/værdi, pause + ryd.
+- [x] done    v0.7.0 b0092 — Interface loopback-selvtest: `POST /api/v1/interfaces/{key}/selftest {"mode":"internal"|"external"}`. HW-UART master sender en FC03-forespørgsel med (intern) UART-loopback og verificerer at telegrammet modtages retur på RX (TIMEOUT=fejl, ellers OK). Test-knap pr. interface i /mgmt. SW-UART understøttes ikke (bit-bang deler timer mellem TX/RX); slave-mode heller ikke. CLI udestår.
+- [x] done    v0.6.0 b0091 — GPIO-oversigt på interface-konfig-siden: `GET /api/v1/system/gpio` beregner pr. GPIO om den kan bruges som TX/RX/DE ift. board-variant + aktiv Ethernet-config (reserverede/optagne pins markeres). Farvekodet chip-grid i /mgmt interfaces-fanen.
+
 - [x] done    v0.1.0 — Basis Modbus RTU master på ét RS485-interface (UART1)
 - [x] done    v0.1.0 — NVS-baseret konfigurationspersistens (alle interface-parametre)
 - [x] done    v0.1.0 — REST API: fuld FC01–FC10/FC0F mapping med 1:1 Modbus-operationer
