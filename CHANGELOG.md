@@ -4,6 +4,15 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.8.1 build 0094] — 2026-07-15 — fix: unik W5500 MAC-adresse + INT-ISR (F6, F7)
+
+**Filer ændret:**
+- `firmware/main/core/ethernet.c` — F6: W5500 fik aldrig en MAC sat (ingen fabriks-MAC) → kørte med `00:00:00:00:00:00` på alle devices, MAC-kollisioner på netværket. LØST: `esp_read_mac(ESP_MAC_ETH)` (dedikeret, unik pr. chip fra eFuse) + `esp_eth_ioctl(ETH_CMD_S_MAC_ADDR)` før netif-attach. MAC logges ved boot.
+  F7: `gpio_isr_handler_add` fejlede stille ved W5500 INT-init ("isr service is not installed") → INT virkede kun via poll-workaround. LØST: `gpio_install_isr_service()` kaldes nu før `esp_eth_driver_install()` når INT-pin er konfigureret.
+- `version.json` — bump til 0.8.1 b0094 (bugfix).
+
+---
+
 ## [0.8.0 build 0093] — 2026-07-13 — feat: dekodet Modbus-log i web-GUI (Feature 3)
 
 **Filer ændret:**

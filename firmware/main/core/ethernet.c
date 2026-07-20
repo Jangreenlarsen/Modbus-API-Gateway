@@ -8,6 +8,7 @@
 #include "esp_eth_phy.h"
 #include "esp_event.h"
 #include "esp_netif.h"
+#include "esp_mac.h"
 #include "driver/spi_master.h"
 #include "driver/gpio.h"
 #include "freertos/FreeRTOS.h"
@@ -209,6 +210,11 @@ static esp_err_t init_w5500(const eth_config_t *cfg, esp_netif_t *eth_netif)
     if (cfg->spi_int_gpio >= 0) {
         w5500_cfg.int_gpio_num   = cfg->spi_int_gpio;
         w5500_cfg.poll_period_ms = 0;
+        // F7: driveren kalder gpio_isr_handler_add() for INT-pinnen ved
+        // esp_eth_driver_install() — servicen skal være installeret FØR det,
+        // ellers fejler tilmeldingen stille og INT virker aldrig (kørte kun
+        // via INT-poll-workaround-tasken nedenfor).
+        gpio_install_isr_service(0);
         ESP_LOGI(TAG, "W5500: interrupt-mode GPIO%d (kræver ekstern pull-up til 3.3V)",
                  cfg->spi_int_gpio);
     } else {
@@ -245,6 +251,23 @@ static esp_err_t init_w5500(const eth_config_t *cfg, esp_netif_t *eth_netif)
         phy->del(phy);
         spi_bus_free(SPI2_HOST);
         return ret;
+    }
+
+    // F6: W5500 har ingen fabriks-MAC (modsat ESP32's interne EMAC) — uden
+    // dette kører den med 00:00:00:00:00:00 på ALLE devices, hvilket giver
+    // MAC-kollisioner på netværket. ESP_MAC_ETH er en dedikeret, unik
+    // Ethernet-MAC udledt af chippens eFuse base-MAC (adskilt fra WiFi-MAC).
+    uint8_t mac_addr[6];
+    esp_err_t mac_err = esp_read_mac(mac_addr, ESP_MAC_ETH);
+    if (mac_err == ESP_OK) {
+        mac_err = esp_eth_ioctl(eth_handle, ETH_CMD_S_MAC_ADDR, mac_addr);
+    }
+    if (mac_err == ESP_OK) {
+        ESP_LOGI(TAG, "W5500 MAC: %02X:%02X:%02X:%02X:%02X:%02X",
+                 mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+    } else {
+        ESP_LOGE(TAG, "W5500 MAC-tildeling fejlede (%s) — enheden kan få en ikke-unik MAC",
+                 esp_err_to_name(mac_err));
     }
 
     ESP_ERROR_CHECK(esp_netif_attach(eth_netif, esp_eth_new_netif_glue(eth_handle)));

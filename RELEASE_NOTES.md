@@ -2,6 +2,18 @@
 
 ---
 
+## v0.8.1 build 0094 — 2026-07-15 — fix: unik MAC-adresse på Ethernet (W5500)
+
+Rettet en netværksfejl der ramte alle enheder med W5500 Ethernet: W5500-chippen har ikke sin egen MAC-adresse indbygget (i modsætning til ESP32'ens interne netværkschip), og firmwaren satte aldrig en — enheden kørte derfor med `00:00:00:00:00:00`, **samme adresse på alle devices**. Det giver konflikter på netværket (DHCP, switche, ARP).
+
+Hver enhed får nu en unik MAC-adresse udledt af sin egen chip ved boot. MAC'en logges i seriel-loggen ved Ethernet-init.
+
+Derudover er en fejl rettet hvor W5500's interrupt-pin ikke blev registreret korrekt ved opstart (virkede kun via en polling-workaround) — den er nu sat op rigtigt fra starten.
+
+**Vigtigt:** Efter denne opdatering får din enhed en ny MAC-adresse. Hvis du bruger DHCP-reservation eller MAC-filtrering i din router/switch, skal den opdateres med den nye adresse (vises i seriel-loggen ved boot, eller `show ethernet` i CLI).
+
+---
+
 ## v0.8.0 build 0093 — 2026-07-13 — feat: dekodet Modbus-log
 
 Ny **Modbus Log**-fane i management-GUI'en viser alle Modbus-bus-transaktioner i realtid — dekodet og læsevenligt:
