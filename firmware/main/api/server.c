@@ -39,7 +39,13 @@ static void reg(httpd_handle_t srv, const httpd_uri_t *r)
     httpd_uri_t wr = *r;
     wr.handler  = log_wrapper;
     wr.user_ctx = &s_orig_ctxs[s_nlogged];
-    httpd_register_uri_handler(srv, &wr);
+    // F9: httpd_register_uri_handler fejler stille (returkode ignoreret) hvis
+    // hcfg.max_uri_handlers er nået — en route kan derved forsvinde uden
+    // varsel. Log højlydt så det aldrig sker ubemærket igen.
+    esp_err_t err = httpd_register_uri_handler(srv, &wr);
+    if (err != ESP_OK)
+        ESP_LOGE(TAG, "Route-registrering fejlede for %s: %s (hcfg.max_uri_handlers nået?)",
+                 r->uri, esp_err_to_name(err));
     s_nlogged++;
 }
 
@@ -148,7 +154,9 @@ esp_err_t api_server_start(const api_config_t *cfg)
     }
 
     httpd_config_t hcfg = HTTPD_DEFAULT_CONFIG();
-    hcfg.max_uri_handlers  = 32;
+    // F9: skal matche/overstige MAX_LOGGED_ROUTES + direkte registreringer
+    // (WebSocket). Ellers fejler senere reg()-kald stille — se reg() ovenfor.
+    hcfg.max_uri_handlers  = 48;
     hcfg.uri_match_fn      = httpd_uri_match_wildcard;
     hcfg.server_port       = cfg->port;
     hcfg.stack_size        = 16384;
@@ -204,7 +212,9 @@ esp_err_t api_server_start(const api_config_t *cfg)
     reg(s_server, &route_get_manual);
 
     // WebSocket — ikke wrappes (specielt upgrade-flow)
-    httpd_register_uri_handler(s_server, &route_ws);
+    esp_err_t ws_err = httpd_register_uri_handler(s_server, &route_ws);
+    if (ws_err != ESP_OK)
+        ESP_LOGE(TAG, "WebSocket-registrering fejlede: %s", esp_err_to_name(ws_err));
 
     // API index — catch-all for /api* — registreres SIDST
     reg(s_server, &route_api_index);
