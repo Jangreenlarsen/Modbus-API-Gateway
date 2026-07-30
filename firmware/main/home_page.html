@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang='da'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<title>Modbus API Gateway</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,sans-serif;background:#f0f2f5;color:#222;font-size:14px}
+header{background:#1a2035;color:#fff;padding:12px 20px;display:flex;justify-content:space-between;align-items:center}
+header h1{font-size:15px;font-weight:600;letter-spacing:.3px}
+#hdr-info{font-size:12px;opacity:.65}
+nav{background:#fff;border-bottom:2px solid #e0e4ea;display:flex;padding:0 16px;gap:4px}
+nav a{border:none;background:none;padding:11px 18px;cursor:pointer;font-size:13px;color:#666;border-bottom:3px solid transparent;margin-bottom:-2px;font-weight:500;text-decoration:none;display:inline-block}
+nav a.active{color:#2563eb;border-bottom-color:#2563eb}
+nav a:hover:not(.active){color:#222}
+main{padding:20px;max-width:900px;margin:0 auto}
+.hero{background:linear-gradient(135deg,#1a2035,#2b3350);color:#fff;border-radius:10px;padding:34px 30px;margin-bottom:20px;box-shadow:0 2px 8px rgba(0,0,0,.15)}
+.hero .ico{font-size:38px;margin-bottom:8px;display:block}
+.hero h2{font-size:24px;font-weight:700;margin-bottom:6px}
+.hero p{font-size:14px;opacity:.8;max-width:560px;line-height:1.5}
+.hero .badges{margin-top:16px;display:flex;gap:10px;flex-wrap:wrap}
+.hb{background:rgba(255,255,255,.12);border-radius:99px;padding:5px 14px;font-size:12px;font-weight:600}
+.hb.live{background:rgba(16,185,129,.2);color:#6ee7b7}
+.hb.live::before{content:'\25cf';margin-right:6px;font-size:9px}
+.card{background:#fff;border-radius:8px;padding:16px 20px;margin-bottom:14px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.ct{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#888;margin-bottom:10px}
+table.info{width:100%;border-collapse:collapse}
+table.info td{padding:6px 0;border-bottom:1px solid #f3f4f6;vertical-align:top}
+table.info td:first-child{color:#666;width:150px;font-size:13px}
+table.info td:last-child{font-weight:500}
+table.info tr:last-child td{border-bottom:none}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px}
+.nc{background:#fff;border-radius:8px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.08);text-decoration:none;color:#222;display:block;border-top:3px solid #2563eb;transition:transform .15s,box-shadow .15s}
+.nc:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.nc .ico{font-size:26px;margin-bottom:10px;display:block}
+.nc h3{font-size:14px;font-weight:700;margin-bottom:6px}
+.nc p{font-size:12.5px;color:#666;line-height:1.5}
+.badge{display:inline-block;padding:2px 9px;border-radius:99px;font-size:11px;font-weight:700}
+.ok{background:#d1fae5;color:#065f46}.warn{background:#fef3c7;color:#92400e}.err{background:#fee2e2;color:#991b1b}
+footer{text-align:center;padding:24px 0 10px;color:#9ca3af;font-size:12px}
+footer a{color:#6b7280}
+</style>
+</head>
+<body>
+<header>
+  <h1>&#9649; Modbus API Gateway</h1>
+  <span id='hdr-info'>indl&#230;ser...</span>
+</header>
+<nav>
+  <a class='active' href='/'>Forside</a>
+  <a href='/mgmt'>Management</a>
+  <a href='/manual'>Manual</a>
+  <a href='/api'>REST API</a>
+  <a href='https://github.com/Jangreenlarsen/Modbus-API-Gateway' target='_blank' rel='noopener'>GitHub &#8599;</a>
+</nav>
+<main>
+
+  <div class='hero'>
+    <span class='ico'>&#128268;</span>
+    <h2>Modbus RTU &#8596; REST API Gateway</h2>
+    <p>Bro mellem Modbus RTU (RS485/RS232) og HTTP REST over Ethernet/WiFi &mdash; hele Modbus-bussen tilg&aelig;ngelig som et almindeligt REST API, ingen specialsoftware n&oslash;dvendig p&aring; klientsiden.</p>
+    <div class='badges'>
+      <span class='hb live' id='b-status'>henter status&hellip;</span>
+      <span class='hb' id='b-ver'>v&hellip;</span>
+      <span class='hb' id='b-ifc'>&hellip; interfaces</span>
+    </div>
+  </div>
+
+  <div class='card'>
+    <div class='ct'>System</div>
+    <table class='info' id='sys-table'>
+      <tr><td colspan='2' style='color:#aaa'>Indl&aelig;ser&hellip;</td></tr>
+    </table>
+  </div>
+
+  <div class='grid4'>
+    <a class='nc' href='/mgmt'>
+      <span class='ico'>&#128295;</span>
+      <h3>Management GUI</h3>
+      <p>Konfigur&eacute;r interfaces, overv&aring;g cache og Modbus-log, styr OTA-opdateringer.</p>
+    </a>
+    <a class='nc' href='/manual'>
+      <span class='ico'>&#128214;</span>
+      <h3>Manual</h3>
+      <p>Installation, GPIO pin-tildeling for RS485/RS232, og komplet REST API-guide.</p>
+    </a>
+    <a class='nc' href='/api' target='_blank'>
+      <span class='ico'>&#128279;</span>
+      <h3>REST API-indeks</h3>
+      <p>Selvdokumenterende JSON-liste over alle tilg&aelig;ngelige endpoints p&aring; denne enhed.</p>
+    </a>
+    <a class='nc' href='https://github.com/Jangreenlarsen/Modbus-API-Gateway' target='_blank' rel='noopener'>
+      <span class='ico'>&#128187;</span>
+      <h3>GitHub</h3>
+      <p>Kildekode, releases og changelog for firmwaren.</p>
+    </a>
+  </div>
+
+  <footer id='foot'>Modbus API Gateway</footer>
+</main>
+<script>
+function $(id){return document.getElementById(id);}
+fetch('/api/v1/system').then(function(r){return r.json();}).then(function(s){
+  $('hdr-info').textContent='v'+s.version+' • '+(s.ip||'?');
+  $('b-status').textContent='Online';
+  $('b-ver').textContent='v'+s.version+' build '+(s.build||'?');
+  var h=Math.floor(s.uptime_s/3600),m=Math.floor((s.uptime_s%3600)/60);
+  var rows=[
+    ['Version','v'+s.version+' build '+(s.build||'?')],
+    ['IP (Ethernet)',s.ip||'&mdash;'],
+    ['Uptime',h+'t '+m+'m'],
+    ['Fri heap',Math.round(s.free_heap/1024)+' KB'],
+    ['ESP32 board',s.board_variant==='38pin'?'38-pin':'30-pin']
+  ];
+  $('sys-table').innerHTML=rows.map(function(r){return '<tr><td>'+r[0]+'</td><td>'+r[1]+'</td></tr>';}).join('');
+  $('foot').innerHTML='Modbus API Gateway v'+s.version+' build '+(s.build||'?')+' &mdash; <a href="https://github.com/Jangreenlarsen/Modbus-API-Gateway" target="_blank" rel="noopener">GitHub</a>';
+}).catch(function(){
+  $('b-status').textContent='Ingen forbindelse';
+  $('b-status').className='hb';
+  $('sys-table').innerHTML='<tr><td colspan="2" style="color:#dc2626">Kunne ikke hente systemstatus</td></tr>';
+});
+fetch('/api/v1/interfaces').then(function(r){return r.json();}).then(function(ifc){
+  var active=ifc.filter(function(f){return f.enabled;}).length;
+  $('b-ifc').textContent=active+' / '+ifc.length+' interfaces aktive';
+}).catch(function(){});
+</script>
+</body>
+</html>

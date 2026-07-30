@@ -2,6 +2,20 @@
 
 ---
 
+## v0.9.0 build 0095 — 2026-07-30 — feat: forside + indlejret manual
+
+Enheden har nu en rigtig **forside** (`http://<ip>/`) — tidligere gav root-URL'en en fejl, da der slet ikke fandtes en side der. Forsiden viser live status (version, uptime, IP, antal aktive interfaces) og navigationskort til Management-GUI'en, manualen, REST API-indekset og GitHub.
+
+Samtidig er hele manualen nu tilgængelig direkte på enheden: `http://<ip>/manual`. Den indeholder:
+
+- Installation og hardware-opsætning, inkl. **komplette GPIO pin-tildelingstabeller for RS485 og RS232** (både 30-pin og 38-pin board)
+- Wiring-diagrammer for RS485- og RS232-transceivere
+- En **komplet REST API-programmeringsguide** med JSON-eksempler for alle endpoints
+
+Både forsiden og manualen er bygget direkte ind i firmwaren (samme måde som management-siden) — ingen separat installation nødvendig, og de virker uanset om frontend-SPIFFS-imaget er opdateret.
+
+---
+
 ## v0.8.1 build 0094 — 2026-07-15 — fix: unik MAC-adresse på Ethernet (W5500)
 
 Rettet en netværksfejl der ramte alle enheder med W5500 Ethernet: W5500-chippen har ikke sin egen MAC-adresse indbygget (i modsætning til ESP32'ens interne netværkschip), og firmwaren satte aldrig en — enheden kørte derfor med `00:00:00:00:00:00`, **samme adresse på alle devices**. Det giver konflikter på netværket (DHCP, switche, ARP).

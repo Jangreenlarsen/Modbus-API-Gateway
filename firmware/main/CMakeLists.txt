@@ -24,6 +24,8 @@ idf_component_register(
         "api/routes/ota.c"
         "api/routes/wifi.c"
         "api/routes/mgmt.c"
+        "api/routes/home.c"
+        "api/routes/manual.c"
         "api/routes/cache.c"
         "api/ws_handler.c"
         "ota/ota_manager.c"
