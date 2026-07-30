@@ -113,6 +113,14 @@ En simpel `http request`-node med URL `http://{gateway-ip}/api/v1/interfaces/flo
 
 ---
 
+## Dokumentation
+
+📘 **[MANUAL.md](MANUAL.md)** — komplet manual: installation, GPIO pin-tildeling for RS485/RS232, wiring-diagrammer og fuld REST API-programmeringsguide med kodeeksempler.
+
+Øvrig teknisk reference: [ARCHITECTURE.md](ARCHITECTURE.md) · [MODBUS_REFERENCE.md](MODBUS_REFERENCE.md) · [ESP32_REFERENCE.md](ESP32_REFERENCE.md) · [CLI_MANUAL.md](CLI_MANUAL.md)
+
+---
+
 ## Hardware
 
 - **MCU**: ESP32 (Xtensa LX6 dual-core, 240 MHz)
