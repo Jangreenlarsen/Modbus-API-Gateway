@@ -4,6 +4,18 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.9.0 build 0095] — 2026-07-30 — feat: forside + indlejret manual (F8)
+
+**Filer ændret:**
+- `firmware/main/home_page.html` (kilde) + `firmware/main/api/routes/home.c/.h` — ny forside på `GET /` (fandtes ikke tidligere — root gav 404). Live systemstatus (version/uptime/heap/board) hentet via JS, navigationskort til Management/Manual/REST API/GitHub.
+- `firmware/main/manual_page.html` (kilde) + `firmware/main/api/routes/manual.c/.h` — hele MANUAL.md konverteret til indlejret, navigerbar HTML på `GET /manual`: indholdsfortegnelse med ankerlinks, fulde GPIO pin-tildelingstabeller (RS485/RS232, 30-/38-pin), wiring-diagrammer, komplet REST API-reference med JSON-eksempler for alle FC01–FC10 m.fl.
+- `firmware/main/api/server.c` — registrér begge routes; tilføjet til det selvdokumenterende API-index; `MAX_LOGGED_ROUTES` hævet 32→48 (var nået præcis — F8).
+- `firmware/main/api/routes/mgmt.c` — header linker nu til forside + manual (kryds-navigation).
+- `firmware/main/CMakeLists.txt` — tilføjet `api/routes/home.c`, `api/routes/manual.c`.
+- `version.json` — bump til 0.9.0 b0095 (feature).
+
+---
+
 ## [0.8.1 build 0094] — 2026-07-15 — fix: unik W5500 MAC-adresse + INT-ISR (F6, F7)
 
 **Filer ændret:**

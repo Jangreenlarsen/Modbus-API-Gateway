@@ -5,6 +5,12 @@ Status: `open` | `investigating` | `fixed`
 
 ---
 
+## Fundet undervejs (2026-07-30)
+
+- [fixed] F8 v0.9.0 b0095 — `MAX_LOGGED_ROUTES` (32) i `server.c` var nået præcis (32 `reg()`-kald) ved tilføjelse af `/` og `/manual` — næste nye route ville have trigget `assert(s_nlogged < MAX_LOGGED_ROUTES)`. LØST: hævet til 48 for at give headroom til fremtidige endpoints.
+
+---
+
 ## Feltfejl (2026-07-12)
 
 - [fixed] F6 v0.8.1 b0094 — W5500 kører med MAC `00:00:00:00:00:00` → alle devices har samme (ikke-unikke) MAC-adresse, hvilket giver kollisioner på netværket (DHCP/switch). Root cause: W5500 har ingen fabriks-MAC (modsat ESP32'ens interne EMAC), og `init_w5500()` satte aldrig en. LØST: MAC udledes nu fra chippens eFuse via `esp_read_mac(ESP_MAC_ETH)` og sættes med `esp_eth_ioctl(ETH_CMD_S_MAC_ADDR)` før netif-attach → unik pr. device. MAC logges ved boot.

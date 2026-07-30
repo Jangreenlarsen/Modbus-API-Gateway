@@ -6,6 +6,8 @@
 #include "routes/ota.h"
 #include "routes/wifi.h"
 #include "routes/mgmt.h"
+#include "routes/home.h"
+#include "routes/manual.h"
 #include "ws_handler.h"
 #include "version.h"
 #include "cJSON.h"
@@ -18,7 +20,7 @@ static httpd_handle_t s_server = NULL;
 // ── Logging wrapper ──────────────────────────────────────────────────────────
 // Alle routes registreres via reg() som logger hvert kald i api_log.
 
-#define MAX_LOGGED_ROUTES 32
+#define MAX_LOGGED_ROUTES 48
 typedef struct { esp_err_t (*orig)(httpd_req_t *req); } orig_ctx_t;
 static orig_ctx_t s_orig_ctxs[MAX_LOGGED_ROUTES];
 static int        s_nlogged = 0;
@@ -112,6 +114,9 @@ static esp_err_t api_index_handler(httpd_req_t *req)
     EP("POST", "/api/v1/cache/clear",                                         "Tøm cache (ikke stats)");
     EP("POST", "/api/v1/cache/reset-stats",                                   "Nulstil hit/miss-tællere");
     EP("GET",  "/ws",                                                         "WebSocket real-time push");
+    EP("GET",  "/",                                                           "Forside — status og links til Management/Manual/API");
+    EP("GET",  "/manual",                                                     "Komplet manual: installation, GPIO-tildeling, REST API-guide");
+    EP("GET",  "/mgmt",                                                       "Management-GUI: konfiguration, cache, OTA, Modbus-log, API-log");
 
     #undef EP
 
@@ -193,6 +198,10 @@ esp_err_t api_server_start(const api_config_t *cfg)
 
     // Management page
     reg(s_server, &route_get_mgmt);
+
+    // Forside + manual
+    reg(s_server, &route_get_home);
+    reg(s_server, &route_get_manual);
 
     // WebSocket — ikke wrappes (specielt upgrade-flow)
     httpd_register_uri_handler(s_server, &route_ws);
