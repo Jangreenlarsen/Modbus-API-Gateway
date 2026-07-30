@@ -2,6 +2,12 @@
 
 ---
 
+## v0.9.1 build 0096 — 2026-07-30 — fix: /api virker igen
+
+`/api` og `/api/v1` (den selvdokumenterende endpoint-liste) gav fejlen "Nothing matches the given URI" efter forrige opdatering. Årsagen var en intern kapacitetsgrænse i webserveren, der blev nået da forsiden og manualen blev tilføjet — én rute nåede aldrig at blive registreret. Rettet ved at hæve kapaciteten, samt tilføjet logning så en tilsvarende fejl fremover vises tydeligt i seriel-loggen i stedet for at forsvinde stille.
+
+---
+
 ## v0.9.0 build 0095 — 2026-07-30 — feat: forside + indlejret manual
 
 Enheden har nu en rigtig **forside** (`http://<ip>/`) — tidligere gav root-URL'en en fejl, da der slet ikke fandtes en side der. Forsiden viser live status (version, uptime, IP, antal aktive interfaces) og navigationskort til Management-GUI'en, manualen, REST API-indekset og GitHub.

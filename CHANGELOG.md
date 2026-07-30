@@ -4,6 +4,14 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.9.1 build 0096] — 2026-07-30 — fix: /api gav 404 — httpd handler-kapacitet nået (F9)
+
+**Filer ændret:**
+- `firmware/main/api/server.c` — F9: `hcfg.max_uri_handlers` (httpd-serverens egen kapacitetsgrænse, adskilt fra `MAX_LOGGED_ROUTES`) var stadig 32, mens tilføjelsen af `/` og `/manual` i b0095 bragte det samlede antal registreringer op på 33 — `route_api_index` (`/api*`) blev derved aldrig registreret, og fejlede stille. Hævet til 48. `reg()` og WebSocket-registreringen logger nu `ESP_LOGE` hvis en route-registrering fejler.
+- `version.json` — bump til 0.9.1 b0096.
+
+---
+
 ## [0.9.0 build 0095] — 2026-07-30 — feat: forside + indlejret manual (F8)
 
 **Filer ændret:**

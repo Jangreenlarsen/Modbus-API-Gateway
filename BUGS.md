@@ -5,6 +5,10 @@ Status: `open` | `investigating` | `fixed`
 
 ---
 
+## Feltfejl (2026-07-30)
+
+- [fixed] F9 v0.9.1 b0096 — `GET /api` og `/api/v1` gav "Nothing matches the given URI" efter opdatering til b0095. Root cause: `hcfg.max_uri_handlers=32` er httpd-serverens hårde kapacitetsgrænse for antal registrerede routes — adskilt fra `MAX_LOGGED_ROUTES` (kun størrelsen på log-wrapper-arrayet). Da `/` og `/manual` blev tilføjet i b0095, nåede det samlede antal registreringer 33 (>32), og `route_api_index` (`/api*` — sidst registreret) fejlede stille, fordi `httpd_register_uri_handler`s returkode ikke blev tjekket. LØST: `hcfg.max_uri_handlers` hævet til 48 (matcher `MAX_LOGGED_ROUTES`); `reg()` og WebSocket-registreringen logger nu fejl højlydt (`ESP_LOGE`) hvis en route-registrering fejler, så det aldrig sker ubemærket igen.
+
 ## Fundet undervejs (2026-07-30)
 
 - [fixed] F8 v0.9.0 b0095 — `MAX_LOGGED_ROUTES` (32) i `server.c` var nået præcis (32 `reg()`-kald) ved tilføjelse af `/` og `/manual` — næste nye route ville have trigget `assert(s_nlogged < MAX_LOGGED_ROUTES)`. LØST: hævet til 48 for at give headroom til fremtidige endpoints.
