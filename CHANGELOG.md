@@ -4,6 +4,18 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.9.2 build 0097] — 2026-07-30 — feat: WebSocket real-time push af Modbus-bus-aktivitet
+
+**Filer ændret:**
+- `firmware/main/modbus/modbus_log.h/.c` — nyt broadcast-callback-hook (`modbus_log_set_broadcast_cb`). `modbus_log_add()` tager et snapshot af den nye entry, giver mutex'en fri, og kalder broadcast-callbacken UDENFOR kritisk sektion (undgår at blokere andre tråde). `entry_to_cjson()` udtrukket som fælles helper (genbruges af både `modbus_log_since_json` og broadcast) — ingen `esp_http_server`-afhængighed i modbus-laget (lagdeling bevaret).
+- `firmware/main/api/ws_handler.h/.c` — `ws_handler_init(server)` gemmer server-handle og registrerer sig som broadcast-callback. Broadcast enumererer tilsluttede WS-klienter via `httpd_get_client_list`/`httpd_ws_get_fd_info`, og sender via `httpd_queue_work` (køres i httpd'ens egen task — ESP-IDF's dokumenterede mønster for afsendelse fra vilkårlig kaldekontekst) med en heap-kopi af JSON'en pr. klient.
+- `firmware/main/api/server.c` — kalder `ws_handler_init(s_server)` efter `httpd_start`; `hcfg.max_open_sockets` hævet 7→10.
+- `firmware/main/api/routes/mgmt.c` — Modbus Log-fanen åbner nu en WS-forbindelse og forbruger push live (`mbAppendEntry` udtrukket som delt render-funktion for både poll- og WS-stien); REST-poll bevaret som fallback/gap-filler, interval sat ned fra 1,5s til 5s.
+- `FEATURES.md` — WebSocket-push flyttet fra planlagt til færdig.
+- `version.json` — bump til 0.9.2 b0097 (feature).
+
+---
+
 ## [0.9.1 build 0096] — 2026-07-30 — fix: /api gav 404 — httpd handler-kapacitet nået (F9)
 
 **Filer ændret:**
