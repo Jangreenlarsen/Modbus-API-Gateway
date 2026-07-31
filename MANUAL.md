@@ -1,6 +1,6 @@
 # Modbus API Gateway — Komplet Manual
 
-**Firmware-version ved skrivning:** v0.8.1 build 0094
+**Firmware-version ved skrivning:** v0.9.2 build 0097
 **Målgruppe:** installatører (hardware/GPIO-opsætning) og udviklere (REST API-integration)
 
 Denne manual er den samlede brugerguide. Den supplerer (og gentager ikke i detalje) de tekniske referencedokumenter i repoet:
@@ -316,6 +316,14 @@ gw> reboot
 ---
 
 ## 3. Web Management GUI (/mgmt)
+
+Enheden serverer tre sider direkte fra firmwaren (ingen SPIFFS-afhængighed):
+
+| Side | URL | Indhold |
+|---|---|---|
+| Forside | `http://<enhedens-ip>/` | Live systemstatus + navigationskort til Management/Manual/REST API/GitHub |
+| Manual | `http://<enhedens-ip>/manual` | Denne manual, tilgængelig direkte på enheden |
+| Management GUI | `http://<enhedens-ip>/mgmt` | Konfiguration, status og monitorering (se nedenfor) |
 
 Naviger til `http://<enhedens-ip>/mgmt`. Faner:
 
@@ -660,7 +668,25 @@ GET /api/v1/system/log?since=N
 
 ### 4.12 WebSocket
 
-`GET /ws` (upgrade til WebSocket) er registreret, men er p.t. en **stub** (echo af modtagne beskeder) — real-time register-push er endnu ikke implementeret. Brug polling mod REST-endpoints (fx `modbus/log` eller FC-læse-endpoints) indtil videre.
+`GET /ws` broadcaster automatisk hver ny Modbus-bus-transaktion (læsning/skrivning udført via REST eller CLI) til alle tilsluttede klienter — real-time monitorering uden polling.
+
+> **Bemærk:** kun transaktioner der rent faktisk rammer bussen udløser en push. Et REST-kald der besvares fra register-cachen (afsnit 4.8) genererer ingen bus-transaktion og derfor ingen WS-hændelse — samme betydning af "transaktion" som i Modbus-loggen (afsnit 4.9).
+
+**Beskedformat** — hver push er ét enkelt JSON-objekt, samme felter som ét element i `entries`-arrayet fra `GET /api/v1/modbus/log` (afsnit 4.9):
+```json
+{ "seq": 542, "t": 88950, "if": 0, "sl": 5, "fc": 6, "ad": 10, "ct": 1, "st": 0, "v": 500 }
+```
+
+**JavaScript-eksempel:**
+```javascript
+const ws = new WebSocket(`ws://${location.host}/ws`);
+ws.onmessage = (ev) => {
+  const e = JSON.parse(ev.data);
+  console.log(`iface${e.if} slave${e.sl} FC${e.fc} @${e.ad} = ${e.v}`);
+};
+```
+
+Polling mod `GET /api/v1/modbus/log?since=N` virker stadig som før, og er et nyttigt fallback/gap-filler hvis WebSocket-forbindelsen falder ud.
 
 ---
 

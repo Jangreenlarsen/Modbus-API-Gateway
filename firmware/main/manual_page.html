@@ -315,6 +315,13 @@ gw&gt; reboot</pre>
 
 <section class='card' id='gui'>
   <h2>3. Web Management GUI (/mgmt)</h2>
+  <p>Enheden serverer tre sider direkte fra firmwaren (ingen SPIFFS-afhængighed):</p>
+  <table class='dt'>
+    <tr><th>Side</th><th>URL</th><th>Indhold</th></tr>
+    <tr><td>Forside</td><td><code>/</code></td><td>Live systemstatus + navigationskort til Management/Manual/REST API/GitHub</td></tr>
+    <tr><td>Manual</td><td><code>/manual</code></td><td>Denne manual, tilgængelig direkte på enheden</td></tr>
+    <tr><td>Management GUI</td><td><code>/mgmt</code></td><td>Konfiguration, status og monitorering (se nedenfor)</td></tr>
+  </table>
   <table class='dt'>
     <tr><th>Fane</th><th>Indhold</th></tr>
     <tr><td>Status</td><td>Version, uptime, heap, Ethernet/WiFi-status, interface-oversigt, direkte register-læsning</td></tr>
@@ -512,7 +519,17 @@ Body: {"mode": "internal"}   // eller "external"
   <p><code>POST</code>-kaldene svarer øjeblikkeligt; download/flash sker i baggrunden. Ved succesfuld firmware-OTA genstarter enheden automatisk.</p>
 
   <h3 id='api-ws'>4.12 WebSocket</h3>
-  <p><code>GET /ws</code> er registreret, men er p.t. en <b>stub</b> (echo). Real-time register-push er endnu ikke implementeret &mdash; brug polling mod REST-endpoints.</p>
+  <p><code>GET /ws</code> broadcaster automatisk hver ny Modbus-bus-transaktion (læsning/skrivning via REST eller CLI) til alle tilsluttede klienter &mdash; real-time monitorering uden polling.</p>
+  <div class='note'><b>Bemærk:</b> kun transaktioner der rent faktisk rammer bussen udløser en push. Et REST-kald der besvares fra register-cachen (afsnit 4.8) genererer ingen bus-transaktion og derfor ingen WS-hændelse &mdash; samme betydning af &raquo;transaktion&laquo; som i Modbus-loggen (afsnit 4.9).</div>
+  <p><b>Beskedformat</b> &mdash; hver push er &eacute;t enkelt JSON-objekt, samme felter som &eacute;t element i <code>entries</code>-arrayet fra <code>GET /api/v1/modbus/log</code> (afsnit 4.9):</p>
+  <pre>{ "seq": 542, "t": 88950, "if": 0, "sl": 5, "fc": 6, "ad": 10, "ct": 1, "st": 0, "v": 500 }</pre>
+  <p><b>JavaScript-eksempel:</b></p>
+  <pre>const ws = new WebSocket(`ws://${location.host}/ws`);
+ws.onmessage = (ev) => {
+  const e = JSON.parse(ev.data);
+  console.log(`iface${e.if} slave${e.sl} FC${e.fc} @${e.ad} = ${e.v}`);
+};</pre>
+  <p>Polling mod <code>GET /api/v1/modbus/log?since=N</code> virker stadig som f&oslash;r, og er et nyttigt fallback/gap-filler hvis WebSocket-forbindelsen falder ud.</p>
 
   <h3 id='api-examples'>4.13 Programmeringseksempler</h3>
   <p><b>curl:</b></p>
