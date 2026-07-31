@@ -2,6 +2,16 @@
 
 ---
 
+## v0.9.2 build 0097 — 2026-07-30 — feat: WebSocket real-time push
+
+Modbus Log-fanen i management-GUI'en er nu **live** — nye bus-transaktioner (læsninger og skrivninger via REST eller CLI) vises øjeblikkeligt i stedet for at vente op til 1,5 sekund på næste polling. `/ws`-endpointet, som tidligere kun var en tom stub, sender nu automatisk hver ny transaktion til alle tilsluttede klienter.
+
+Bemærk: kun rigtig bus-trafik udløser en push — cache-hits (data der allerede er friskt i den lokale cache) rammer ikke bussen og genererer derfor ikke en hændelse. Det svarer til den eksisterende Modbus Log-fanes betydning af "transaktion".
+
+Polling er bevaret som sikkerhedsnet (nu hvert 5. sekund i stedet for 1,5) i tilfælde af at WebSocket-forbindelsen falder ud.
+
+---
+
 ## v0.9.1 build 0096 — 2026-07-30 — fix: /api virker igen
 
 `/api` og `/api/v1` (den selvdokumenterende endpoint-liste) gav fejlen "Nothing matches the given URI" efter forrige opdatering. Årsagen var en intern kapacitetsgrænse i webserveren, der blev nået da forsiden og manualen blev tilføjet — én rute nåede aldrig at blive registreret. Rettet ved at hæve kapaciteten, samt tilføjet logning så en tilsvarende fejl fremover vises tydeligt i seriel-loggen i stedet for at forsvinde stille.

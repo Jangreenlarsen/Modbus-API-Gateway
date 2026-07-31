@@ -161,10 +161,17 @@ esp_err_t api_server_start(const api_config_t *cfg)
     hcfg.server_port       = cfg->port;
     hcfg.stack_size        = 16384;
     hcfg.lru_purge_enable  = true;   // frigiv ældste socket automatisk ved pres
+    // Default er kun 7 — for lidt til flere samtidige GUI-faner (REST-polling)
+    // + mindst én WebSocket-forbindelse. Skal matche WS_MAX_CLIENTS i ws_handler.c.
+    hcfg.max_open_sockets  = 10;
 
     api_log_init();
     s_nlogged = 0;
     ESP_ERROR_CHECK(httpd_start(&s_server, &hcfg));
+
+    // WS broadcast-infrastruktur — skal initialiseres FØR routes registreres,
+    // så modbus_log's callback er sat inden første klient kan nå at forbinde.
+    ws_handler_init(s_server);
 
     // Interface routes
     reg(s_server, &route_get_interfaces);

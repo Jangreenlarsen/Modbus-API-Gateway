@@ -23,3 +23,11 @@ void  modbus_log_add(uint8_t iface, uint8_t slave, uint8_t fc,
                      uint16_t addr, uint16_t count, mb_result_t r, uint16_t first_val);
 char *modbus_log_since_json(uint32_t since_seq);   // caller free()s
 void  modbus_log_clear(void);
+
+// Broadcast-hook (WebSocket real-time push) — modbus_log kender intet til
+// HTTP/WS; API-laget registrerer en callback der kaldes med den nye entrys
+// JSON (samme felter som ét element i modbus_log_since_json's "entries"-array)
+// hver gang modbus_log_add() logger en ny bus-transaktion. Holder lagdelingen
+// intakt: modbus-laget har ingen esp_http_server-afhængighed.
+typedef void (*modbus_log_broadcast_cb_t)(const char *json);
+void modbus_log_set_broadcast_cb(modbus_log_broadcast_cb_t cb);
