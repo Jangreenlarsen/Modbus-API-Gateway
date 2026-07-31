@@ -4,6 +4,15 @@ Nyeste øverst. Format: `## [version build NNNN] — YYYY-MM-DD — beskrivelse`
 
 ---
 
+## [0.9.2 build 0098] — 2026-07-31 — chore: opdater manual (WebSocket-push, forside/manual-sider)
+
+**Filer ændret (indhold-sync, ingen versionsbump af MAJOR.MINOR.PATCH):**
+- `MANUAL.md` — afsnit 4.12 (WebSocket) omskrevet til at beskrive den nye broadcast-adfærd (beskedformat, JS-eksempel); afsnit 3 udvidet med tabel over de tre on-device sider (`/`, `/manual`, `/mgmt`); versionsbanner opdateret til 0.9.2 b0097.
+- `firmware/main/manual_page.html` (kilde) + `firmware/main/api/routes/manual.c` (genereret) — samme to indholdsopdateringer i den indlejrede `/manual`-side på enheden.
+- `version.json` — build bumpet til 0098 (indhold i firmware-binæren ændret — samme princip som b0085: build stiger altid ved kodeændring, selv uden feature/fix).
+
+---
+
 ## [0.9.2 build 0097] — 2026-07-30 — feat: WebSocket real-time push af Modbus-bus-aktivitet
 
 **Filer ændret:**

@@ -2,6 +2,12 @@
 
 ---
 
+## v0.9.2 build 0098 — 2026-07-31 — chore: manual opdateret
+
+Både den centrale `MANUAL.md` og den indlejrede manual på enheden (`/manual`) er opdateret til at beskrive WebSocket-pushet fra forrige opdatering, samt de tre on-device sider (`/`, `/manual`, `/mgmt`). Ingen funktionsændring.
+
+---
+
 ## v0.9.2 build 0097 — 2026-07-30 — feat: WebSocket real-time push
 
 Modbus Log-fanen i management-GUI'en er nu **live** — nye bus-transaktioner (læsninger og skrivninger via REST eller CLI) vises øjeblikkeligt i stedet for at vente op til 1,5 sekund på næste polling. `/ws`-endpointet, som tidligere kun var en tom stub, sender nu automatisk hver ny transaktion til alle tilsluttede klienter.
